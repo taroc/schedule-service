@@ -4,12 +4,8 @@ import bcrypt from 'bcryptjs';
 
 class UserStorageDB {
   private insertUser = db.prepare(`
-    INSERT INTO users (id, email, password, name, created_at, updated_at)
-    VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-  `);
-
-  private selectUserByEmail = db.prepare(`
-    SELECT * FROM users WHERE email = ?
+    INSERT INTO users (id, password, created_at, updated_at)
+    VALUES (?, ?, datetime('now'), datetime('now'))
   `);
 
   private selectUserById = db.prepare(`
@@ -17,7 +13,7 @@ class UserStorageDB {
   `);
 
   private selectAllUsers = db.prepare(`
-    SELECT id, email, name, created_at, updated_at FROM users
+    SELECT id, created_at, updated_at FROM users
   `);
 
   private updateUserUpdatedAt = db.prepare(`
@@ -26,18 +22,18 @@ class UserStorageDB {
 
   async createUser(request: CreateUserRequest, providedId?: string): Promise<User> {
     return runInTransaction(() => {
-      // 既存ユーザーチェック
-      const existingUser = this.selectUserByEmail.get(request.email) as User | undefined;
+      // 既存ユーザーIDチェック
+      const userId = providedId || request.userId;
+      const existingUser = this.selectUserById.get(userId) as User | undefined;
       if (existingUser) {
-        throw new Error('User already exists');
+        throw new Error('User ID already exists');
       }
 
       // パスワードハッシュ化
       const hashedPassword = bcrypt.hashSync(request.password, 10);
-      const userId = providedId || Math.random().toString(36).substring(2, 15);
 
       // ユーザー作成
-      this.insertUser.run(userId, request.email, hashedPassword, request.name);
+      this.insertUser.run(userId, hashedPassword);
 
       // 作成されたユーザーを取得
       const user = this.selectUserById.get(userId) as User;
@@ -50,19 +46,6 @@ class UserStorageDB {
     });
   }
 
-  async getUserByEmail(email: string): Promise<User | null> {
-    const user = this.selectUserByEmail.get(email) as User | undefined;
-    
-    if (!user) {
-      return null;
-    }
-
-    return {
-      ...user,
-      createdAt: new Date(user.createdAt),
-      updatedAt: new Date(user.updatedAt)
-    };
-  }
 
   async getUserById(id: string): Promise<User | null> {
     const user = this.selectUserById.get(id) as User | undefined;
@@ -78,8 +61,8 @@ class UserStorageDB {
     };
   }
 
-  async verifyPassword(email: string, password: string): Promise<User | null> {
-    const user = await this.getUserByEmail(email);
+  async verifyPassword(userId: string, password: string): Promise<User | null> {
+    const user = await this.getUserById(userId);
     if (!user) {
       return null;
     }

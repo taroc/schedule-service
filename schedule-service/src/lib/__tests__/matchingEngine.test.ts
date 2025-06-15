@@ -13,21 +13,18 @@ describe('matchingEngine', () => {
   beforeEach(async () => {
     // テスト前にテストユーザーを作成
     await userStorage.createUser({
-      email: 'user1@example.com',
-      password: 'password123',
-      name: 'User 1'
+      userId: 'user-1',
+      password: 'password123'
     }, mockUser1);
     
     await userStorage.createUser({
-      email: 'user2@example.com',
-      password: 'password123',
-      name: 'User 2'
+      userId: 'user-2',
+      password: 'password123'
     }, mockUser2);
     
     await userStorage.createUser({
-      email: 'creator@example.com',
-      password: 'password123',
-      name: 'Creator'
+      userId: 'creator-1',
+      password: 'password123'
     }, mockCreator);
   });
 

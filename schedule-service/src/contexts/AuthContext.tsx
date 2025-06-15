@@ -7,8 +7,8 @@ interface AuthContextType {
   user: UserSession | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  login: (userId: string, password: string) => Promise<void>;
+  register: (userId: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -61,13 +61,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (userId: string, password: string) => {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ userId, password }),
     });
 
     const data = await response.json();
@@ -81,13 +81,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(data.user);
   };
 
-  const register = async (email: string, password: string, name: string) => {
+  const register = async (userId: string, password: string) => {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ userId, password }),
     });
 
     const data = await response.json();

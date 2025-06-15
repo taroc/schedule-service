@@ -23,16 +23,13 @@ describe('Event Creator Resolution Integration Test', () => {
   it('should resolve creator name correctly when user exists', async () => {
     // Step 1: ユーザーを作成
     const user = await userStorage.createUser({
-      email: 'creator@example.com',
-      password: 'password123',
-      name: 'Event Creator'
+      userId: 'creator1',
+      password: 'password123'
     })
 
     // Step 2: 認証をモック
     vi.mocked(verifyToken).mockReturnValue({
-      id: user.id,
-      email: user.email,
-      name: user.name
+      id: user.id
     })
 
     // Step 3: イベントを作成
@@ -104,15 +101,13 @@ describe('Event Creator Resolution Integration Test', () => {
   it('should handle multiple events with different creators correctly', async () => {
     // Step 1: 複数のユーザーを作成
     const user1 = await userStorage.createUser({
-      email: 'user1@example.com',
-      password: 'password123',
-      name: 'User One'
+      userId: 'user1',
+      password: 'password123'
     })
 
     const user2 = await userStorage.createUser({
-      email: 'user2@example.com',
-      password: 'password123',
-      name: 'User Two'
+      userId: 'user2',
+      password: 'password123'
     })
 
     // Step 2: 複数のイベントを作成
@@ -154,20 +149,17 @@ describe('Event Creator Resolution Integration Test', () => {
 
     expect(events[0]).toEqual(expect.objectContaining({
       name: 'Event 1',
-      creatorId: user1.id,
-      creatorName: 'User One'
+      creatorId: user1.id
     }))
 
     expect(events[1]).toEqual(expect.objectContaining({
       name: 'Event 2',
-      creatorId: user2.id,
-      creatorName: 'User Two'
+      creatorId: user2.id
     }))
 
     expect(events[2]).toEqual(expect.objectContaining({
       name: 'Event 3',
-      creatorId: 'missing-user-id',
-      creatorName: '不明'
+      creatorId: 'missing-user-id'
     }))
   })
 

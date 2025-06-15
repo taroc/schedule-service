@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eventStorageDB as eventStorage } from '@/lib/eventStorage';
 import { userStorageDB as userStorage } from '@/lib/userStorage';
 import { verifyToken } from '@/lib/auth';
-import { CreateEventRequest, Event as EventType } from '@/types/event';
+import { CreateEventRequest } from '@/types/event';
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,28 +84,8 @@ export async function GET(request: NextRequest) {
       events = await eventStorage.getAllEvents();
     }
 
-    // 作成者情報と参加者情報を付与
-    const eventsWithCreator = await Promise.all(
-      events.map(async (event: EventType) => {
-        const creator = await userStorage.getUserById(event.creatorId);
-        
-        // 参加者名を解決
-        const participantNames = await Promise.all(
-          event.participants.map(async (participantId: string) => {
-            const participant = await userStorage.getUserById(participantId);
-            return participant ? participant.name : '不明';
-          })
-        );
-        
-        return {
-          ...event,
-          creatorName: creator ? creator.name : '不明',
-          participantNames
-        };
-      })
-    );
-
-    return NextResponse.json(eventsWithCreator);
+    // ユーザー名は保存しないため、シンプルなイベント情報を返す
+    return NextResponse.json(events);
   } catch (error) {
     console.error('Error fetching events:', error);
     return NextResponse.json(

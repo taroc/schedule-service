@@ -13,12 +13,12 @@ export default function AuthPage() {
   const { login, register } = useAuth();
   const router = useRouter();
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (userId: string, password: string) => {
     setIsLoading(true);
     setError('');
     
     try {
-      await login(email, password);
+      await login(userId, password);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログインに失敗しました');
@@ -27,12 +27,12 @@ export default function AuthPage() {
     }
   };
 
-  const handleRegister = async (email: string, password: string, name: string) => {
+  const handleRegister = async (userId: string, password: string) => {
     setIsLoading(true);
     setError('');
     
     try {
-      await register(email, password, name);
+      await register(userId, password);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : '登録に失敗しました');

@@ -140,7 +140,7 @@ export default function Dashboard() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">こんにちは、{user.name}さん</span>
+              <span className="text-gray-700">こんにちは、{user.id}さん</span>
               <button
                 onClick={logout}
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"

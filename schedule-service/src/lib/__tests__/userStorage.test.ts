@@ -18,9 +18,8 @@ vi.mock('bcryptjs', () => ({
 
 describe('userStorage', () => {
   const mockUserRequest: CreateUserRequest = {
-    email: 'test@example.com',
-    password: 'correct-password',
-    name: 'Test User'
+    userId: 'testuser',
+    password: 'correct-password'
   }
 
   beforeEach(() => {
@@ -34,8 +33,8 @@ describe('userStorage', () => {
       
       expect(user).toBeDefined()
       expect(user.id).toBeDefined()
-      expect(user.email).toBe(mockUserRequest.email)
-      expect(user.name).toBe(mockUserRequest.name)
+      expect(user.id).toBe(mockUserRequest.userId)
+      expect(user.password).toBe('hashed-password')
       expect(user.password).toBe('hashed-password')
       expect(user.createdAt).toBeInstanceOf(Date)
       expect(user.updatedAt).toBeInstanceOf(Date)
@@ -44,8 +43,8 @@ describe('userStorage', () => {
     it('should generate unique IDs for different users', async () => {
       const user1 = await userStorage.createUser(mockUserRequest)
       const user2 = await userStorage.createUser({
-        ...mockUserRequest,
-        email: 'test2@example.com'
+        userId: 'testuser2',
+        password: 'correct-password'
       })
       
       expect(user1.id).not.toBe(user2.id)
@@ -55,7 +54,7 @@ describe('userStorage', () => {
       await userStorage.createUser(mockUserRequest)
       
       await expect(userStorage.createUser(mockUserRequest))
-        .rejects.toThrow('User already exists')
+        .rejects.toThrow('User ID already exists')
     })
 
     it('should hash the password', async () => {
@@ -66,30 +65,6 @@ describe('userStorage', () => {
     })
   })
 
-  describe('getUserByEmail', () => {
-    it('should return user when email exists', async () => {
-      const createdUser = await userStorage.createUser(mockUserRequest)
-      const foundUser = await userStorage.getUserByEmail(mockUserRequest.email)
-      
-      expect(foundUser).toBeDefined()
-      expect(foundUser!.id).toBe(createdUser.id)
-      expect(foundUser!.email).toBe(mockUserRequest.email)
-    })
-
-    it('should return null when email does not exist', async () => {
-      const foundUser = await userStorage.getUserByEmail('nonexistent@example.com')
-      
-      expect(foundUser).toBeNull()
-    })
-
-    it('should be case sensitive', async () => {
-      await userStorage.createUser(mockUserRequest)
-      const foundUser = await userStorage.getUserByEmail('TEST@EXAMPLE.COM')
-      
-      expect(foundUser).toBeNull()
-    })
-  })
-
   describe('getUserById', () => {
     it('should return user when ID exists', async () => {
       const createdUser = await userStorage.createUser(mockUserRequest)
@@ -97,7 +72,7 @@ describe('userStorage', () => {
       
       expect(foundUser).toBeDefined()
       expect(foundUser!.id).toBe(createdUser.id)
-      expect(foundUser!.email).toBe(mockUserRequest.email)
+      expect(foundUser!.id).toBe(mockUserRequest.userId)
     })
 
     it('should return null when ID does not exist', async () => {
@@ -113,18 +88,19 @@ describe('userStorage', () => {
     })
 
     it('should return user when credentials are correct', async () => {
+      await userStorage.createUser(mockUserRequest)
       const user = await userStorage.verifyPassword(
-        mockUserRequest.email,
+        mockUserRequest.userId,
         'correct-password'
       )
       
       expect(user).toBeDefined()
-      expect(user!.email).toBe(mockUserRequest.email)
+      expect(user!.id).toBe(mockUserRequest.userId)
     })
 
-    it('should return null when email does not exist', async () => {
+    it('should return null when userId does not exist', async () => {
       const user = await userStorage.verifyPassword(
-        'nonexistent@example.com',
+        'nonexistentuserid',
         'correct-password'
       )
       
@@ -132,17 +108,18 @@ describe('userStorage', () => {
     })
 
     it('should return null when password is incorrect', async () => {
+      await userStorage.createUser(mockUserRequest)
       const user = await userStorage.verifyPassword(
-        mockUserRequest.email,
+        mockUserRequest.userId,
         'wrong-password'
       )
       
       expect(user).toBeNull()
     })
 
-    it('should return null when both email and password are incorrect', async () => {
+    it('should return null when both userId and password are incorrect', async () => {
       const user = await userStorage.verifyPassword(
-        'wrong@example.com',
+        'wronguserid',
         'wrong-password'
       )
       
@@ -160,9 +137,8 @@ describe('userStorage', () => {
     it('should return all users without passwords', async () => {
       await userStorage.createUser(mockUserRequest)
       await userStorage.createUser({
-        ...mockUserRequest,
-        email: 'test2@example.com',
-        name: 'Test User 2'
+        userId: 'testuser2',
+        password: 'correct-password'
       })
       
       const users = userStorage.getAllUsers()
@@ -171,15 +147,15 @@ describe('userStorage', () => {
       expect(users[0]).not.toHaveProperty('password')
       expect(users[1]).not.toHaveProperty('password')
       expect(users[0]).toHaveProperty('id')
-      expect(users[0]).toHaveProperty('email')
-      expect(users[0]).toHaveProperty('name')
+      expect(users[0]).toHaveProperty('id')
+      expect(users[0]).toHaveProperty('createdAt')
     })
 
     it('should maintain user order', async () => {
       const user1 = await userStorage.createUser(mockUserRequest)
       const user2 = await userStorage.createUser({
-        ...mockUserRequest,
-        email: 'test2@example.com'
+        userId: 'testuser2',
+        password: 'correct-password'
       })
       
       const users = userStorage.getAllUsers()
@@ -190,24 +166,19 @@ describe('userStorage', () => {
   })
 
   describe('edge cases', () => {
-    it('should handle empty string email', async () => {
-      const foundUser = await userStorage.getUserByEmail('')
-      expect(foundUser).toBeNull()
-    })
-
     it('should handle empty string ID', async () => {
       const foundUser = await userStorage.getUserById('')
       expect(foundUser).toBeNull()
     })
 
-    it('should handle special characters in email', async () => {
-      const specialEmailUser = {
-        ...mockUserRequest,
-        email: 'test+special@example.com'
+    it('should handle special characters in userId', async () => {
+      const specialUser = {
+        userId: 'test-user_123',
+        password: 'correct-password'
       }
       
-      const user = await userStorage.createUser(specialEmailUser)
-      const foundUser = await userStorage.getUserByEmail(specialEmailUser.email)
+      const user = await userStorage.createUser(specialUser)
+      const foundUser = await userStorage.getUserById(specialUser.userId)
       
       expect(foundUser).toBeDefined()
       expect(foundUser!.id).toBe(user.id)

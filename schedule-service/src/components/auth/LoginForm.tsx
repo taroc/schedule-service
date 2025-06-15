@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => Promise<void>;
+  onLogin: (userId: string, password: string) => Promise<void>;
   onSwitchToRegister: () => void;
   isLoading?: boolean;
   error?: string;
@@ -15,12 +15,12 @@ export default function LoginForm({
   isLoading = false,
   error
 }: LoginFormProps) {
-  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onLogin(email, password);
+    await onLogin(userId, password);
   };
 
   return (
@@ -35,14 +35,14 @@ export default function LoginForm({
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
-            メールアドレス
+          <label htmlFor="userId" className="block text-gray-700 text-sm font-bold mb-2">
+            ユーザーID
           </label>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="userId"
+            type="text"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             required
           />

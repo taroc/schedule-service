@@ -7,14 +7,14 @@ export async function POST(request: NextRequest) {
   try {
     const body: LoginRequest = await request.json();
     
-    if (!body.email || !body.password) {
+    if (!body.userId || !body.password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'User ID and password are required' },
         { status: 400 }
       );
     }
 
-    const user = await userStorage.verifyPassword(body.email, body.password);
+    const user = await userStorage.verifyPassword(body.userId, body.password);
     
     if (!user) {
       return NextResponse.json(
@@ -24,9 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userSession = {
-      id: user.id,
-      email: user.email,
-      name: user.name
+      id: user.id
     };
     
     const token = generateToken(userSession);

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface RegisterFormProps {
-  onRegister: (email: string, password: string, name: string) => Promise<void>;
+  onRegister: (userId: string, password: string) => Promise<void>;
   onSwitchToLogin: () => void;
   isLoading?: boolean;
   error?: string;
@@ -15,9 +15,8 @@ export default function RegisterForm({
   isLoading = false,
   error
 }: RegisterFormProps) {
-  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +26,7 @@ export default function RegisterForm({
       return;
     }
     
-    await onRegister(email, password, name);
+    await onRegister(userId, password);
   };
 
   return (
@@ -42,28 +41,14 @@ export default function RegisterForm({
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label htmlFor="name" className="block text-gray-700 text-sm font-bold mb-2">
-            名前
+          <label htmlFor="userId" className="block text-gray-700 text-sm font-bold mb-2">
+            ユーザーID
           </label>
           <input
-            id="name"
+            id="userId"
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
-            メールアドレス
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             required
           />

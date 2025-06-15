@@ -7,18 +7,16 @@ export async function POST(request: NextRequest) {
   try {
     const body: CreateUserRequest = await request.json();
     
-    if (!body.email || !body.password || !body.name) {
+    if (!body.userId || !body.password) {
       return NextResponse.json(
-        { error: 'Email, password, and name are required' },
+        { error: 'User ID and password are required' },
         { status: 400 }
       );
     }
 
     const user = await userStorage.createUser(body);
     const userSession = {
-      id: user.id,
-      email: user.email,
-      name: user.name
+      id: user.id
     };
     
     const token = generateToken(userSession);
@@ -28,9 +26,9 @@ export async function POST(request: NextRequest) {
       token
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'User already exists') {
+    if (error instanceof Error && error.message === 'User ID already exists') {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { error: 'User ID already exists' },
         { status: 409 }
       );
     }

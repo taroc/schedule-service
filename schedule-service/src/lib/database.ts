@@ -28,9 +28,7 @@ export function initializeDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
-      name TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -91,6 +89,42 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_user_schedules_date ON user_schedules (date);
     CREATE INDEX IF NOT EXISTS idx_user_schedules_user_date ON user_schedules (user_id, date);
   `);
+
+  // nameカラムを削除するマイグレーション
+  try {
+    // 既存のusersテーブルのnameカラムをチェック
+    const columns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    const hasNameColumn = columns.some(col => col.name === 'name');
+    
+    if (hasNameColumn) {
+      console.log('Removing name column from users table...');
+      
+      // 1. 新しいテーブルを作成
+      db.exec(`
+        CREATE TABLE users_new (
+          id TEXT PRIMARY KEY,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      // 2. データをコピー（nameカラムを除く）
+      db.exec(`
+        INSERT INTO users_new (id, password, created_at, updated_at)
+        SELECT id, password, created_at, updated_at
+        FROM users
+      `);
+      
+      // 3. 旧テーブルを削除し、新テーブルをリネーム
+      db.exec('DROP TABLE users');
+      db.exec('ALTER TABLE users_new RENAME TO users');
+      
+      console.log('Name column removed successfully');
+    }
+  } catch {
+    console.log('Name column migration not needed or already completed');
+  }
 
   console.log('Database schema initialized successfully');
 }

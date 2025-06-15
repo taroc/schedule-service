@@ -117,20 +117,12 @@ describe('/api/events', () => {
       })
     }
 
-    it('should return events with creator names', async () => {
+    it('should return events without creator names', async () => {
       // Arrange
       const mockEvents = [mockEvent]
-      const mockCreator = {
-        id: 'user-123',
-        email: 'test@example.com',
-        name: 'Test User',
-        password: 'hashed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
       
       vi.mocked(eventStorage.getAllEvents).mockResolvedValue(mockEvents)
-      vi.mocked(userStorage.getUserById).mockResolvedValue(mockCreator)
+      // userStorage.getUserById is no longer called
       
       const request = createMockRequest()
       
@@ -150,11 +142,10 @@ describe('/api/events', () => {
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
-        creatorName: 'Test User'
       }))
       expect(data[0].createdAt).toBeDefined()
       expect(data[0].updatedAt).toBeDefined()
-      expect(userStorage.getUserById).toHaveBeenCalledWith('user-123')
+      // userStorage.getUserById is no longer called since names are not stored
     })
 
     it('should return "不明" when creator is not found', async () => {
@@ -162,7 +153,7 @@ describe('/api/events', () => {
       const mockEvents = [mockEvent]
       
       vi.mocked(eventStorage.getAllEvents).mockResolvedValue(mockEvents)
-      vi.mocked(userStorage.getUserById).mockResolvedValue(null)
+      // userStorage.getUserById is no longer called
       
       const request = createMockRequest()
       
@@ -182,11 +173,10 @@ describe('/api/events', () => {
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
-        creatorName: '不明'
       }))
       expect(data[0].createdAt).toBeDefined()
       expect(data[0].updatedAt).toBeDefined()
-      expect(userStorage.getUserById).toHaveBeenCalledWith('user-123')
+      // userStorage.getUserById is no longer called since names are not stored
     })
 
     it('should handle getUsersByCreator query correctly', async () => {
@@ -223,12 +213,11 @@ describe('/api/events', () => {
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
-        creatorName: 'Test User'
       }))
       expect(data[0].createdAt).toBeDefined()
       expect(data[0].updatedAt).toBeDefined()
       expect(eventStorage.getEventsByCreator).toHaveBeenCalledWith(creatorId)
-      expect(userStorage.getUserById).toHaveBeenCalledWith('user-123')
+      // userStorage.getUserById is no longer called since names are not stored
     })
 
     it('should handle open events query correctly', async () => {
@@ -264,12 +253,11 @@ describe('/api/events', () => {
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
-        creatorName: 'Test User'
       }))
       expect(data[0].createdAt).toBeDefined()
       expect(data[0].updatedAt).toBeDefined()
       expect(eventStorage.getOpenEvents).toHaveBeenCalled()
-      expect(userStorage.getUserById).toHaveBeenCalledWith('user-123')
+      // userStorage.getUserById is no longer called since names are not stored
     })
   })
 
@@ -403,7 +391,7 @@ describe('/api/events', () => {
       
       // getUserById should be called for creator + each participant
       expect(userStorage.getUserById).toHaveBeenCalledTimes(3)
-      expect(userStorage.getUserById).toHaveBeenCalledWith('user-123')
+      // userStorage.getUserById is no longer called since names are not stored
       expect(userStorage.getUserById).toHaveBeenCalledWith('participant-1')
       expect(userStorage.getUserById).toHaveBeenCalledWith('participant-2')
     })

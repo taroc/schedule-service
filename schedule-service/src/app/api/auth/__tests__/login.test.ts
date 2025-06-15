@@ -18,14 +18,12 @@ import { generateToken } from '@/lib/auth'
 
 describe('/api/auth/login', () => {
   const mockLoginData = {
-    email: 'test@example.com',
+    userId: 'testuser',
     password: 'password123'
   }
 
   const mockUser = {
-    id: 'user-123',
-    email: 'test@example.com',
-    name: 'Test User',
+    id: 'testuser',
     password: 'hashed-password',
     createdAt: new Date(),
     updatedAt: new Date()
@@ -57,34 +55,30 @@ describe('/api/auth/login', () => {
       expect(response.status).toBe(200)
       expect(data).toEqual({
         user: {
-          id: mockUser.id,
-          email: mockUser.email,
-          name: mockUser.name
+          id: mockUser.id
         },
         token: 'mock-jwt-token'
       })
       
       expect(userStorage.verifyPassword).toHaveBeenCalledWith(
-        mockLoginData.email,
+        mockLoginData.userId,
         mockLoginData.password
       )
       expect(generateToken).toHaveBeenCalledWith({
-        id: mockUser.id,
-        email: mockUser.email,
-        name: mockUser.name
+        id: mockUser.id
       })
     })
   })
 
   describe('validation errors', () => {
-    it('should return 400 when email is missing', async () => {
-      const invalidData = { ...mockLoginData, email: '' }
+    it('should return 400 when userId is missing', async () => {
+      const invalidData = { ...mockLoginData, userId: '' }
       const request = createMockRequest(invalidData)
       const response = await POST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Email and password are required')
+      expect(data.error).toBe('User ID and password are required')
       expect(userStorage.verifyPassword).not.toHaveBeenCalled()
     })
 
@@ -95,7 +89,7 @@ describe('/api/auth/login', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Email and password are required')
+      expect(data.error).toBe('User ID and password are required')
       expect(userStorage.verifyPassword).not.toHaveBeenCalled()
     })
 
@@ -105,7 +99,7 @@ describe('/api/auth/login', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Email and password are required')
+      expect(data.error).toBe('User ID and password are required')
       expect(userStorage.verifyPassword).not.toHaveBeenCalled()
     })
   })
@@ -251,7 +245,7 @@ describe('/api/auth/login', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Email and password are required')
+      expect(data.error).toBe('User ID and password are required')
       expect(userStorage.verifyPassword).not.toHaveBeenCalled()
     })
   })

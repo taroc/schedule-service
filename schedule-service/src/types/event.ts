@@ -34,7 +34,5 @@ export interface EventParticipation {
   joinedAt: Date;
 }
 
-export interface EventWithCreator extends Event {
-  creatorName: string;
-  participantNames: string[];
-}
+// EventWithCreator is now equivalent to Event since user names are not stored
+export type EventWithCreator = Event;

@@ -95,7 +95,7 @@ export default function EventList({
 
           <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
             <div>
-              <span className="font-medium">作成者:</span> {event.creatorName}
+              <span className="font-medium">作成者ID:</span> {event.creatorId}
             </div>
             <div>
               <span className="font-medium">作成日:</span> {formatDate(event.createdAt)}
@@ -114,9 +114,9 @@ export default function EventList({
               {isParticipating(event) && (
                 <span className="ml-2 text-blue-600 font-medium">（参加中）</span>
               )}
-              {event.participantNames && event.participantNames.length > 0 && (
+              {event.participants && event.participants.length > 0 && (
                 <div className="mt-1 text-xs text-gray-500">
-                  {event.participantNames.join(', ')}
+                  参加者ID: {event.participants.join(', ')}
                 </div>
               )}
             </div>

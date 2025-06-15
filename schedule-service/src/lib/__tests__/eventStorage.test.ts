@@ -18,9 +18,8 @@ describe('eventStorage', () => {
   beforeEach(async () => {
     // テスト前にテストユーザーを作成
     await userStorage.createUser({
-      email: 'test@example.com',
-      password: 'password123',
-      name: 'Test User'
+      userId: 'user-123',
+      password: 'password123'
     }, mockCreatorId)
   })
 
@@ -156,7 +155,7 @@ describe('eventStorage', () => {
       
       // Assert
       expect(result).toBe(true)
-      expect(await eventStorage.getEventById(event.id)).toBeNull()
+      expect(eventStorage.getEventById(event.id)).toBeNull()
       
       // 参加記録も削除されているかチェック
       const participantEvents = await eventStorage.getParticipantEvents('user-456')
