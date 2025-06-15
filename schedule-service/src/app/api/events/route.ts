@@ -101,8 +101,8 @@ export async function GET(request: NextRequest) {
     
     if (creatorId) {
       events = await eventStorage.getEventsByCreator(creatorId);
-    } else if (status === 'open') {
-      events = await eventStorage.getOpenEvents();
+    } else if (status) {
+      events = await eventStorage.getEventsByStatus(status as any);
     } else {
       events = await eventStorage.getAllEvents();
     }

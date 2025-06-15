@@ -78,11 +78,17 @@ class MatchingEngine {
     );
 
     const isMatched = matchedDates.length >= event.requiredDays;
+    const finalMatchedDates = isMatched ? matchedDates.slice(0, event.requiredDays) : [];
+
+    // マッチした場合は自動的にイベントステータスを更新
+    if (isMatched) {
+      await eventStorage.updateEventStatus(eventId, 'matched', finalMatchedDates);
+    }
 
     return {
       eventId,
       isMatched,
-      matchedDates: isMatched ? matchedDates.slice(0, event.requiredDays) : [],
+      matchedDates: finalMatchedDates,
       participants: event.participants,
       requiredDays: event.requiredDays,
       reason: isMatched ? 'Successfully matched' : 'No common available dates found'
@@ -104,11 +110,6 @@ class MatchingEngine {
     for (const event of openEvents) {
       const result = await this.checkEventMatching(event.id);
       results.push(result);
-      
-      // マッチした場合はイベントステータスを更新
-      if (result.isMatched) {
-        await eventStorage.updateEventStatus(event.id, 'matched', result.matchedDates);
-      }
     }
     
     return results;
@@ -121,8 +122,9 @@ class MatchingEngine {
     participantIds: string[],
     requiredDays: number
   ): Promise<Date[]> {
-    // 検索範囲を設定（今日から30日間）
+    // 検索範囲を設定（過去30日から未来30日間）
     const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 30);
 
@@ -157,11 +159,6 @@ class MatchingEngine {
     for (const event of openUserEvents) {
       const result = await this.checkEventMatching(event.id);
       results.push(result);
-      
-      // マッチした場合はイベントステータスを更新
-      if (result.isMatched) {
-        await eventStorage.updateEventStatus(event.id, 'matched', result.matchedDates);
-      }
     }
     
     return results;
