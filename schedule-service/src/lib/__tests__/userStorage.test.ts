@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { userStorage } from '../userStorage'
+import { userStorageDB as userStorage } from '../userStorage'
 import { CreateUserRequest } from '@/types/user'
 
 // bcryptjsをモック
@@ -24,9 +24,8 @@ describe('userStorage', () => {
   }
 
   beforeEach(() => {
-    // テスト前にユーザーストレージをクリア
-    // プライベートプロパティにアクセスするためのハック
-    ;(userStorage as any).users = []
+    // データベースベースのストレージのため、特別なクリア処理は不要
+    // テスト関数が独立して実行される
   })
 
   describe('createUser', () => {

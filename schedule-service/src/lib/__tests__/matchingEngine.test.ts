@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { matchingEngine } from '../matchingEngine';
-import { eventStorage } from '../eventStorage';
+import { eventStorageDB as eventStorage } from '../eventStorage';
+import { userStorageDB as userStorage } from '../userStorage';
 import { scheduleStorage } from '../scheduleStorage';
 import { CreateEventRequest } from '@/types/event';
 
@@ -9,11 +10,25 @@ describe('matchingEngine', () => {
   const mockUser2 = 'user-2';
   const mockCreator = 'creator-1';
 
-  beforeEach(() => {
-    // テスト前にストレージをクリア
-    ;(eventStorage as any).events = [];
-    ;(eventStorage as any).participations = [];
-    ;(scheduleStorage as any).schedules = [];
+  beforeEach(async () => {
+    // テスト前にテストユーザーを作成
+    await userStorage.createUser({
+      email: 'user1@example.com',
+      password: 'password123',
+      name: 'User 1'
+    }, mockUser1);
+    
+    await userStorage.createUser({
+      email: 'user2@example.com',
+      password: 'password123',
+      name: 'User 2'
+    }, mockUser2);
+    
+    await userStorage.createUser({
+      email: 'creator@example.com',
+      password: 'password123',
+      name: 'Creator'
+    }, mockCreator);
   });
 
   describe('checkEventMatching', () => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eventStorage } from '@/lib/eventStorage';
-import { userStorage } from '@/lib/userStorage';
+import { eventStorageDB as eventStorage } from '@/lib/eventStorage';
+import { userStorageDB as userStorage } from '@/lib/userStorage';
 import { verifyToken } from '@/lib/auth';
 import { UpdateEventRequest } from '@/types/event';
 

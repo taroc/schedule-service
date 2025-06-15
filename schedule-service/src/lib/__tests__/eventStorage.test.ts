@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { eventStorage } from '../eventStorage'
+import { eventStorageDB as eventStorage } from '../eventStorage'
+import { userStorageDB as userStorage } from '../userStorage'
 import { CreateEventRequest } from '@/types/event'
 import { scheduleStorage } from '../scheduleStorage'
 import { getCommonAvailableDates } from '../scheduleUtils'
@@ -14,11 +15,13 @@ describe('eventStorage', () => {
 
   const mockCreatorId = 'user-123'
 
-  beforeEach(() => {
-    // テスト前にストレージをクリア
-    ;(eventStorage as any).events = []
-    ;(eventStorage as any).participations = []
-    ;(scheduleStorage as any).schedules = []
+  beforeEach(async () => {
+    // テスト前にテストユーザーを作成
+    await userStorage.createUser({
+      email: 'test@example.com',
+      password: 'password123',
+      name: 'Test User'
+    }, mockCreatorId)
   })
 
   describe('createEvent', () => {

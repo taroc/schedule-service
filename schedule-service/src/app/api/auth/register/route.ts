@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { userStorage } from '@/lib/userStorage';
+import { userStorageDB as userStorage } from '@/lib/userStorage';
 import { generateToken } from '@/lib/auth';
 import { CreateUserRequest } from '@/types/user';
 

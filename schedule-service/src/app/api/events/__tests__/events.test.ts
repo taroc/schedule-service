@@ -46,25 +46,14 @@ describe('/api/events', () => {
     participants: []
   }
 
-  const mockEventSerialized = {
-    id: 'event-123',
-    name: 'Test Event',
-    description: 'Test Description',
-    requiredParticipants: 3,
-    requiredDays: 2,
-    creatorId: 'user-123',
-    createdAt: '2025-06-14T10:41:33.617Z',
-    updatedAt: '2025-06-14T10:41:33.617Z',
-    status: 'open' as const,
-    participants: []
-  }
+  // mockEventSerializedは使用しないため削除
 
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   describe('POST /api/events', () => {
-    const createMockRequest = (body: any, token?: string) => {
+    const createMockRequest = (body: unknown, token?: string) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }

@@ -1,152 +1,253 @@
-import { Event, CreateEventRequest, UpdateEventRequest, EventParticipation } from '@/types/event';
+import { Event, CreateEventRequest, UpdateEventRequest, EventStatus } from '@/types/event';
+import { db, runInTransaction } from './database';
 
-class EventStorage {
-  private events: Event[] = [];
-  private participations: EventParticipation[] = [];
+interface EventRow {
+  id: string;
+  name: string;
+  description: string;
+  required_participants: number;
+  required_days: number;
+  creator_id: string;
+  status: EventStatus;
+  matched_dates: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+class EventStorageDB {
+  private insertEvent = db.prepare(`
+    INSERT INTO events (id, name, description, required_participants, required_days, creator_id, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `);
+
+  private selectEventById = db.prepare(`
+    SELECT * FROM events WHERE id = ?
+  `);
+
+  private selectAllEvents = db.prepare(`
+    SELECT * FROM events ORDER BY created_at DESC
+  `);
+
+  private selectEventsByCreator = db.prepare(`
+    SELECT * FROM events WHERE creator_id = ? ORDER BY created_at DESC
+  `);
+
+  private selectEventsByStatus = db.prepare(`
+    SELECT * FROM events WHERE status = ? ORDER BY created_at DESC
+  `);
+
+  private updateEventStatusStmt = db.prepare(`
+    UPDATE events SET status = ?, matched_dates = ?, updated_at = datetime('now') WHERE id = ?
+  `);
+
+  private deleteEventStmt = db.prepare(`
+    DELETE FROM events WHERE id = ?
+  `);
+
+  private updateEventStmt = db.prepare(`
+    UPDATE events SET name = ?, description = ?, required_participants = ?, required_days = ?, updated_at = datetime('now') 
+    WHERE id = ?
+  `);
+
+  private insertParticipant = db.prepare(`
+    INSERT INTO event_participants (event_id, user_id, joined_at)
+    VALUES (?, ?, datetime('now'))
+  `);
+
+  private deleteParticipant = db.prepare(`
+    DELETE FROM event_participants WHERE event_id = ? AND user_id = ?
+  `);
+
+  private selectParticipants = db.prepare(`
+    SELECT user_id FROM event_participants WHERE event_id = ? ORDER BY joined_at
+  `);
+
+  private selectParticipantEvents = db.prepare(`
+    SELECT DISTINCT e.* FROM events e
+    INNER JOIN event_participants ep ON e.id = ep.event_id
+    WHERE ep.user_id = ?
+    ORDER BY e.created_at DESC
+  `);
+
+  private checkParticipantExists = db.prepare(`
+    SELECT 1 FROM event_participants WHERE event_id = ? AND user_id = ?
+  `);
+
+  private countParticipants = db.prepare(`
+    SELECT COUNT(*) as count FROM event_participants WHERE event_id = ?
+  `);
 
   async createEvent(request: CreateEventRequest, creatorId: string): Promise<Event> {
-    const event: Event = {
-      id: Math.random().toString(36).substring(2, 15),
-      name: request.name,
-      description: request.description,
-      requiredParticipants: request.requiredParticipants,
-      requiredDays: request.requiredDays,
-      creatorId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      status: 'open',
-      participants: []
-    };
+    return runInTransaction(() => {
+      const eventId = Math.random().toString(36).substring(2, 15);
 
-    this.events.push(event);
-    return event;
+      this.insertEvent.run(
+        eventId,
+        request.name,
+        request.description,
+        request.requiredParticipants,
+        request.requiredDays,
+        creatorId,
+        'open'
+      );
+
+      const event = this.getEventById(eventId);
+      if (!event) {
+        throw new Error('Failed to create event');
+      }
+
+      return event;
+    });
   }
 
-  async getEventById(id: string): Promise<Event | null> {
-    return this.events.find(event => event.id === id) || null;
-  }
-
-  async getAllEvents(): Promise<Event[]> {
-    return [...this.events];
-  }
-
-  async getEventsByCreator(creatorId: string): Promise<Event[]> {
-    return this.events.filter(event => event.creatorId === creatorId);
-  }
-
-  async getOpenEvents(): Promise<Event[]> {
-    return this.events.filter(event => event.status === 'open');
-  }
-
-  async updateEvent(id: string, updates: UpdateEventRequest): Promise<Event | null> {
-    const eventIndex = this.events.findIndex(event => event.id === id);
-    if (eventIndex === -1) {
+  getEventById(id: string): Event | null {
+    const eventRow = this.selectEventById.get(id) as EventRow | undefined;
+    if (!eventRow) {
       return null;
     }
 
-    const event = this.events[eventIndex];
-    this.events[eventIndex] = {
-      ...event,
-      ...updates,
-      updatedAt: new Date()
-    };
+    const participants = this.selectParticipants.all(id) as { user_id: string }[];
 
-    return this.events[eventIndex];
+    return this.mapRowToEvent(eventRow, participants.map(p => p.user_id));
   }
 
-  async deleteEvent(id: string): Promise<boolean> {
-    const eventIndex = this.events.findIndex(event => event.id === id);
-    if (eventIndex === -1) {
-      return false;
-    }
+  async getAllEvents(): Promise<Event[]> {
+    const eventRows = this.selectAllEvents.all() as EventRow[];
+    
+    return eventRows.map(row => {
+      const participants = this.selectParticipants.all(row.id) as { user_id: string }[];
+      return this.mapRowToEvent(row, participants.map(p => p.user_id));
+    });
+  }
 
-    this.events.splice(eventIndex, 1);
-    // 関連する参加記録も削除
-    this.participations = this.participations.filter(p => p.eventId !== id);
-    return true;
+  async getEventsByCreator(creatorId: string): Promise<Event[]> {
+    const eventRows = this.selectEventsByCreator.all(creatorId) as EventRow[];
+    
+    return eventRows.map(row => {
+      const participants = this.selectParticipants.all(row.id) as { user_id: string }[];
+      return this.mapRowToEvent(row, participants.map(p => p.user_id));
+    });
+  }
+
+  async getEventsByStatus(status: EventStatus): Promise<Event[]> {
+    const eventRows = this.selectEventsByStatus.all(status) as EventRow[];
+    
+    return eventRows.map(row => {
+      const participants = this.selectParticipants.all(row.id) as { user_id: string }[];
+      return this.mapRowToEvent(row, participants.map(p => p.user_id));
+    });
   }
 
   async addParticipant(eventId: string, userId: string): Promise<boolean> {
-    const event = await this.getEventById(eventId);
-    if (!event) {
-      return false;
-    }
+    return runInTransaction(() => {
+      const event = this.getEventById(eventId);
+      if (!event) {
+        return false;
+      }
 
-    // 既に参加しているかチェック
-    if (event.participants.includes(userId)) {
-      return false;
-    }
+      // 作成者は参加できない
+      if (event.creatorId === userId) {
+        return false;
+      }
 
-    // イベントの参加者リストに追加
-    event.participants.push(userId);
-    event.updatedAt = new Date();
+      // 既に参加しているかチェック
+      const exists = this.checkParticipantExists.get(eventId, userId);
+      if (exists) {
+        return false;
+      }
 
-    // 参加記録を追加
-    const participation: EventParticipation = {
-      eventId,
-      userId,
-      joinedAt: new Date()
-    };
-    this.participations.push(participation);
-
-    return true;
+      try {
+        this.insertParticipant.run(eventId, userId);
+        return true;
+      } catch {
+        return false;
+      }
+    });
   }
 
   async removeParticipant(eventId: string, userId: string): Promise<boolean> {
-    const event = await this.getEventById(eventId);
-    if (!event) {
-      return false;
-    }
-
-    // 参加者リストから削除
-    const participantIndex = event.participants.indexOf(userId);
-    if (participantIndex === -1) {
-      return false;
-    }
-
-    event.participants.splice(participantIndex, 1);
-    event.updatedAt = new Date();
-
-    // 参加記録も削除
-    this.participations = this.participations.filter(
-      p => !(p.eventId === eventId && p.userId === userId)
-    );
-
-    return true;
+    const result = this.deleteParticipant.run(eventId, userId);
+    return result.changes > 0;
   }
 
   async getParticipantEvents(userId: string): Promise<Event[]> {
-    const userParticipations = this.participations.filter(p => p.userId === userId);
-    const eventIds = userParticipations.map(p => p.eventId);
+    const eventRows = this.selectParticipantEvents.all(userId) as EventRow[];
     
-    return this.events.filter(event => eventIds.includes(event.id));
+    return eventRows.map(row => {
+      const participants = this.selectParticipants.all(row.id) as { user_id: string }[];
+      return this.mapRowToEvent(row, participants.map(p => p.user_id));
+    });
   }
 
-  async updateEventStatus(eventId: string, status: Event['status'], matchedDates?: Date[]): Promise<boolean> {
-    const event = await this.getEventById(eventId);
-    if (!event) {
-      return false;
-    }
-
-    event.status = status;
-    event.updatedAt = new Date();
-    
-    if (matchedDates) {
-      event.matchedDates = matchedDates;
-    }
-
-    return true;
+  async updateEventStatus(eventId: string, status: EventStatus, matchedDates?: Date[]): Promise<boolean> {
+    const matchedDatesJson = matchedDates ? JSON.stringify(matchedDates) : null;
+    const result = this.updateEventStatusStmt.run(status, matchedDatesJson, eventId);
+    return result.changes > 0;
   }
 
-  // 統計情報取得
+  async updateEvent(eventId: string, updates: UpdateEventRequest): Promise<Event | null> {
+    return runInTransaction(() => {
+      const event = this.getEventById(eventId);
+      if (!event) {
+        return null;
+      }
+
+      // Only update provided fields
+      const name = updates.name ?? event.name;
+      const description = updates.description ?? event.description;
+      const requiredParticipants = updates.requiredParticipants ?? event.requiredParticipants;
+      const requiredDays = updates.requiredDays ?? event.requiredDays;
+
+      this.updateEventStmt.run(name, description, requiredParticipants, requiredDays, eventId);
+
+      // Return updated event
+      const updatedEvent = this.getEventById(eventId);
+      return updatedEvent;
+    });
+  }
+
+  async deleteEvent(eventId: string): Promise<boolean> {
+    return runInTransaction(() => {
+      // 外部キー制約により、event_participants も自動削除される
+      const result = this.deleteEventStmt.run(eventId);
+      return result.changes > 0;
+    });
+  }
+
+  // Add missing getEventsByStatus method (called getOpenEvents in tests)
+  async getOpenEvents(): Promise<Event[]> {
+    return this.getEventsByStatus('open');
+  }
+
   getStats() {
+    const allEvents = this.selectAllEvents.all() as EventRow[];
+    const totalParticipants = db.prepare('SELECT COUNT(*) as count FROM event_participants').get() as { count: number };
+
     return {
-      totalEvents: this.events.length,
-      openEvents: this.events.filter(e => e.status === 'open').length,
-      matchedEvents: this.events.filter(e => e.status === 'matched').length,
-      totalParticipations: this.participations.length
+      totalEvents: allEvents.length,
+      openEvents: allEvents.filter(e => e.status === 'open').length,
+      matchedEvents: allEvents.filter(e => e.status === 'matched').length,
+      cancelledEvents: allEvents.filter(e => e.status === 'cancelled').length,
+      totalParticipations: totalParticipants.count
+    };
+  }
+
+  private mapRowToEvent(row: EventRow, participants: string[]): Event {
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      requiredParticipants: row.required_participants,
+      requiredDays: row.required_days,
+      creatorId: row.creator_id,
+      status: row.status,
+      participants,
+      matchedDates: row.matched_dates ? JSON.parse(row.matched_dates).map((d: string) => new Date(d)) : undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
     };
   }
 }
 
-export const eventStorage = new EventStorage();
+export const eventStorageDB = new EventStorageDB();
+export const eventStorage = eventStorageDB;

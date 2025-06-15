@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface MatchingStats {
@@ -25,13 +25,7 @@ export default function MatchingStatus() {
   const [lastResults, setLastResults] = useState<MatchingResult[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      fetchStats();
-    }
-  }, [token]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!token) return;
 
     try {
@@ -50,7 +44,13 @@ export default function MatchingStatus() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchStats();
+    }
+  }, [token, fetchStats]);
 
   const runMatching = async () => {
     if (!token) return;

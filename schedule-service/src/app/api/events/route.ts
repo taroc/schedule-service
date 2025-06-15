@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eventStorage } from '@/lib/eventStorage';
-import { userStorage } from '@/lib/userStorage';
+import { eventStorageDB as eventStorage } from '@/lib/eventStorage';
+import { userStorageDB as userStorage } from '@/lib/userStorage';
 import { verifyToken } from '@/lib/auth';
-import { CreateEventRequest } from '@/types/event';
+import { CreateEventRequest, Event as EventType } from '@/types/event';
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,12 +86,12 @@ export async function GET(request: NextRequest) {
 
     // 作成者情報と参加者情報を付与
     const eventsWithCreator = await Promise.all(
-      events.map(async (event) => {
+      events.map(async (event: EventType) => {
         const creator = await userStorage.getUserById(event.creatorId);
         
         // 参加者名を解決
         const participantNames = await Promise.all(
-          event.participants.map(async (participantId) => {
+          event.participants.map(async (participantId: string) => {
             const participant = await userStorage.getUserById(participantId);
             return participant ? participant.name : '不明';
           })

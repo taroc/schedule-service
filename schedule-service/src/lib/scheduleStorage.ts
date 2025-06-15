@@ -1,121 +1,196 @@
-import { 
-  UserSchedule, 
-  BulkAvailabilityRequest
-} from '@/types/schedule';
+import { UserSchedule, BulkAvailabilityRequest } from '@/types/schedule';
+import { db, runInTransaction } from './database';
+
+interface ScheduleRow {
+  id: string;
+  user_id: string;
+  date: string;
+  time_slots_morning: number;
+  time_slots_afternoon: number;
+  time_slots_fullday: number;
+  created_at: string;
+  updated_at: string;
+}
 
 class ScheduleStorage {
-  private schedules: UserSchedule[] = [];
+  private insertSchedule = db.prepare(`
+    INSERT INTO user_schedules (id, user_id, date, time_slots_morning, time_slots_afternoon, time_slots_fullday, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `);
 
-  // 新しいフロー：選択した日付に空き時間を登録
+  private updateSchedule = db.prepare(`
+    UPDATE user_schedules 
+    SET time_slots_morning = ?, time_slots_afternoon = ?, time_slots_fullday = ?, updated_at = datetime('now')
+    WHERE user_id = ? AND date = ?
+  `);
+
+  private selectScheduleByUserAndDate = db.prepare(`
+    SELECT * FROM user_schedules WHERE user_id = ? AND date = ?
+  `);
+
+  private selectSchedulesByUser = db.prepare(`
+    SELECT * FROM user_schedules WHERE user_id = ? ORDER BY date
+  `);
+
+  private selectSchedulesByUserAndDateRange = db.prepare(`
+    SELECT * FROM user_schedules 
+    WHERE user_id = ? AND date >= ? AND date <= ?
+    ORDER BY date
+  `);
+
+  private selectSchedulesInDateRange = db.prepare(`
+    SELECT * FROM user_schedules 
+    WHERE date >= ? AND date <= ?
+    ORDER BY user_id, date
+  `);
+
+  private deleteSchedule = db.prepare(`
+    DELETE FROM user_schedules WHERE user_id = ? AND date = ?
+  `);
+
   async bulkSetAvailability(request: BulkAvailabilityRequest, userId: string): Promise<UserSchedule[]> {
-    const processedSchedules: UserSchedule[] = [];
+    return runInTransaction(() => {
+      const processedSchedules: UserSchedule[] = [];
 
-    for (const dateString of request.dates) {
-      const date = new Date(dateString);
-      
-      // 既存の予定を検索
-      const existingScheduleIndex = this.schedules.findIndex(
-        s => s.userId === userId && 
-             s.date.toDateString() === date.toDateString()
-      );
-      
-      if (existingScheduleIndex !== -1) {
-        // 既存の予定を更新
-        const existingSchedule = this.schedules[existingScheduleIndex];
-        
-        // 指定された時間帯を空きに設定
-        existingSchedule.timeSlots = {
-          morning: request.timeSlots.morning || existingSchedule.timeSlots.morning,
-          afternoon: request.timeSlots.afternoon || existingSchedule.timeSlots.afternoon,
-          fullday: request.timeSlots.fullday || existingSchedule.timeSlots.fullday,
-        };
-          
-        existingSchedule.updatedAt = new Date();
-        processedSchedules.push(existingSchedule);
-      } else {
-        // 新しい予定を作成
-        const schedule: UserSchedule = {
-          id: Math.random().toString(36).substring(2, 15),
-          userId,
-          date,
-          timeSlots: { ...request.timeSlots },
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        this.schedules.push(schedule);
-        processedSchedules.push(schedule);
+      for (const dateString of request.dates) {
+        const date = new Date(dateString);
+        const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+        // 既存の予定を検索
+        const existingSchedule = this.selectScheduleByUserAndDate.get(userId, dateStr) as ScheduleRow | undefined;
+
+        if (existingSchedule) {
+          // 既存の予定を更新（OR演算で時間帯を追加）
+          const newTimeSlots = {
+            morning: request.timeSlots.morning || Boolean(existingSchedule.time_slots_morning),
+            afternoon: request.timeSlots.afternoon || Boolean(existingSchedule.time_slots_afternoon),
+            fullday: request.timeSlots.fullday || Boolean(existingSchedule.time_slots_fullday),
+          };
+
+          this.updateSchedule.run(
+            newTimeSlots.morning ? 1 : 0,
+            newTimeSlots.afternoon ? 1 : 0,
+            newTimeSlots.fullday ? 1 : 0,
+            userId,
+            dateStr
+          );
+
+          // 更新後のデータを取得
+          const updatedSchedule = this.selectScheduleByUserAndDate.get(userId, dateStr) as ScheduleRow;
+          processedSchedules.push(this.mapRowToSchedule(updatedSchedule));
+        } else {
+          // 新しい予定を作成
+          const scheduleId = Math.random().toString(36).substring(2, 15);
+
+          this.insertSchedule.run(
+            scheduleId,
+            userId,
+            dateStr,
+            request.timeSlots.morning ? 1 : 0,
+            request.timeSlots.afternoon ? 1 : 0,
+            request.timeSlots.fullday ? 1 : 0
+          );
+
+          // 作成されたデータを取得
+          const newSchedule = this.selectScheduleByUserAndDate.get(userId, dateStr) as ScheduleRow;
+          processedSchedules.push(this.mapRowToSchedule(newSchedule));
+        }
       }
-    }
 
-    return processedSchedules;
+      return processedSchedules;
+    });
   }
 
-  // ユーザーのすべての予定を取得
   async getUserSchedules(userId: string): Promise<UserSchedule[]> {
-    return this.schedules.filter(s => s.userId === userId);
+    const scheduleRows = this.selectSchedulesByUser.all(userId) as ScheduleRow[];
+    return scheduleRows.map(row => this.mapRowToSchedule(row));
   }
 
-  // 日付範囲でユーザーの予定を取得
   async getUserSchedulesByDateRange(
-    userId: string, 
-    startDate: Date, 
+    userId: string,
+    startDate: Date,
     endDate: Date
   ): Promise<UserSchedule[]> {
-    return this.schedules.filter(s => 
-      s.userId === userId && 
-      s.date >= startDate && 
-      s.date <= endDate
-    );
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    const scheduleRows = this.selectSchedulesByUserAndDateRange.all(
+      userId,
+      startDateStr,
+      endDateStr
+    ) as ScheduleRow[];
+
+    return scheduleRows.map(row => this.mapRowToSchedule(row));
   }
 
-  // 指定した日付でユーザーの予定を取得
   async getScheduleByUserAndDate(userId: string, date: Date): Promise<UserSchedule | null> {
-    // 指定したユーザーと日付の予定を取得
-    // nullが返される場合は未登録（デフォルトで忙しい扱い）
-    return this.schedules.find(
-      s => s.userId === userId && 
-           s.date.toDateString() === date.toDateString()
-    ) || null;
+    const dateStr = date.toISOString().split('T')[0];
+    const scheduleRow = this.selectScheduleByUserAndDate.get(userId, dateStr) as ScheduleRow | undefined;
+
+    if (!scheduleRow) {
+      return null;
+    }
+
+    return this.mapRowToSchedule(scheduleRow);
   }
 
-  // 指定した日付範囲でユーザーが空いている日程を取得
   async getUserAvailableDates(userId: string, startDate: Date, endDate: Date): Promise<Date[]> {
-    const availableSchedules = this.schedules.filter(s => 
-      s.userId === userId && 
-      (s.timeSlots.morning || s.timeSlots.afternoon || s.timeSlots.fullday) &&
-      s.date >= startDate && 
-      s.date <= endDate
-    );
+    const schedules = await this.getUserSchedulesByDateRange(userId, startDate, endDate);
     
-    return availableSchedules.map(s => s.date);
+    return schedules
+      .filter(s => s.timeSlots.morning || s.timeSlots.afternoon || s.timeSlots.fullday)
+      .map(s => s.date);
   }
 
-  // 複数ユーザーの共通空き日程を取得（マッチングエンジン用）
   async getCommonAvailableDates(
-    userIds: string[], 
-    startDate: Date, 
+    userIds: string[],
+    startDate: Date,
     endDate: Date,
     requiredDays: number
   ): Promise<Date[]> {
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // 指定期間内の全スケジュールを取得
+    const allSchedules = this.selectSchedulesInDateRange.all(startDateStr, endDateStr) as ScheduleRow[];
+    
+    // ユーザーIDごとにグループ化
+    const schedulesByUser = new Map<string, ScheduleRow[]>();
+    for (const schedule of allSchedules) {
+      if (!schedulesByUser.has(schedule.user_id)) {
+        schedulesByUser.set(schedule.user_id, []);
+      }
+      schedulesByUser.get(schedule.user_id)!.push(schedule);
+    }
+
     const commonDates: Date[] = [];
     
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const currentDate = new Date(d);
+    // 日付ごとにチェック
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
       
       // 全ユーザーがこの日に空いているかチェック
-      // 未登録の場合（schedule === null）は忙しい扱いになる
-      const allAvailable = await Promise.all(
-        userIds.map(async userId => {
-          const schedule = await this.getScheduleByUserAndDate(userId, currentDate);
-          // 時間帯のいずれかが空いていればtrue
-          return schedule && (schedule.timeSlots.morning || schedule.timeSlots.afternoon || schedule.timeSlots.fullday);
-        })
-      );
+      const allAvailable = userIds.every(userId => {
+        const userSchedules = schedulesByUser.get(userId) || [];
+        const daySchedule = userSchedules.find(s => s.date === dateStr);
+        
+        // 未登録の場合はfalse（忙しい扱い）
+        if (!daySchedule) {
+          return false;
+        }
+        
+        // いずれかの時間帯が空いていればtrue
+        return daySchedule.time_slots_morning || 
+               daySchedule.time_slots_afternoon || 
+               daySchedule.time_slots_fullday;
+      });
       
-      if (allAvailable.every(available => available)) {
-        commonDates.push(currentDate);
+      if (allAvailable) {
+        commonDates.push(new Date(currentDate));
       }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     // 連続した日程を見つける
@@ -148,6 +223,21 @@ class ScheduleStorage {
     }
     
     return [];
+  }
+
+  private mapRowToSchedule(row: ScheduleRow): UserSchedule {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      date: new Date(row.date + 'T00:00:00.000Z'), // UTC日付として解釈
+      timeSlots: {
+        morning: Boolean(row.time_slots_morning),
+        afternoon: Boolean(row.time_slots_afternoon),
+        fullday: Boolean(row.time_slots_fullday),
+      },
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
   }
 }
 

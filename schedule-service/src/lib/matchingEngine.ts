@@ -1,8 +1,5 @@
-import { Event } from '@/types/event';
-import { UserSchedule } from '@/types/schedule';
-import { eventStorage } from './eventStorage';
+import { eventStorageDB as eventStorage } from './eventStorage';
 import { scheduleStorage } from './scheduleStorage';
-import { getCommonAvailableDates } from './scheduleUtils';
 
 export interface MatchingResult {
   eventId: string;
@@ -10,7 +7,7 @@ export interface MatchingResult {
   matchedDates: Date[];
   participants: string[];
   requiredDays: number;
-  reason?: string; // マッチしなかった理由
+  reason?: string;
 }
 
 export interface MatchingEngineStats {
@@ -24,7 +21,7 @@ class MatchingEngine {
    * 指定されたイベントのマッチング判定を実行
    */
   async checkEventMatching(eventId: string): Promise<MatchingResult> {
-    const event = await eventStorage.getEventById(eventId);
+    const event = eventStorage.getEventById(eventId);
     
     if (!event) {
       return {
@@ -108,22 +105,13 @@ class MatchingEngine {
     participantIds: string[],
     requiredDays: number
   ): Promise<Date[]> {
-    // 全参加者のスケジュールを取得
-    const allSchedules: UserSchedule[] = [];
-    
-    for (const userId of participantIds) {
-      const userSchedules = await scheduleStorage.getUserSchedules(userId);
-      allSchedules.push(...userSchedules);
-    }
-
     // 検索範囲を設定（今日から30日間）
     const startDate = new Date();
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 30);
 
     // 共通の空き日程を検索
-    const commonDates = getCommonAvailableDates(
-      allSchedules,
+    const commonDates = await scheduleStorage.getCommonAvailableDates(
       participantIds,
       startDate,
       endDate,
@@ -145,14 +133,12 @@ class MatchingEngine {
    */
   async onScheduleUpdated(userId: string): Promise<MatchingResult[]> {
     // ユーザーが参加している全てのオープンイベントを取得
-    const events = await eventStorage.getAllEvents();
-    const userEvents = events.filter(
-      event => event.status === 'open' && event.participants.includes(userId)
-    );
+    const userEvents = await eventStorage.getParticipantEvents(userId);
+    const openUserEvents = userEvents.filter(event => event.status === 'open');
 
     const results: MatchingResult[] = [];
     
-    for (const event of userEvents) {
+    for (const event of openUserEvents) {
       const result = await this.checkEventMatching(event.id);
       results.push(result);
       

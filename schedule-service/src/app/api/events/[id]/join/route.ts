@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eventStorage } from '@/lib/eventStorage';
-import { verifyToken } from '@/lib/auth';
+import { eventStorageDB as eventStorage } from '@/lib/eventStorage';
 import { matchingEngine } from '@/lib/matchingEngine';
+import { verifyToken } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,

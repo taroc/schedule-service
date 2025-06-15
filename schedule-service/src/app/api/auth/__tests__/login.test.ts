@@ -35,7 +35,7 @@ describe('/api/auth/login', () => {
     vi.clearAllMocks()
   })
 
-  const createMockRequest = (body: any) => {
+  const createMockRequest = (body: unknown) => {
     return new NextRequest('http://localhost:3000/api/auth/login', {
       method: 'POST',
       headers: {

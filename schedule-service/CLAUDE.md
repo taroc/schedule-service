@@ -27,7 +27,11 @@ This is a Next.js 15 schedule coordination service using the App Router architec
 4. API routes validate Bearer tokens
 
 ### Data Storage
-Currently uses in-memory storage (`/src/lib/userStorage.ts`) - suitable for development but needs database integration for production.
+Uses SQLite database with better-sqlite3 for persistent data storage:
+- Database connection and schema management in `/src/lib/database.ts`
+- WAL mode enabled for better concurrency
+- Foreign key constraints for data integrity
+- All storage classes use database persistence (userStorage, eventStorage, scheduleStorage, matchingEngine)
 
 ### API Routes
 Located in `/src/app/api/auth/`:
@@ -49,11 +53,19 @@ Located in `/src/app/api/auth/`:
 ## Important Configuration
 - **Path mapping**: `@/*` maps to `./src/*`
 - **JWT secret**: Defaults to hardcoded value, set `JWT_SECRET` environment variable for production
+- **Database**: SQLite database stored in `/data/schedule.db`
 - **Turbopack**: Enabled for fast development builds
 - **Japanese locale**: UI is in Japanese, HTML lang="ja"
 
-## Future Development Notes
-- Replace in-memory storage with persistent database
-- Implement core scheduling features (events, participants, schedule coordination)
-- Add proper environment configuration for production deployment
-- The architecture is designed to support the planned scheduling features where users create events and coordinate schedules based on availability
+## Completed Features
+- Phase 1: User authentication and event management ✓
+- Phase 2: User schedule management with time slots (morning, afternoon, full day) ✓ 
+- Phase 3: Automatic matching engine for event scheduling ✓
+- Database persistence with SQLite ✓
+
+## Architecture Overview
+The system supports comprehensive schedule coordination where:
+- Users create events requiring specific numbers of participants and days
+- Participants register their availability in time slots
+- Automatic matching engine finds common available dates
+- Events are automatically marked as matched when conditions are met

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { scheduleStorage } from '@/lib/scheduleStorage';
-import { BulkAvailabilityRequest } from '@/types/schedule';
 import { matchingEngine } from '@/lib/matchingEngine';
+import { BulkAvailabilityRequest } from '@/types/schedule';
 
 export async function POST(request: NextRequest) {
   try {
