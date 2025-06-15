@@ -6,12 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import CreateEventForm from '@/components/events/CreateEventForm';
 import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
+import MatchingStatus from '@/components/matching/MatchingStatus';
 import { CreateEventRequest, EventWithCreator } from '@/types/event';
 
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'myEvents' | 'allEvents' | 'createEvent' | 'availability'>('myEvents');
+  const [activeTab, setActiveTab] = useState<'myEvents' | 'allEvents' | 'createEvent' | 'availability' | 'matching'>('myEvents');
   const [myEvents, setMyEvents] = useState<EventWithCreator[]>([]);
   const [allEvents, setAllEvents] = useState<EventWithCreator[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
@@ -209,6 +210,16 @@ export default function Dashboard() {
                 >
                   予定管理
                 </button>
+                <button
+                  onClick={() => setActiveTab('matching')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'matching'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  マッチング状況
+                </button>
               </nav>
             </div>
           </div>
@@ -256,6 +267,15 @@ export default function Dashboard() {
 
               {activeTab === 'availability' && (
                 <AvailabilityManager />
+              )}
+
+              {activeTab === 'matching' && (
+                <div>
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    マッチング状況
+                  </h2>
+                  <MatchingStatus />
+                </div>
               )}
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eventStorage } from '@/lib/eventStorage';
 import { verifyToken } from '@/lib/auth';
+import { matchingEngine } from '@/lib/matchingEngine';
 
 export async function POST(
   request: NextRequest,
@@ -62,7 +63,17 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ message: 'Successfully joined event' });
+    // 参加後に自動マッチング実行
+    const matchingResult = await matchingEngine.onParticipantAdded(resolvedParams.id);
+
+    return NextResponse.json({ 
+      message: 'Successfully joined event',
+      matching: {
+        checked: true,
+        isMatched: matchingResult.isMatched,
+        reason: matchingResult.reason
+      }
+    });
   } catch (error) {
     console.error('Error joining event:', error);
     return NextResponse.json(

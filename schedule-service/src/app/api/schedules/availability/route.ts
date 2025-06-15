@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { scheduleStorage } from '@/lib/scheduleStorage';
 import { BulkAvailabilityRequest } from '@/types/schedule';
+import { matchingEngine } from '@/lib/matchingEngine';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,12 +62,19 @@ export async function POST(request: NextRequest) {
 
     const schedules = await scheduleStorage.bulkSetAvailability(body, user.id);
     
+    // スケジュール更新後に関連イベントのマッチング実行
+    const matchingResults = await matchingEngine.onScheduleUpdated(user.id);
+    
     return NextResponse.json({
       message: `Successfully registered availability for ${schedules.length} dates`,
       schedules: schedules,
       summary: {
         totalDates: schedules.length,
         timeSlots: body.timeSlots
+      },
+      matching: {
+        eventsChecked: matchingResults.length,
+        newMatches: matchingResults.filter(r => r.isMatched).length
       }
     });
   } catch (error) {
