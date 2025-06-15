@@ -9,6 +9,7 @@ interface EventListProps {
   onJoinEvent?: (eventId: string) => void;
   currentUserId?: string;
   showJoinButton?: boolean;
+  emptyMessage?: string;
 }
 
 export default function EventList({
@@ -17,7 +18,8 @@ export default function EventList({
   onEventClick,
   onJoinEvent,
   currentUserId,
-  showJoinButton = false
+  showJoinButton = false,
+  emptyMessage = 'イベントがありません'
 }: EventListProps) {
   if (isLoading) {
     return (
@@ -31,7 +33,7 @@ export default function EventList({
   if (events.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        イベントがありません
+        {emptyMessage}
       </div>
     );
   }

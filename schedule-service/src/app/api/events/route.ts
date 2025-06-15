@@ -95,12 +95,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const creatorId = searchParams.get('creatorId');
+    const participantId = searchParams.get('participantId');
     const status = searchParams.get('status');
 
     let events;
     
     if (creatorId) {
       events = await eventStorage.getEventsByCreator(creatorId);
+    } else if (participantId) {
+      // 参加しているイベントを取得（作成者として以外）
+      const participantEvents = await eventStorage.getParticipantEvents(participantId);
+      events = participantEvents.filter(event => event.creatorId !== participantId);
     } else if (status) {
       events = await eventStorage.getEventsByStatus(status as any);
     } else {
