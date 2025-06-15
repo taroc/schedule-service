@@ -45,6 +45,7 @@ export function initializeDatabase() {
       creator_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'open',
       matched_dates TEXT, -- JSON array of dates
+      deadline DATETIME, -- 参加締切
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (creator_id) REFERENCES users (id) ON DELETE CASCADE
@@ -89,6 +90,21 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_user_schedules_date ON user_schedules (date);
     CREATE INDEX IF NOT EXISTS idx_user_schedules_user_date ON user_schedules (user_id, date);
   `);
+
+  // deadlineカラムを追加するマイグレーション
+  try {
+    // 既存のeventsテーブルにdeadlineカラムがあるかチェック
+    const eventColumns = db.prepare("PRAGMA table_info(events)").all() as { name: string }[];
+    const hasDeadlineColumn = eventColumns.some(col => col.name === 'deadline');
+    
+    if (!hasDeadlineColumn) {
+      console.log('Adding deadline column to events table...');
+      db.exec('ALTER TABLE events ADD COLUMN deadline DATETIME');
+      console.log('Deadline column added successfully');
+    }
+  } catch {
+    console.log('Deadline column migration not needed or already completed');
+  }
 
   // nameカラムを削除するマイグレーション
   try {

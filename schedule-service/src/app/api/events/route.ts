@@ -26,20 +26,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: CreateEventRequest = await request.json();
+    const body = await request.json();
+    
+    // deadlineをISO 8601文字列からDateオブジェクトに変換
+    const eventRequest: CreateEventRequest = {
+      ...body,
+      deadline: body.deadline ? new Date(body.deadline) : undefined
+    };
     
     // バリデーション
-    if (!body.name || !body.description || 
-        !body.requiredParticipants || !body.requiredDays) {
+    if (!eventRequest.name || !eventRequest.description || 
+        !eventRequest.requiredParticipants || !eventRequest.requiredDays) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
       );
     }
 
-    if (body.requiredParticipants < 1 || body.requiredDays < 1) {
+    if (eventRequest.requiredParticipants < 1 || eventRequest.requiredDays < 1) {
       return NextResponse.json(
         { error: 'Required participants and days must be greater than 0' },
+        { status: 400 }
+      );
+    }
+
+    // 期限が過去の日時でないかチェック
+    if (eventRequest.deadline && eventRequest.deadline < new Date()) {
+      return NextResponse.json(
+        { error: 'Deadline must be in the future' },
         { status: 400 }
       );
     }
@@ -56,9 +70,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const event = await eventStorage.createEvent(body, user.id);
+    const event = await eventStorage.createEvent(eventRequest, user.id);
     
-    return NextResponse.json(event);
+    // レスポンスでDateオブジェクトをISO 8601文字列に変換
+    const eventResponse = {
+      ...event,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
+      deadline: event.deadline ? event.deadline.toISOString() : null,
+      matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
+    };
+    
+    return NextResponse.json(eventResponse);
   } catch (error) {
     console.error('Error creating event:', error);
     return NextResponse.json(
@@ -84,8 +107,16 @@ export async function GET(request: NextRequest) {
       events = await eventStorage.getAllEvents();
     }
 
-    // ユーザー名は保存しないため、シンプルなイベント情報を返す
-    return NextResponse.json(events);
+    // DateオブジェクトをISO 8601文字列に変換してレスポンス
+    const eventsResponse = events.map(event => ({
+      ...event,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
+      deadline: event.deadline ? event.deadline.toISOString() : null,
+      matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
+    }));
+    
+    return NextResponse.json(eventsResponse);
   } catch (error) {
     console.error('Error fetching events:', error);
     return NextResponse.json(

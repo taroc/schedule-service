@@ -40,7 +40,8 @@ export default function EventList({
     const statusConfig = {
       open: { text: '募集中', className: 'bg-green-100 text-green-800' },
       matched: { text: '成立済み', className: 'bg-blue-100 text-blue-800' },
-      cancelled: { text: 'キャンセル', className: 'bg-red-100 text-red-800' }
+      cancelled: { text: 'キャンセル', className: 'bg-red-100 text-red-800' },
+      expired: { text: '期限切れ', className: 'bg-gray-100 text-gray-800' }
     };
 
     const config = statusConfig[status];
@@ -53,6 +54,26 @@ export default function EventList({
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('ja-JP');
+  };
+
+  const formatDateTime = (date: Date) => {
+    return new Date(date).toLocaleString('ja-JP');
+  };
+
+  const getDeadlineStatus = (deadline: Date) => {
+    const now = new Date();
+    const timeDiff = deadline.getTime() - now.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (timeDiff <= 0) {
+      return { text: '期限切れ', className: 'text-red-600' };
+    } else if (hoursDiff <= 24) {
+      return { text: '24時間以内', className: 'text-orange-600' };
+    } else if (hoursDiff <= 72) {
+      return { text: '3日以内', className: 'text-yellow-600' };
+    } else {
+      return { text: '', className: 'text-gray-600' };
+    }
   };
 
   const canJoin = (event: EventWithCreator) => {
@@ -105,6 +126,27 @@ export default function EventList({
             </div>
             <div>
               <span className="font-medium">必要日数:</span> {event.requiredDays}日
+            </div>
+            <div className="col-span-2">
+              <span className="font-medium">参加締切:</span>{' '}
+              {event.deadline ? (
+                (() => {
+                  const deadline = event.deadline instanceof Date ? event.deadline : new Date(event.deadline);
+                  const deadlineStatus = getDeadlineStatus(deadline);
+                  return (
+                    <span className={deadlineStatus.className}>
+                      {formatDateTime(deadline)}
+                      {deadlineStatus.text && (
+                        <span className="ml-2 text-xs font-semibold">
+                          ({deadlineStatus.text})
+                        </span>
+                      )}
+                    </span>
+                  );
+                })()
+              ) : (
+                <span className="text-gray-500">期限なし</span>
+              )}
             </div>
           </div>
 

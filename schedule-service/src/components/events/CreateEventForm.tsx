@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreateEventRequest } from '@/types/event';
 
 interface CreateEventFormProps {
@@ -20,8 +20,21 @@ export default function CreateEventForm({
     name: '',
     description: '',
     requiredParticipants: 1,
-    requiredDays: 1
+    requiredDays: 1,
+    deadline: undefined
   });
+  
+  const [deadlineDate, setDeadlineDate] = useState('');
+
+  // 期限の日付が変更されたときにformDataを更新（23:59に固定）
+  useEffect(() => {
+    if (deadlineDate) {
+      const deadline = new Date(`${deadlineDate}T23:59:59`);
+      setFormData(prev => ({ ...prev, deadline }));
+    } else {
+      setFormData(prev => ({ ...prev, deadline: undefined }));
+    }
+  }, [deadlineDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +47,10 @@ export default function CreateEventForm({
       ...prev,
       [name]: type === 'number' ? parseInt(value) || 0 : value
     }));
+  };
+
+  const handleDeadlineDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDeadlineDate(e.target.value);
   };
 
   return (
@@ -95,7 +112,7 @@ export default function CreateEventForm({
           </p>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">
             必要日数 *
           </label>
@@ -110,6 +127,22 @@ export default function CreateEventForm({
           />
           <p className="text-gray-500 text-xs mt-1">
             連続して確保したい日数
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            参加締切日
+          </label>
+          <input
+            type="date"
+            value={deadlineDate}
+            onChange={handleDeadlineDateChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            placeholder="日付を選択"
+          />
+          <p className="text-gray-500 text-xs mt-1">
+            参加者の募集を締切る日（その日の23:59まで有効、設定しない場合は無期限）
           </p>
         </div>
 

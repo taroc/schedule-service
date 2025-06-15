@@ -18,8 +18,16 @@ export async function GET(
       );
     }
 
-    // ユーザー名は保存しないため、シンプルなイベント情報を返す
-    return NextResponse.json(event);
+    // DateオブジェクトをISO 8601文字列に変換してレスポンス
+    const eventResponse = {
+      ...event,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
+      deadline: event.deadline ? event.deadline.toISOString() : undefined,
+      matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
+    };
+    
+    return NextResponse.json(eventResponse);
   } catch (error) {
     console.error('Error fetching event:', error);
     return NextResponse.json(
@@ -72,7 +80,15 @@ export async function PUT(
       );
     }
 
-    const updates: UpdateEventRequest = await request.json();
+    const body = await request.json();
+    
+    // deadlineをISO 8601文字列からDateオブジェクトに変換
+    const updates: UpdateEventRequest = {
+      ...body,
+      deadline: body.deadline !== undefined ? 
+        (body.deadline ? new Date(body.deadline) : undefined) : 
+        undefined
+    };
     
     // バリデーション
     if (updates.requiredParticipants && updates.requiredParticipants < 1) {
@@ -88,10 +104,34 @@ export async function PUT(
         { status: 400 }
       );
     }
+    
+    // 期限が過去の日時でないかチェック
+    if (updates.deadline && updates.deadline < new Date()) {
+      return NextResponse.json(
+        { error: 'Deadline must be in the future' },
+        { status: 400 }
+      );
+    }
 
     const updatedEvent = await eventStorage.updateEvent(resolvedParams.id, updates);
     
-    return NextResponse.json(updatedEvent);
+    if (!updatedEvent) {
+      return NextResponse.json(
+        { error: 'Failed to update event' },
+        { status: 500 }
+      );
+    }
+    
+    // DateオブジェクトをISO 8601文字列に変換してレスポンス
+    const eventResponse = {
+      ...updatedEvent,
+      createdAt: updatedEvent.createdAt.toISOString(),
+      updatedAt: updatedEvent.updatedAt.toISOString(),
+      deadline: updatedEvent.deadline ? updatedEvent.deadline.toISOString() : undefined,
+      matchedDates: updatedEvent.matchedDates ? updatedEvent.matchedDates.map(d => d.toISOString()) : undefined
+    };
+    
+    return NextResponse.json(eventResponse);
   } catch (error) {
     console.error('Error updating event:', error);
     return NextResponse.json(

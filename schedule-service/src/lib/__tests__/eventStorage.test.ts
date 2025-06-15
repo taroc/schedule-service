@@ -13,6 +13,14 @@ describe('eventStorage', () => {
     requiredDays: 2
   }
 
+  const mockEventWithDeadline: CreateEventRequest = {
+    name: 'Test Event with Deadline',
+    description: 'Test Description',
+    requiredParticipants: 3,
+    requiredDays: 2,
+    deadline: new Date(Date.now() + 24 * 60 * 60 * 1000) // 明日
+  }
+
   const mockCreatorId = 'user-123'
 
   beforeEach(async () => {
@@ -40,6 +48,17 @@ describe('eventStorage', () => {
       expect(event.participants).toEqual([])
       expect(event.createdAt).toBeInstanceOf(Date)
       expect(event.updatedAt).toBeInstanceOf(Date)
+      expect(event.deadline).toBeUndefined()
+    })
+
+    it('should create event with deadline', async () => {
+      // Act
+      const event = await eventStorage.createEvent(mockEventWithDeadline, mockCreatorId)
+      
+      // Assert
+      expect(event).toBeDefined()
+      expect(event.deadline).toBeInstanceOf(Date)
+      expect(event.deadline).toEqual(mockEventWithDeadline.deadline)
     })
 
     it('should generate unique IDs for different events', async () => {
@@ -247,6 +266,70 @@ describe('eventStorage', () => {
       expect(commonDates).toHaveLength(2)
       expect(commonDates[0].toDateString()).toBe(commonDate1.toDateString())
       expect(commonDates[1].toDateString()).toBe(commonDate2.toDateString())
+    })
+  })
+
+  describe('deadline functionality', () => {
+    it('should get expired events', async () => {
+      // Arrange - 期限切れのイベントを作成
+      const expiredDeadline = new Date(Date.now() - 60 * 60 * 1000) // 1時間前
+      const expiredEvent = await eventStorage.createEvent({
+        ...mockEventRequest,
+        deadline: expiredDeadline
+      }, mockCreatorId)
+
+      // Act
+      const expiredEvents = await eventStorage.getExpiredEvents()
+
+      // Assert
+      expect(expiredEvents).toHaveLength(1)
+      expect(expiredEvents[0].id).toBe(expiredEvent.id)
+      expect(expiredEvents[0].deadline).toEqual(expiredDeadline)
+    })
+
+    it('should expire overdue events', async () => {
+      // Arrange - 期限切れのイベントを作成
+      const expiredDeadline = new Date(Date.now() - 60 * 60 * 1000) // 1時間前
+      const expiredEvent = await eventStorage.createEvent({
+        ...mockEventRequest,
+        deadline: expiredDeadline
+      }, mockCreatorId)
+
+      // Act
+      const expiredCount = await eventStorage.expireOverdueEvents()
+
+      // Assert
+      expect(expiredCount).toBe(1)
+      
+      // ステータスが更新されているかチェック
+      const updatedEvent = eventStorage.getEventById(expiredEvent.id)
+      expect(updatedEvent?.status).toBe('expired')
+    })
+
+    it('should not expire events with future deadlines', async () => {
+      // Arrange - 将来の期限のイベントを作成
+      const futureDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000) // 明日
+      await eventStorage.createEvent({
+        ...mockEventRequest,
+        deadline: futureDeadline
+      }, mockCreatorId)
+
+      // Act
+      const expiredCount = await eventStorage.expireOverdueEvents()
+
+      // Assert
+      expect(expiredCount).toBe(0)
+    })
+
+    it('should not affect events without deadlines', async () => {
+      // Arrange - 期限なしのイベントを作成
+      await eventStorage.createEvent(mockEventRequest, mockCreatorId)
+
+      // Act
+      const expiredCount = await eventStorage.expireOverdueEvents()
+
+      // Assert
+      expect(expiredCount).toBe(0)
     })
   })
 })

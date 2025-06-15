@@ -70,6 +70,7 @@ export default function Dashboard() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
+
       const response = await fetch('/api/events', {
         method: 'POST',
         headers: {

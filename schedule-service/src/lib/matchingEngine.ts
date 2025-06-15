@@ -46,6 +46,19 @@ class MatchingEngine {
       };
     }
 
+    // 期限切れチェック
+    if (event.deadline && new Date() > event.deadline) {
+      await eventStorage.updateEventStatus(eventId, 'expired');
+      return {
+        eventId,
+        isMatched: false,
+        matchedDates: [],
+        participants: event.participants,
+        requiredDays: event.requiredDays,
+        reason: 'Event deadline has passed'
+      };
+    }
+
     // 参加者数チェック
     if (event.participants.length < event.requiredParticipants) {
       return {
@@ -80,6 +93,9 @@ class MatchingEngine {
    * 全てのオープンなイベントのマッチング判定を実行
    */
   async checkAllEvents(): Promise<MatchingResult[]> {
+    // 期限切れイベントを自動的に期限切れステータスに更新
+    await this.expireOverdueEvents();
+    
     const events = await eventStorage.getAllEvents();
     const openEvents = events.filter(event => event.status === 'open');
     
@@ -149,6 +165,20 @@ class MatchingEngine {
     }
     
     return results;
+  }
+
+  /**
+   * 期限切れイベントを自動的に期限切れステータスに更新
+   */
+  async expireOverdueEvents(): Promise<number> {
+    return await eventStorage.expireOverdueEvents();
+  }
+
+  /**
+   * 期限切れイベントを取得
+   */
+  async getExpiredEvents() {
+    return await eventStorage.getExpiredEvents();
   }
 
   /**

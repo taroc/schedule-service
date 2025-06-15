@@ -10,14 +10,15 @@ interface EventRow {
   creator_id: string;
   status: EventStatus;
   matched_dates: string | null;
+  deadline: string | null;
   created_at: string;
   updated_at: string;
 }
 
 class EventStorageDB {
   private insertEvent = db.prepare(`
-    INSERT INTO events (id, name, description, required_participants, required_days, creator_id, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    INSERT INTO events (id, name, description, required_participants, required_days, creator_id, status, deadline, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
   `);
 
   private selectEventById = db.prepare(`
@@ -45,7 +46,7 @@ class EventStorageDB {
   `);
 
   private updateEventStmt = db.prepare(`
-    UPDATE events SET name = ?, description = ?, required_participants = ?, required_days = ?, updated_at = datetime('now') 
+    UPDATE events SET name = ?, description = ?, required_participants = ?, required_days = ?, deadline = ?, updated_at = datetime('now') 
     WHERE id = ?
   `);
 
@@ -77,6 +78,10 @@ class EventStorageDB {
     SELECT COUNT(*) as count FROM event_participants WHERE event_id = ?
   `);
 
+  private selectExpiredEvents = db.prepare(`
+    SELECT * FROM events WHERE deadline < datetime('now') AND status = 'open' ORDER BY created_at DESC
+  `);
+
   async createEvent(request: CreateEventRequest, creatorId: string): Promise<Event> {
     return runInTransaction(() => {
       const eventId = Math.random().toString(36).substring(2, 15);
@@ -88,7 +93,8 @@ class EventStorageDB {
         request.requiredParticipants,
         request.requiredDays,
         creatorId,
-        'open'
+        'open',
+        request.deadline ? request.deadline.toISOString() : null
       );
 
       const event = this.getEventById(eventId);
@@ -197,8 +203,11 @@ class EventStorageDB {
       const description = updates.description ?? event.description;
       const requiredParticipants = updates.requiredParticipants ?? event.requiredParticipants;
       const requiredDays = updates.requiredDays ?? event.requiredDays;
+      const deadline = updates.deadline !== undefined ? 
+        (updates.deadline ? updates.deadline.toISOString() : null) : 
+        (event.deadline ? event.deadline.toISOString() : null);
 
-      this.updateEventStmt.run(name, description, requiredParticipants, requiredDays, eventId);
+      this.updateEventStmt.run(name, description, requiredParticipants, requiredDays, deadline, eventId);
 
       // Return updated event
       const updatedEvent = this.getEventById(eventId);
@@ -211,6 +220,29 @@ class EventStorageDB {
       // 外部キー制約により、event_participants も自動削除される
       const result = this.deleteEventStmt.run(eventId);
       return result.changes > 0;
+    });
+  }
+
+  async getExpiredEvents(): Promise<Event[]> {
+    const eventRows = this.selectExpiredEvents.all() as EventRow[];
+    
+    return eventRows.map(row => {
+      const participants = this.selectParticipants.all(row.id) as { user_id: string }[];
+      return this.mapRowToEvent(row, participants.map(p => p.user_id));
+    });
+  }
+
+  async expireOverdueEvents(): Promise<number> {
+    return runInTransaction(() => {
+      const expiredEvents = this.selectExpiredEvents.all() as EventRow[];
+      let expiredCount = 0;
+      
+      for (const event of expiredEvents) {
+        this.updateEventStatusStmt.run('expired', null, event.id);
+        expiredCount++;
+      }
+      
+      return expiredCount;
     });
   }
 
@@ -243,6 +275,7 @@ class EventStorageDB {
       status: row.status,
       participants,
       matchedDates: row.matched_dates ? JSON.parse(row.matched_dates).map((d: string) => new Date(d)) : undefined,
+      deadline: row.deadline ? new Date(row.deadline) : undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at)
     };

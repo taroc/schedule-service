@@ -250,4 +250,107 @@ describe('matchingEngine', () => {
       expect(stats.pendingEvents).toBe(1);
     });
   });
+
+  describe('deadline functionality', () => {
+    it('should expire overdue events when checking', async () => {
+      // Arrange - 期限切れのイベントを作成
+      const expiredDeadline = new Date(Date.now() - 60 * 60 * 1000); // 1時間前
+      const eventRequest: CreateEventRequest = {
+        name: 'Expired Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        deadline: expiredDeadline
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      await eventStorage.addParticipant(event.id, mockUser2);
+
+      // Act
+      const result = await matchingEngine.checkEventMatching(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(false);
+      expect(result.reason).toBe('Event deadline has passed');
+      
+      // ステータスが期限切れに更新されているかチェック
+      const updatedEvent = await eventStorage.getEventById(event.id);
+      expect(updatedEvent?.status).toBe('expired');
+    });
+
+    it('should process events with future deadlines normally', async () => {
+      // Arrange - 将来の期限のイベントを作成
+      const futureDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000); // 明日
+      const eventRequest: CreateEventRequest = {
+        name: 'Future Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        deadline: futureDeadline
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      await eventStorage.addParticipant(event.id, mockUser2);
+
+      // 共通空き日程を設定
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser1);
+
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser2);
+
+      // Act
+      const result = await matchingEngine.checkEventMatching(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(true);
+      expect(result.reason).toBe('Successfully matched');
+    });
+
+    it('should expire overdue events in checkAllEvents', async () => {
+      // Arrange - 期限切れと通常のイベントを作成
+      const expiredDeadline = new Date(Date.now() - 60 * 60 * 1000); // 1時間前
+      const expiredEventRequest: CreateEventRequest = {
+        name: 'Expired Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        deadline: expiredDeadline
+      };
+
+      const normalEventRequest: CreateEventRequest = {
+        name: 'Normal Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1
+      };
+
+      const expiredEvent = await eventStorage.createEvent(expiredEventRequest, mockCreator);
+      const normalEvent = await eventStorage.createEvent(normalEventRequest, mockCreator);
+
+      // Act
+      const results = await matchingEngine.checkAllEvents();
+
+      // Assert
+      const expiredResult = results.find(r => r.eventId === expiredEvent.id);
+      const normalResult = results.find(r => r.eventId === normalEvent.id);
+
+      // 期限切れイベントはexpiredステータスになっている
+      const updatedExpiredEvent = await eventStorage.getEventById(expiredEvent.id);
+      expect(updatedExpiredEvent?.status).toBe('expired');
+
+      // 通常のイベントはopenのまま
+      const updatedNormalEvent = await eventStorage.getEventById(normalEvent.id);
+      expect(updatedNormalEvent?.status).toBe('open');
+    });
+  });
 });

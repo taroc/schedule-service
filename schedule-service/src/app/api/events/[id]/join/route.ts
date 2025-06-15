@@ -46,6 +46,16 @@ export async function POST(
       );
     }
 
+    // 期限チェック
+    if (event.deadline && new Date() > event.deadline) {
+      // 期限切れの場合はステータスを更新
+      await eventStorage.updateEventStatus(resolvedParams.id, 'expired');
+      return NextResponse.json(
+        { error: 'Event deadline has passed' },
+        { status: 400 }
+      );
+    }
+
     // 作成者は参加できない
     if (event.creatorId === user.id) {
       return NextResponse.json(

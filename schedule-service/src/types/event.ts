@@ -10,15 +10,17 @@ export interface Event {
   status: EventStatus;
   participants: string[];        // 参加者ID配列
   matchedDates?: Date[];         // 成立した日程
+  deadline?: Date;               // 参加締切
 }
 
-export type EventStatus = 'open' | 'matched' | 'cancelled';
+export type EventStatus = 'open' | 'matched' | 'cancelled' | 'expired';
 
 export interface CreateEventRequest {
   name: string;
   description: string;
   requiredParticipants: number;
   requiredDays: number;
+  deadline?: Date;
 }
 
 export interface UpdateEventRequest {
@@ -26,6 +28,7 @@ export interface UpdateEventRequest {
   description?: string;
   requiredParticipants?: number;
   requiredDays?: number;
+  deadline?: Date;
 }
 
 export interface EventParticipation {
