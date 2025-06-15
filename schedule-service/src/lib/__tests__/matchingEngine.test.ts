@@ -6,24 +6,37 @@ import { scheduleStorage } from '../scheduleStorage';
 import { CreateEventRequest } from '@/types/event';
 
 describe('matchingEngine', () => {
-  const mockUser1 = 'user-1';
-  const mockUser2 = 'user-2';
-  const mockCreator = 'creator-1';
+  // テスト毎にユニークなIDを生成する変数
+  let mockUser1: string;
+  let mockUser2: string;
+  let mockCreator: string;
 
   beforeEach(async () => {
-    // テスト前にテストユーザーを作成
+    // テスト毎にユニークなIDを生成
+    const testRunId = Math.random().toString(36).substring(7);
+    mockUser1 = `user-1-${testRunId}`;
+    mockUser2 = `user-2-${testRunId}`;
+    mockCreator = `creator-1-${testRunId}`;
+
+    // 既存イベントをクリーンアップ
+    const allEvents = await eventStorage.getAllEvents();
+    for (const event of allEvents) {
+      await eventStorage.deleteEvent(event.id);
+    }
+
+    // テストユーザーを作成
     await userStorage.createUser({
-      userId: 'user-1',
+      userId: `user-1-${testRunId}`,
       password: 'password123'
     }, mockUser1);
     
     await userStorage.createUser({
-      userId: 'user-2',
+      userId: `user-2-${testRunId}`,
       password: 'password123'
     }, mockUser2);
     
     await userStorage.createUser({
-      userId: 'creator-1',
+      userId: `creator-1-${testRunId}`,
       password: 'password123'
     }, mockCreator);
   });
@@ -166,6 +179,75 @@ describe('matchingEngine', () => {
       expect(result.isMatched).toBe(true);
       expect(result.participants).toHaveLength(2);
     });
+
+    it('should automatically update event status when participant join triggers matching', async () => {
+      // Arrange - マッチング可能な条件を整える
+      const eventRequest: CreateEventRequest = {
+        name: 'Participant Join Auto Match',
+        description: 'Test auto-matching on participant join',
+        requiredParticipants: 2,
+        requiredDays: 1
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      
+      // 共通空き日程を設定
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser1);
+
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser2);
+
+      // 最初の参加者を追加（まだマッチングしない）
+      await eventStorage.addParticipant(event.id, mockUser1);
+      let currentEvent = eventStorage.getEventById(event.id);
+      expect(currentEvent?.status).toBe('open');
+
+      // Act - 2番目の参加者追加でマッチング成立
+      await eventStorage.addParticipant(event.id, mockUser2);
+      const result = await matchingEngine.onParticipantAdded(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(true);
+      expect(result.participants).toHaveLength(2);
+      
+      // イベントステータスが自動更新されていることを確認
+      currentEvent = eventStorage.getEventById(event.id);
+      expect(currentEvent?.status).toBe('matched');
+      expect(currentEvent?.matchedDates).toHaveLength(1);
+    });
+
+    it('should not update event status when participant join does not trigger matching', async () => {
+      // Arrange - マッチングしない条件
+      const eventRequest: CreateEventRequest = {
+        name: 'Participant Join No Match',
+        description: 'Test no auto-matching on insufficient participants',
+        requiredParticipants: 3,
+        requiredDays: 1
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+
+      // Act - 参加者追加（まだ人数不足）
+      await eventStorage.addParticipant(event.id, mockUser1);
+      const result = await matchingEngine.onParticipantAdded(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(false);
+      expect(result.reason).toContain('Insufficient participants');
+      
+      // イベントステータスがopenのままであることを確認
+      const currentEvent = eventStorage.getEventById(event.id);
+      expect(currentEvent?.status).toBe('open');
+      expect(currentEvent?.matchedDates).toBeUndefined();
+    });
   });
 
   describe('checkAllEvents', () => {
@@ -220,7 +302,7 @@ describe('matchingEngine', () => {
       expect(anyUnmatchedResult).toBeDefined();
 
       // イベントステータスが更新されていることを確認
-      const updatedEvent1 = await eventStorage.getEventById(event1.id);
+      const updatedEvent1 = eventStorage.getEventById(event1.id);
       expect(updatedEvent1?.status).toBe('matched');
     });
   });
@@ -251,6 +333,190 @@ describe('matchingEngine', () => {
     });
   });
 
+  describe('onScheduleUpdated', () => {
+    it('should check matching for user events when schedule is updated', async () => {
+      // Arrange - ユーザーが参加しているイベントを作成
+      const eventRequest: CreateEventRequest = {
+        name: 'Schedule Update Test Event',
+        description: 'Test auto-matching on schedule update',
+        requiredParticipants: 2,
+        requiredDays: 1
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      await eventStorage.addParticipant(event.id, mockUser2);
+
+      // 最初はマッチングしない状態にしておく
+      const initialResult = await matchingEngine.checkEventMatching(event.id);
+      expect(initialResult.isMatched).toBe(false);
+
+      // Act - user1のスケジュール更新時に自動マッチング実行
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // user2のスケジュールも設定
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser2);
+
+      // user1のスケジュール更新（これによりマッチング成立）
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser1);
+      
+      const results = await matchingEngine.onScheduleUpdated(mockUser1);
+
+      // Assert
+      expect(results).toHaveLength(1);
+      const result = results[0];
+      expect(result.eventId).toBe(event.id);
+      expect(result.isMatched).toBe(true);
+      
+      // イベントステータスが自動更新されていることを確認
+      const updatedEvent = eventStorage.getEventById(event.id);
+      expect(updatedEvent?.status).toBe('matched');
+      expect(updatedEvent?.matchedDates).toHaveLength(1);
+    });
+
+    it('should check multiple events when user participates in several', async () => {
+      // Arrange - ユーザーが複数のイベントに参加
+      const event1Request: CreateEventRequest = {
+        name: 'Multi Event Test 1',
+        description: 'Test Description 1',
+        requiredParticipants: 2,
+        requiredDays: 1
+      };
+
+      const event2Request: CreateEventRequest = {
+        name: 'Multi Event Test 2', 
+        description: 'Test Description 2',
+        requiredParticipants: 2,
+        requiredDays: 1
+      };
+
+      const event1 = await eventStorage.createEvent(event1Request, mockCreator);
+      const event2 = await eventStorage.createEvent(event2Request, mockCreator);
+      
+      // user1が両イベントに参加
+      await eventStorage.addParticipant(event1.id, mockUser1);
+      await eventStorage.addParticipant(event2.id, mockUser1);
+      
+      // event1にはuser2も参加（マッチング可能）
+      await eventStorage.addParticipant(event1.id, mockUser2);
+      // event2は参加者不足（マッチング不可）
+
+      // 共通スケジュールを設定
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser2);
+
+      // Act - user1のスケジュール更新
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser1);
+
+      const results = await matchingEngine.onScheduleUpdated(mockUser1);
+
+      // Assert
+      expect(results).toHaveLength(2);
+      
+      const event1Result = results.find(r => r.eventId === event1.id);
+      const event2Result = results.find(r => r.eventId === event2.id);
+      
+      expect(event1Result?.isMatched).toBe(true);
+      expect(event2Result?.isMatched).toBe(false);
+      expect(event2Result?.reason).toContain('Insufficient participants');
+    });
+
+    it('should handle user with no participating events', async () => {
+      // Arrange - ユーザーがイベントに参加していない状態
+      
+      // Act
+      const results = await matchingEngine.onScheduleUpdated(mockUser1);
+
+      // Assert
+      expect(results).toHaveLength(0);
+    });
+  });
+
+  describe('automatic status update on matching', () => {
+    it('should automatically update event status to matched when conditions are met', async () => {
+      // Arrange
+      const eventRequest: CreateEventRequest = {
+        name: 'Auto Status Update Test',
+        description: 'Test automatic status update',
+        requiredParticipants: 2,
+        requiredDays: 1
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      await eventStorage.addParticipant(event.id, mockUser2);
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser1);
+
+      await scheduleStorage.bulkSetAvailability({
+        dates: [tomorrow.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, mockUser2);
+
+      // イベントが最初はopenステータスであることを確認
+      let currentEvent = eventStorage.getEventById(event.id);
+      expect(currentEvent?.status).toBe('open');
+
+      // Act - マッチングチェック実行
+      const result = await matchingEngine.checkEventMatching(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(true);
+      
+      // ステータスが自動的にmatchedに更新されていることを確認
+      currentEvent = eventStorage.getEventById(event.id);
+      expect(currentEvent?.status).toBe('matched');
+      expect(currentEvent?.matchedDates).toHaveLength(1);
+      expect(currentEvent?.matchedDates?.[0]).toBeInstanceOf(Date);
+    });
+
+    it('should not update status when matching fails', async () => {
+      // Arrange
+      const eventRequest: CreateEventRequest = {
+        name: 'No Auto Update Test',
+        description: 'Test no status update on failed match',
+        requiredParticipants: 3,
+        requiredDays: 1
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      // 参加者不足
+
+      // Act
+      const result = await matchingEngine.checkEventMatching(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(false);
+      
+      // ステータスがopenのままであることを確認
+      const currentEvent = eventStorage.getEventById(event.id);
+      expect(currentEvent?.status).toBe('open');
+      expect(currentEvent?.matchedDates).toBeUndefined();
+    });
+  });
+
   describe('deadline functionality', () => {
     it('should expire overdue events when checking', async () => {
       // Arrange - 期限切れのイベントを作成
@@ -275,7 +541,7 @@ describe('matchingEngine', () => {
       expect(result.reason).toBe('Event deadline has passed');
       
       // ステータスが期限切れに更新されているかチェック
-      const updatedEvent = await eventStorage.getEventById(event.id);
+      const updatedEvent = eventStorage.getEventById(event.id);
       expect(updatedEvent?.status).toBe('expired');
     });
 
@@ -341,15 +607,14 @@ describe('matchingEngine', () => {
       const results = await matchingEngine.checkAllEvents();
 
       // Assert
-      const expiredResult = results.find(r => r.eventId === expiredEvent.id);
-      const normalResult = results.find(r => r.eventId === normalEvent.id);
+      expect(results).toHaveLength(2);
 
       // 期限切れイベントはexpiredステータスになっている
-      const updatedExpiredEvent = await eventStorage.getEventById(expiredEvent.id);
+      const updatedExpiredEvent = eventStorage.getEventById(expiredEvent.id);
       expect(updatedExpiredEvent?.status).toBe('expired');
 
       // 通常のイベントはopenのまま
-      const updatedNormalEvent = await eventStorage.getEventById(normalEvent.id);
+      const updatedNormalEvent = eventStorage.getEventById(normalEvent.id);
       expect(updatedNormalEvent?.status).toBe('open');
     });
   });

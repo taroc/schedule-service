@@ -205,6 +205,11 @@ class ScheduleStorage {
     for (let i = 0; i <= dates.length - requiredDays; i++) {
       const consecutiveDates: Date[] = [dates[i]];
       
+      // Check if we already have enough dates (handles requiredDays = 1 case)
+      if (consecutiveDates.length === requiredDays) {
+        return consecutiveDates;
+      }
+      
       for (let j = i + 1; j < dates.length; j++) {
         const prevDate = consecutiveDates[consecutiveDates.length - 1];
         const currentDate = dates[j];
