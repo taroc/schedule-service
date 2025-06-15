@@ -118,8 +118,8 @@ export default function AvailabilityManager() {
         setSelectedDates([]);
         alert(`${selectedDates.length}日の空き時間を登録しました`);
       } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to register availability');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to register availability');
       }
     } catch (error) {
       console.error('Error registering availability:', error);
