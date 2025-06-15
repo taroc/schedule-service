@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 class UserStorage {
   private users: User[] = [];
 
-  async createUser(request: CreateUserRequest): Promise<User> {
+  async createUser(request: CreateUserRequest, providedId?: string): Promise<User> {
     const existingUser = this.users.find(u => u.email === request.email);
     if (existingUser) {
       throw new Error('User already exists');
@@ -12,7 +12,7 @@ class UserStorage {
 
     const hashedPassword = await bcrypt.hash(request.password, 10);
     const user: User = {
-      id: Math.random().toString(36).substring(2, 15),
+      id: providedId || Math.random().toString(36).substring(2, 15),
       email: request.email,
       password: hashedPassword,
       name: request.name,

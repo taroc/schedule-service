@@ -114,6 +114,11 @@ export default function EventList({
               {isParticipating(event) && (
                 <span className="ml-2 text-blue-600 font-medium">（参加中）</span>
               )}
+              {event.participantNames && event.participantNames.length > 0 && (
+                <div className="mt-1 text-xs text-gray-500">
+                  {event.participantNames.join(', ')}
+                </div>
+              )}
             </div>
 
             {event.status === 'matched' && event.matchedDates && (

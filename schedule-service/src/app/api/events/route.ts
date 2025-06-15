@@ -44,6 +44,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 作成者がUserStorageに存在するかを確認
+    const creatorInStorage = await userStorage.getUserById(user.id);
+    
+    if (!creatorInStorage) {
+      // JWTトークンのユーザーがUserStorageに存在しない場合はエラーを返す
+      console.error(`Event creator ${user.id} not found in UserStorage. User needs to be logged in properly.`);
+      return NextResponse.json(
+        { error: 'Creator user not found. Please log in again.' },
+        { status: 400 }
+      );
+    }
+
     const event = await eventStorage.createEvent(body, user.id);
     
     return NextResponse.json(event);
@@ -72,13 +84,23 @@ export async function GET(request: NextRequest) {
       events = await eventStorage.getAllEvents();
     }
 
-    // 作成者情報を付与
+    // 作成者情報と参加者情報を付与
     const eventsWithCreator = await Promise.all(
       events.map(async (event) => {
         const creator = await userStorage.getUserById(event.creatorId);
+        
+        // 参加者名を解決
+        const participantNames = await Promise.all(
+          event.participants.map(async (participantId) => {
+            const participant = await userStorage.getUserById(participantId);
+            return participant ? participant.name : '不明';
+          })
+        );
+        
         return {
           ...event,
-          creatorName: creator ? creator.name : '不明'
+          creatorName: creator ? creator.name : '不明',
+          participantNames
         };
       })
     );

@@ -36,4 +36,5 @@ export interface EventParticipation {
 
 export interface EventWithCreator extends Event {
   creatorName: string;
+  participantNames: string[];
 }
