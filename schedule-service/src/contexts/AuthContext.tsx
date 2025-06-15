@@ -5,6 +5,7 @@ import { UserSession } from '@/types/user';
 
 interface AuthContextType {
   user: UserSession | null;
+  token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
@@ -27,14 +28,16 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserSession | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
       fetch('/api/auth/verify', {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${storedToken}`
         }
       })
       .then(res => res.json())
@@ -43,10 +46,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(data.user);
         } else {
           localStorage.removeItem('token');
+          setToken(null);
         }
       })
       .catch(() => {
         localStorage.removeItem('token');
+        setToken(null);
       })
       .finally(() => {
         setIsLoading(false);
@@ -72,6 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     localStorage.setItem('token', data.token);
+    setToken(data.token);
     setUser(data.user);
   };
 
@@ -91,16 +97,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     localStorage.setItem('token', data.token);
+    setToken(data.token);
     setUser(data.user);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    setToken(null);
     setUser(null);
   };
 
   const value = {
     user,
+    token,
     isLoading,
     login,
     register,

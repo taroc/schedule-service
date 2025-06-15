@@ -43,6 +43,7 @@ class UserStorage {
   }
 
   getAllUsers(): Omit<User, 'password'>[] {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return this.users.map(({ password, ...user }) => user);
   }
 }

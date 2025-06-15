@@ -6,10 +6,11 @@ import { UpdateEventRequest } from '@/types/event';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const event = await eventStorage.getEventById(params.id);
+    const resolvedParams = await params;
+    const event = await eventStorage.getEventById(resolvedParams.id);
     
     if (!event) {
       return NextResponse.json(
@@ -37,7 +38,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 認証チェック
@@ -60,7 +61,8 @@ export async function PUT(
       );
     }
 
-    const event = await eventStorage.getEventById(params.id);
+    const resolvedParams = await params;
+    const event = await eventStorage.getEventById(resolvedParams.id);
     
     if (!event) {
       return NextResponse.json(
@@ -94,7 +96,7 @@ export async function PUT(
       );
     }
 
-    const updatedEvent = await eventStorage.updateEvent(params.id, updates);
+    const updatedEvent = await eventStorage.updateEvent(resolvedParams.id, updates);
     
     return NextResponse.json(updatedEvent);
   } catch (error) {
@@ -108,7 +110,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 認証チェック
@@ -131,7 +133,8 @@ export async function DELETE(
       );
     }
 
-    const event = await eventStorage.getEventById(params.id);
+    const resolvedParams = await params;
+    const event = await eventStorage.getEventById(resolvedParams.id);
     
     if (!event) {
       return NextResponse.json(
@@ -148,7 +151,7 @@ export async function DELETE(
       );
     }
 
-    const success = await eventStorage.deleteEvent(params.id);
+    const success = await eventStorage.deleteEvent(resolvedParams.id);
     
     if (!success) {
       return NextResponse.json(

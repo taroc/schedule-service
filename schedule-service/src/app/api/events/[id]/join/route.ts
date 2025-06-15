@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 認証チェック
@@ -27,7 +27,8 @@ export async function POST(
       );
     }
 
-    const event = await eventStorage.getEventById(params.id);
+    const resolvedParams = await params;
+    const event = await eventStorage.getEventById(resolvedParams.id);
     
     if (!event) {
       return NextResponse.json(
@@ -52,7 +53,7 @@ export async function POST(
       );
     }
 
-    const success = await eventStorage.addParticipant(params.id, user.id);
+    const success = await eventStorage.addParticipant(resolvedParams.id, user.id);
     
     if (!success) {
       return NextResponse.json(
@@ -73,7 +74,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 認証チェック
@@ -96,7 +97,8 @@ export async function DELETE(
       );
     }
 
-    const success = await eventStorage.removeParticipant(params.id, user.id);
+    const resolvedParams = await params;
+    const success = await eventStorage.removeParticipant(resolvedParams.id, user.id);
     
     if (!success) {
       return NextResponse.json(

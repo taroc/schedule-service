@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { eventStorage } from '../eventStorage'
 import { CreateEventRequest } from '@/types/event'
+import { scheduleStorage } from '../scheduleStorage'
+import { getCommonAvailableDates } from '../scheduleUtils'
 
 describe('eventStorage', () => {
   const mockEventRequest: CreateEventRequest = {
@@ -13,9 +15,10 @@ describe('eventStorage', () => {
   const mockCreatorId = 'user-123'
 
   beforeEach(() => {
-    // テスト前にイベントストレージをクリア
+    // テスト前にストレージをクリア
     ;(eventStorage as any).events = []
     ;(eventStorage as any).participations = []
+    ;(scheduleStorage as any).schedules = []
   })
 
   describe('createEvent', () => {
@@ -193,6 +196,55 @@ describe('eventStorage', () => {
       expect(stats.openEvents).toBe(1)
       expect(stats.matchedEvents).toBe(1)
       expect(stats.totalParticipations).toBe(2)
+    })
+  })
+
+  describe('schedule integration', () => {
+    it('should find common available dates for participants', async () => {
+      // Arrange - ユーザーの空き時間を設定
+      const user1 = 'user-123'
+      const user2 = 'user-456'
+      const user3 = 'user-789'
+      
+      // 共通で空いている日を設定
+      const commonDate1 = new Date('2025-01-01')
+      const commonDate2 = new Date('2025-01-02')
+      
+      await scheduleStorage.bulkSetAvailability({
+        dates: [commonDate1.toISOString(), commonDate2.toISOString()],
+        timeSlots: { morning: true, afternoon: false, fullday: false }
+      }, user1)
+      
+      await scheduleStorage.bulkSetAvailability({
+        dates: [commonDate1.toISOString(), commonDate2.toISOString()],
+        timeSlots: { morning: false, afternoon: true, fullday: false }
+      }, user2)
+      
+      await scheduleStorage.bulkSetAvailability({
+        dates: [commonDate1.toISOString(), commonDate2.toISOString()],
+        timeSlots: { morning: false, afternoon: false, fullday: true }
+      }, user3)
+      
+      // すべてのユーザーのスケジュールを取得
+      const allSchedules = [
+        ...(await scheduleStorage.getUserSchedules(user1)),
+        ...(await scheduleStorage.getUserSchedules(user2)),
+        ...(await scheduleStorage.getUserSchedules(user3))
+      ]
+      
+      // Act - 共通空き日程を検索
+      const commonDates = getCommonAvailableDates(
+        allSchedules,
+        [user1, user2, user3],
+        new Date('2024-12-25'),
+        new Date('2025-01-05'),
+        2
+      )
+      
+      // Assert - 全ユーザーが何らかの時間帯で空いている日付が返される
+      expect(commonDates).toHaveLength(2)
+      expect(commonDates[0].toDateString()).toBe(commonDate1.toDateString())
+      expect(commonDates[1].toDateString()).toBe(commonDate2.toDateString())
     })
   })
 })
