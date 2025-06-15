@@ -11,7 +11,7 @@ import NotificationToast from '@/components/ui/NotificationToast';
 import { useNotification } from '@/hooks/useNotification';
 import { CreateEventRequest, EventWithCreator } from '@/types/event';
 
-type TabType = 'dashboard' | 'myParticipation' | 'myCreatedEvents' | 'findEvents' | 'createEvent' | 'availability' | 'matching';
+type TabType = 'dashboard' | 'createEvent' | 'availability' | 'matching';
 
 interface DashboardStats {
   createdEvents: number;
@@ -20,11 +20,18 @@ interface DashboardStats {
   pendingEvents: number;
 }
 
+interface DashboardModal {
+  type: 'myEvents' | 'participatingEvents' | 'availableEvents' | null;
+  isOpen: boolean;
+}
+
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const { notifications, showSuccess, showError, showInfo, removeNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [modal, setModal] = useState<DashboardModal>({ type: null, isOpen: false });
+  
   const [myCreatedEvents, setMyCreatedEvents] = useState<EventWithCreator[]>([]);
   const [myParticipatingEvents, setMyParticipatingEvents] = useState<EventWithCreator[]>([]);
   const [availableEvents, setAvailableEvents] = useState<EventWithCreator[]>([]);
@@ -52,69 +59,69 @@ export default function Dashboard() {
     
     try {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        showError('認証トークンがありません。再ログインしてください。');
+        logout();
+        return;
+      }
 
-      // 並行して全データを取得
-      const [createdEventsRes, participatingEventsRes, availableEventsRes] = await Promise.all([
-        // 作成したイベント
-        fetch(`/api/events?creatorId=${user.id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        // 参加しているイベント（作成者以外として）
-        fetch(`/api/events?participantId=${user.id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        // 参加可能なイベント（オープンなもの）
-        fetch('/api/events?status=open', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
+      // 作成したイベントを取得
+      const createdEventsRes = await fetch(`/api/events?creatorId=${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
+      let myCreatedEventsData: EventWithCreator[] = [];
       if (createdEventsRes.ok) {
-        const createdData = await createdEventsRes.json();
-        setMyCreatedEvents(createdData);
-      }
-
-      if (participatingEventsRes.ok) {
-        const participatingData = await participatingEventsRes.json();
-        setMyParticipatingEvents(participatingData);
+        myCreatedEventsData = await createdEventsRes.json();
+        setMyCreatedEvents(myCreatedEventsData);
+      } else if (createdEventsRes.status === 401) {
+        showError('認証エラーが発生しました。再ログインしてください。');
+        logout();
+        return;
       } else {
-        // participantIdパラメータが未実装の場合、全イベントから参加しているものをフィルター
-        const allEventsRes = await fetch('/api/events', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (allEventsRes.ok) {
-          const allEvents = await allEventsRes.json();
-          const participating = allEvents.filter((event: EventWithCreator) => 
-            event.participants.includes(user.id) && event.creatorId !== user.id
-          );
-          setMyParticipatingEvents(participating);
-        }
+        console.error('Created events fetch failed:', createdEventsRes.status);
       }
 
+      // 参加可能なイベントを取得
+      const availableEventsRes = await fetch('/api/events?status=open', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      let availableEventsData: EventWithCreator[] = [];
       if (availableEventsRes.ok) {
-        const availableData = await availableEventsRes.json();
+        const allAvailable = await availableEventsRes.json();
         // 自分が作成したものと既に参加しているものを除外
-        const filteredAvailable = availableData.filter((event: EventWithCreator) => 
+        availableEventsData = allAvailable.filter((event: EventWithCreator) => 
           event.creatorId !== user.id && !event.participants.includes(user.id)
         );
-        setAvailableEvents(filteredAvailable);
+        setAvailableEvents(availableEventsData);
+      }
+
+      // 参加しているイベントを取得（全イベントから参加しているものをフィルター）
+      const allEventsRes = await fetch('/api/events', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      let myParticipatingEventsData: EventWithCreator[] = [];
+      if (allEventsRes.ok) {
+        const allEvents = await allEventsRes.json();
+        myParticipatingEventsData = allEvents.filter((event: EventWithCreator) => 
+          event.participants.includes(user.id) && event.creatorId !== user.id
+        );
+        setMyParticipatingEvents(myParticipatingEventsData);
       }
 
       // ダッシュボード統計を計算
-      if (createdEventsRes.ok && participatingEventsRes.ok) {
-        const created = await createdEventsRes.json();
-        const participating = myParticipatingEvents;
-        
-        setDashboardStats({
-          createdEvents: created.length,
-          participatingEvents: participating.length,
-          matchedEvents: [...created, ...participating].filter((e: EventWithCreator) => e.status === 'matched').length,
-          pendingEvents: [...created, ...participating].filter((e: EventWithCreator) => e.status === 'open').length,
-        });
-      }
+      const allMyEvents = [...myCreatedEventsData, ...myParticipatingEventsData];
+      setDashboardStats({
+        createdEvents: myCreatedEventsData.length,
+        participatingEvents: myParticipatingEventsData.length,
+        matchedEvents: allMyEvents.filter(e => e.status === 'matched').length,
+        pendingEvents: allMyEvents.filter(e => e.status === 'open').length,
+      });
 
-    } catch {
+    } catch (error) {
+      console.error('Data loading error:', error);
       const errorMessage = 'データの読み込みに失敗しました';
       setError(errorMessage);
       showError(errorMessage);
@@ -142,7 +149,7 @@ export default function Dashboard() {
         throw new Error(errorData.error || 'イベントの作成に失敗しました');
       }
 
-      setActiveTab('myCreatedEvents');
+      setActiveTab('dashboard');
       await loadAllData();
       showSuccess('イベントを作成しました！');
     } catch (err) {
@@ -179,11 +186,20 @@ export default function Dashboard() {
       }
 
       await loadAllData();
+      setModal({ type: null, isOpen: false }); // モーダルを閉じる
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'イベントへの参加に失敗しました';
       setError(errorMessage);
       showError(errorMessage);
     }
+  };
+
+  const openModal = (type: DashboardModal['type']) => {
+    setModal({ type, isOpen: true });
+  };
+
+  const closeModal = () => {
+    setModal({ type: null, isOpen: false });
   };
 
   if (isLoading) {
@@ -212,7 +228,10 @@ export default function Dashboard() {
       {/* 統計カード */}
       {dashboardStats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div 
+            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => openModal('myEvents')}
+          >
             <div className="flex items-center">
               <div className="p-2 rounded-full bg-blue-100">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,7 +245,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div 
+            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => openModal('participatingEvents')}
+          >
             <div className="flex items-center">
               <div className="p-2 rounded-full bg-green-100">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,87 +292,180 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* クイックアクション */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">クイックアクション</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={() => setActiveTab('createEvent')}
-              className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
-            >
-              <svg className="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* メインアクション */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* イベント作成 */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">新しいイベントを作成</p>
-                <p className="text-sm text-gray-500">日程調整を開始する</p>
-              </div>
-            </button>
-
+              新しいイベントを作成
+            </h3>
+            <p className="text-gray-600 mb-4">日程調整が必要なイベントを作成しましょう</p>
             <button
-              onClick={() => setActiveTab('availability')}
-              className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"
+              onClick={() => setActiveTab('createEvent')}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
-              <svg className="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-              </svg>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">予定を更新</p>
-                <p className="text-sm text-gray-500">空き時間を設定する</p>
-              </div>
+              イベントを作成する
             </button>
+          </div>
+        </div>
 
-            <button
-              onClick={() => setActiveTab('findEvents')}
-              className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors"
-            >
-              <svg className="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* イベントを探す */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">イベントを探す</p>
-                <p className="text-sm text-gray-500">参加できるイベントを見つける</p>
-              </div>
+              参加できるイベントを探す
+            </h3>
+            <p className="text-gray-600 mb-4">他の人が作成したイベントに参加してみましょう</p>
+            <button
+              onClick={() => openModal('availableEvents')}
+              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              イベントを探す
+              {availableEvents.length > 0 && (
+                <span className="ml-2 bg-purple-400 px-2 py-1 rounded-full text-xs">
+                  {availableEvents.length}件
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* サブアクション */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+              </svg>
+              予定を管理
+            </h3>
+            <p className="text-gray-600 mb-4">空き時間を登録して日程調整に参加しましょう</p>
+            <button
+              onClick={() => setActiveTab('availability')}
+              className="w-full border border-green-500 text-green-600 hover:bg-green-50 font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              予定を更新する
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 text-indigo-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              マッチング状況
+            </h3>
+            <p className="text-gray-600 mb-4">全体のマッチング統計を確認できます</p>
+            <button
+              onClick={() => setActiveTab('matching')}
+              className="w-full border border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              状況を確認する
             </button>
           </div>
         </div>
       </div>
 
       {/* 最近のアクティビティ */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">最近のアクティビティ</h3>
-          <div className="space-y-3">
-            {[...myCreatedEvents, ...myParticipatingEvents]
-              .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-              .slice(0, 3)
-              .map((event) => (
-                <div key={event.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <div className={`w-3 h-3 rounded-full mr-3 ${
-                    event.status === 'matched' ? 'bg-green-400' : 
-                    event.status === 'open' ? 'bg-blue-400' : 'bg-gray-400'
-                  }`}></div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{event.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {event.creatorId === user.id ? '作成者' : '参加者'} • 
-                      {event.status === 'matched' ? ' 成立済み' : ' 調整中'}
-                    </p>
+      {[...myCreatedEvents, ...myParticipatingEvents].length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">最近のアクティビティ</h3>
+            <div className="space-y-3">
+              {[...myCreatedEvents, ...myParticipatingEvents]
+                .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                .slice(0, 3)
+                .map((event) => (
+                  <div key={event.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      event.status === 'matched' ? 'bg-green-400' : 
+                      event.status === 'open' ? 'bg-blue-400' : 'bg-gray-400'
+                    }`}></div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{event.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {event.creatorId === user.id ? '作成者' : '参加者'} • 
+                        {event.status === 'matched' ? ' 成立済み' : ' 調整中'}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(event.updatedAt).toLocaleDateString('ja-JP')}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-400">
-                    {new Date(event.updatedAt).toLocaleDateString('ja-JP')}
-                  </span>
-                </div>
-              ))}
-            {[...myCreatedEvents, ...myParticipatingEvents].length === 0 && (
-              <p className="text-gray-500 text-center py-4">まだアクティビティがありません</p>
-            )}
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderModal = () => {
+    if (!modal.isOpen || !modal.type) return null;
+
+    let events: EventWithCreator[] = [];
+    let title = '';
+    let showJoinButton = false;
+
+    switch (modal.type) {
+      case 'myEvents':
+        events = myCreatedEvents;
+        title = '作成したイベント';
+        break;
+      case 'participatingEvents':
+        events = myParticipatingEvents;
+        title = '参加中のイベント';
+        break;
+      case 'availableEvents':
+        events = availableEvents;
+        title = '参加可能なイベント';
+        showJoinButton = true;
+        break;
+    }
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+          <div className="flex items-center justify-between p-6 border-b">
+            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+            <button
+              onClick={closeModal}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <EventList
+              events={events}
+              isLoading={isLoadingEvents}
+              currentUserId={user.id}
+              showJoinButton={showJoinButton}
+              onJoinEvent={handleJoinEvent}
+              emptyMessage={
+                modal.type === 'myEvents' ? 'まだイベントを作成していません' :
+                modal.type === 'participatingEvents' ? '参加中のイベントがありません' :
+                '現在参加可能なイベントがありません'
+              }
+            />
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -390,11 +505,7 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {error && (
-            <div className={`border px-4 py-3 rounded mb-6 ${
-              error.includes('おめでとう') 
-                ? 'bg-green-100 border-green-400 text-green-700'
-                : 'bg-red-100 border-red-400 text-red-700'
-            }`}>
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
               {error}
               <button
                 onClick={() => setError('')}
@@ -405,185 +516,29 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* タブナビゲーション */}
-          <div className="mb-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8 overflow-x-auto">
-                <button
-                  onClick={() => setActiveTab('dashboard')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'dashboard'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    </svg>
-                    ダッシュボード
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('myParticipation')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'myParticipation'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    参加中のイベント
-                    {myParticipatingEvents.length > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full text-xs">
-                        {myParticipatingEvents.length}
-                      </span>
-                    )}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('myCreatedEvents')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'myCreatedEvents'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    </svg>
-                    作成したイベント
-                    {myCreatedEvents.length > 0 && (
-                      <span className="ml-1 bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full text-xs">
-                        {myCreatedEvents.length}
-                      </span>
-                    )}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('findEvents')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'findEvents'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    イベントを探す
-                    {availableEvents.length > 0 && (
-                      <span className="ml-1 bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full text-xs">
-                        {availableEvents.length}
-                      </span>
-                    )}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('createEvent')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'createEvent'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    イベント作成
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('availability')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'availability'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    </svg>
-                    予定管理
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('matching')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'matching'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    マッチング状況
-                  </span>
-                </button>
-              </nav>
+          {/* シンプルなタブナビゲーション */}
+          {activeTab !== 'dashboard' && (
+            <div className="mb-6">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                ダッシュボードに戻る
+              </button>
             </div>
-          </div>
+          )}
 
-          {/* タブコンテンツ */}
+          {/* コンテンツ */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6">
               {activeTab === 'dashboard' && renderDashboard()}
 
-              {activeTab === 'myParticipation' && (
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    参加中のイベント
-                  </h2>
-                  <EventList
-                    events={myParticipatingEvents}
-                    isLoading={isLoadingEvents}
-                    currentUserId={user.id}
-                    emptyMessage="参加中のイベントがありません。イベントを探して参加してみましょう！"
-                  />
-                </div>
-              )}
-
-              {activeTab === 'myCreatedEvents' && (
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    作成したイベント
-                  </h2>
-                  <EventList
-                    events={myCreatedEvents}
-                    isLoading={isLoadingEvents}
-                    currentUserId={user.id}
-                    emptyMessage="まだイベントを作成していません。新しいイベントを作成してみましょう！"
-                  />
-                </div>
-              )}
-
-              {activeTab === 'findEvents' && (
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    参加可能なイベント
-                  </h2>
-                  <EventList
-                    events={availableEvents}
-                    isLoading={isLoadingEvents}
-                    currentUserId={user.id}
-                    showJoinButton={true}
-                    onJoinEvent={handleJoinEvent}
-                    emptyMessage="現在参加可能なイベントがありません。"
-                  />
-                </div>
-              )}
-
               {activeTab === 'createEvent' && (
                 <div>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">新しいイベントを作成</h2>
                   <CreateEventForm
                     onSubmit={handleCreateEvent}
                     onCancel={() => setActiveTab('dashboard')}
@@ -593,14 +548,15 @@ export default function Dashboard() {
               )}
 
               {activeTab === 'availability' && (
-                <AvailabilityManager />
+                <div>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">予定管理</h2>
+                  <AvailabilityManager />
+                </div>
               )}
 
               {activeTab === 'matching' && (
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    マッチング状況
-                  </h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">マッチング状況</h2>
                   <MatchingStatus />
                 </div>
               )}
@@ -608,6 +564,9 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* モーダル */}
+      {renderModal()}
     </div>
   );
 }
