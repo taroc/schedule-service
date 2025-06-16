@@ -314,7 +314,7 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">日程調整が必要なイベントを作成しましょう</p>
             <button
               onClick={() => setActiveTab('createEvent')}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               イベントを作成する
             </button>
@@ -333,7 +333,7 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">他の人が作成したイベントに参加してみましょう</p>
             <button
               onClick={() => openModal('availableEvents')}
-              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               イベントを探す
               {availableEvents.length > 0 && (
@@ -359,7 +359,7 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">空き時間を登録して日程調整に参加しましょう</p>
             <button
               onClick={() => setActiveTab('availability')}
-              className="w-full border border-green-500 text-green-600 hover:bg-green-50 font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full border border-green-500 text-green-600 hover:bg-green-50 font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               予定を更新する
             </button>
@@ -377,7 +377,7 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">全体の日程調整統計を確認できます</p>
             <button
               onClick={() => setActiveTab('scheduling')}
-              className="w-full border border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full border border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               状況を確認する
             </button>
@@ -449,7 +449,7 @@ export default function Dashboard() {
             <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
             <button
               onClick={closeModal}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 hover:cursor-pointer"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -501,7 +501,7 @@ export default function Dashboard() {
               <span className="text-gray-700">こんにちは、{user.id}さん</span>
               <button
                 onClick={logout}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
               >
                 ログアウト
               </button>
@@ -517,7 +517,7 @@ export default function Dashboard() {
               {error}
               <button
                 onClick={() => setError('')}
-                className="float-right hover:opacity-75"
+                className="float-right hover:opacity-75 hover:cursor-pointer"
               >
                 ×
               </button>
@@ -529,7 +529,7 @@ export default function Dashboard() {
             <div className="mb-6">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+                className="flex items-center text-blue-600 hover:text-blue-800 font-medium hover:cursor-pointer"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

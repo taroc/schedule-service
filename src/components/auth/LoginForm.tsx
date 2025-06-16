@@ -65,7 +65,7 @@ export default function LoginForm({
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed"
         >
           {isLoading ? 'ログイン中...' : 'ログイン'}
         </button>
@@ -75,7 +75,7 @@ export default function LoginForm({
           <button
             type="button"
             onClick={onSwitchToRegister}
-            className="text-blue-500 hover:text-blue-700 underline"
+            className="text-blue-500 hover:text-blue-700 underline hover:cursor-pointer"
           >
             こちら
           </button>

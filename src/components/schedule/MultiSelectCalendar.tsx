@@ -168,7 +168,7 @@ export default function MultiSelectCalendar({
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigateMonth('prev')}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -181,7 +181,7 @@ export default function MultiSelectCalendar({
         
         <button
           onClick={() => navigateMonth('next')}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -198,7 +198,7 @@ export default function MultiSelectCalendar({
             </span>
             <button
               onClick={clearSelection}
-              className="text-xs text-blue-600 hover:text-blue-800 underline"
+              className="text-xs text-blue-600 hover:text-blue-800 underline hover:cursor-pointer"
             >
               選択解除
             </button>

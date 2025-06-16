@@ -205,7 +205,7 @@ export default function EventList({
               <div className="flex justify-end">
                 <button
                   onClick={() => onJoinEvent?.(event.id)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors hover:cursor-pointer"
                 >
                   参加する
                 </button>

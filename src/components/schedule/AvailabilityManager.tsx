@@ -225,7 +225,7 @@ export default function AvailabilityManager() {
             <button
               onClick={handleSubmitAvailability}
               disabled={isSubmitting || selectedDates.length === 0}
-              className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
             >
               {isSubmitting ? '登録中...' : '空き時間登録'}
             </button>

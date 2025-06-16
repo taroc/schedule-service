@@ -88,7 +88,7 @@ export default function RegisterForm({
         <button
           type="submit"
           disabled={isLoading || password !== confirmPassword}
-          className="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          className="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed"
         >
           {isLoading ? '登録中...' : 'アカウント登録'}
         </button>
@@ -98,7 +98,7 @@ export default function RegisterForm({
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-blue-500 hover:text-blue-700 underline"
+            className="text-blue-500 hover:text-blue-700 underline hover:cursor-pointer"
           >
             こちら
           </button>

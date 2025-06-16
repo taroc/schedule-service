@@ -150,7 +150,7 @@ export default function CreateEventForm({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+            className="flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer disabled:cursor-not-allowed"
             disabled={isLoading}
           >
             キャンセル
@@ -158,7 +158,7 @@ export default function CreateEventForm({
           <button
             type="submit"
             disabled={isLoading}
-            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed"
           >
             {isLoading ? '作成中...' : 'イベント作成'}
           </button>
