@@ -21,7 +21,7 @@ interface DashboardStats {
 }
 
 interface DashboardModal {
-  type: 'myEvents' | 'participatingEvents' | 'availableEvents' | null;
+  type: 'myEvents' | 'participatingEvents' | null;
   isOpen: boolean;
 }
 
@@ -183,7 +183,6 @@ export default function Dashboard() {
       }
 
       await loadAllData();
-      setModal({ type: null, isOpen: false }); // モーダルを閉じる
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'イベントへの参加に失敗しました';
       setError(errorMessage);
@@ -224,7 +223,7 @@ export default function Dashboard() {
 
       {/* 統計カード */}
       {dashboardStats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div 
             className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => openModal('myEvents')}
@@ -275,20 +274,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 rounded-full bg-orange-100">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">調整中</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardStats.pendingEvents}</p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -313,33 +298,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* イベントを探す */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <svg className="w-5 h-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              参加できるイベントを探す
-            </h3>
-            <p className="text-gray-600 mb-4">他の人が作成したイベントに参加してみましょう</p>
-            <button
-              onClick={() => openModal('availableEvents')}
-              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
-            >
-              イベントを探す
-              {availableEvents.length > 0 && (
-                <span className="ml-2 bg-purple-400 px-2 py-1 rounded-full text-xs">
-                  {availableEvents.length}件
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* サブアクション */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* 予定管理 */}
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
@@ -357,23 +316,49 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <svg className="w-5 h-5 text-indigo-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              参加が決まったイベント
-            </h3>
-            <p className="text-gray-600 mb-4">参加が決まったイベントを確認できます</p>
-            <button
-              onClick={() => setActiveTab('completedEvents')}
-              className="w-full border border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
-            >
-              参加が決まったイベントを見る
-            </button>
-          </div>
+      {/* 参加できるイベント一覧 */}
+      <div className="bg-white rounded-lg shadow-sm border">
+        <div className="p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+            <svg className="w-5 h-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            参加できるイベント
+            {availableEvents.length > 0 && (
+              <span className="ml-2 bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                {availableEvents.length}件
+              </span>
+            )}
+          </h3>
+          {availableEvents.length > 0 ? (
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {availableEvents.map((event) => (
+                <div key={event.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{event.name}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{event.description}</p>
+                      <div className="flex items-center mt-2 text-xs text-gray-500">
+                        <span>作成者: {event.creatorId}</span>
+                        <span className="ml-4">必要人数: {event.requiredParticipants}人</span>
+                        <span className="ml-4">必要日数: {event.requiredDays}日</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleJoinEvent(event.id)}
+                      className="ml-4 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                    >
+                      参加する
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">現在参加可能なイベントがありません</p>
+          )}
         </div>
       </div>
 
@@ -395,11 +380,6 @@ export default function Dashboard() {
       case 'participatingEvents':
         events = myParticipatingEvents;
         title = '参加表明したイベント';
-        break;
-      case 'availableEvents':
-        events = availableEvents;
-        title = '参加可能なイベント';
-        showJoinButton = true;
         break;
     }
 
@@ -426,8 +406,7 @@ export default function Dashboard() {
               onJoinEvent={handleJoinEvent}
               emptyMessage={
                 modal.type === 'myEvents' ? 'まだイベントを作成していません' :
-                modal.type === 'participatingEvents' ? '参加表明したイベントがありません' :
-                '現在参加可能なイベントがありません'
+                '参加表明したイベントがありません'
               }
             />
           </div>
