@@ -6,12 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import CreateEventForm from '@/components/events/CreateEventForm';
 import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
-import MatchingStatus from '@/components/matching/MatchingStatus';
 import NotificationToast from '@/components/ui/NotificationToast';
 import { useNotification } from '@/hooks/useNotification';
 import { CreateEventRequest, EventWithCreator } from '@/types/event';
 
-type TabType = 'dashboard' | 'createEvent' | 'availability' | 'completedEvents';
+type TabType = 'dashboard' | 'createEvent' | 'availability';
 
 interface DashboardStats {
   createdEvents: number;
@@ -21,7 +20,7 @@ interface DashboardStats {
 }
 
 interface DashboardModal {
-  type: 'myEvents' | 'participatingEvents' | null;
+  type: 'myEvents' | 'participatingEvents' | 'completedEvents' | null;
   isOpen: boolean;
 }
 
@@ -260,7 +259,7 @@ export default function Dashboard() {
 
           <div 
             className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => setActiveTab('completedEvents')}
+            onClick={() => openModal('completedEvents')}
           >
             <div className="flex items-center">
               <div className="p-2 rounded-full bg-emerald-100">
@@ -381,6 +380,12 @@ export default function Dashboard() {
         events = myParticipatingEvents;
         title = '参加表明したイベント';
         break;
+      case 'completedEvents':
+        // 自分が関わっている成立済みイベント
+        const allMyEvents = [...myCreatedEvents, ...myParticipatingEvents];
+        events = allMyEvents.filter(event => event.status === 'matched');
+        title = '参加が決まったイベント';
+        break;
     }
 
     return (
@@ -406,7 +411,8 @@ export default function Dashboard() {
               onJoinEvent={handleJoinEvent}
               emptyMessage={
                 modal.type === 'myEvents' ? 'まだイベントを作成していません' :
-                '参加表明したイベントがありません'
+                modal.type === 'participatingEvents' ? '参加表明したイベントがありません' :
+                '参加が決まったイベントがありません'
               }
             />
           </div>
@@ -499,13 +505,6 @@ export default function Dashboard() {
                 <div>
                   <h2 className="text-lg font-medium text-gray-900 mb-6">予定管理</h2>
                   <AvailabilityManager />
-                </div>
-              )}
-
-              {activeTab === 'completedEvents' && (
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">参加が決まったイベント</h2>
-                  <MatchingStatus />
                 </div>
               )}
             </div>
