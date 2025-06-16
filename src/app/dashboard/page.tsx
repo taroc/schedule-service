@@ -11,7 +11,7 @@ import NotificationToast from '@/components/ui/NotificationToast';
 import { useNotification } from '@/hooks/useNotification';
 import { CreateEventRequest, EventWithCreator } from '@/types/event';
 
-type TabType = 'dashboard' | 'createEvent' | 'availability' | 'matching';
+type TabType = 'dashboard' | 'createEvent' | 'availability' | 'scheduling';
 
 interface DashboardStats {
   createdEvents: number;
@@ -113,10 +113,15 @@ export default function Dashboard() {
 
       // ダッシュボード統計を計算
       const allMyEvents = [...myCreatedEventsData, ...myParticipatingEventsData];
+      
+      // 成立済みイベントは作成したものと参加しているもの両方をカウント
+      const myMatchedEvents = myCreatedEventsData.filter(e => e.status === 'matched').length +
+                             myParticipatingEventsData.filter(e => e.status === 'matched').length;
+      
       setDashboardStats({
         createdEvents: myCreatedEventsData.length,
         participatingEvents: myParticipatingEventsData.length,
-        matchedEvents: allMyEvents.filter(e => e.status === 'matched').length,
+        matchedEvents: myMatchedEvents,
         pendingEvents: allMyEvents.filter(e => e.status === 'open').length,
       });
 
@@ -178,9 +183,9 @@ export default function Dashboard() {
 
       const result = await response.json();
       
-      // マッチング結果を表示
+      // 日程調整結果を表示
       if (result.matching?.isMatched) {
-        showSuccess('🎉 おめでとうございます！イベントがマッチングしました！', 7000);
+        showSuccess('🎉 おめでとうございます！イベントが成立しました！', 7000);
       } else {
         showInfo('イベントに参加しました。他の参加者を待っています。');
       }
@@ -262,7 +267,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div 
+            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setActiveTab('scheduling')}
+          >
             <div className="flex items-center">
               <div className="p-2 rounded-full bg-emerald-100">
                 <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -364,11 +372,11 @@ export default function Dashboard() {
               <svg className="w-5 h-5 text-indigo-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              マッチング状況
+              日程調整状況
             </h3>
-            <p className="text-gray-600 mb-4">全体のマッチング統計を確認できます</p>
+            <p className="text-gray-600 mb-4">全体の日程調整統計を確認できます</p>
             <button
-              onClick={() => setActiveTab('matching')}
+              onClick={() => setActiveTab('scheduling')}
               className="w-full border border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors"
             >
               状況を確認する
@@ -554,9 +562,9 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {activeTab === 'matching' && (
+              {activeTab === 'scheduling' && (
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">マッチング状況</h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">日程調整状況</h2>
                   <MatchingStatus />
                 </div>
               )}

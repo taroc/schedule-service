@@ -19,15 +19,15 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // 指定されたイベントのマッチング判定を実行
+    // 指定されたイベントの日程調整判定を実行
     const result = await matchingEngine.checkEventMatching(eventId);
     
     return NextResponse.json({
-      message: `Matching check completed for event ${eventId}`,
+      message: `Schedule coordination check completed for event ${eventId}`,
       result
     });
   } catch (error) {
-    console.error('Error checking event matching:', error);
+    console.error('Error checking event schedule coordination:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

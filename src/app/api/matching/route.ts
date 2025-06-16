@@ -14,11 +14,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // 全てのオープンイベントのマッチングを実行
+    // 全てのオープンイベントの日程調整を実行
     const results = await matchingEngine.checkAllEvents();
     
     return NextResponse.json({
-      message: 'Matching process completed',
+      message: 'Schedule coordination process completed',
       results,
       summary: {
         totalChecked: results.length,
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error in matching process:', error);
+    console.error('Error in schedule coordination process:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -47,12 +47,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // マッチングエンジンの統計情報を取得
+    // 日程調整エンジンの統計情報を取得
     const stats = await matchingEngine.getStats();
     
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('Error getting matching stats:', error);
+    console.error('Error getting schedule coordination stats:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
