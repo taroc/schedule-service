@@ -1,6 +1,5 @@
 import { Event, CreateEventRequest, UpdateEventRequest, EventStatus } from '@/types/event';
 import { prisma } from './prisma';
-import type { Event as PrismaEvent } from '@prisma/client';
 
 class EventStorageDB {
   async createEvent(request: CreateEventRequest, creatorId: string): Promise<Event> {
@@ -343,7 +342,22 @@ class EventStorageDB {
     };
   }
 
-  private mapPrismaToEvent(prismaEvent: PrismaEvent & { participants: { userId: string }[] }): Event {
+  private mapPrismaToEvent(
+    prismaEvent: {
+      id: string;
+      name: string;
+      description: string;
+      requiredParticipants: number;
+      requiredDays: number;
+      creatorId: string;
+      status: string;
+      matchedDates: string | null;
+      deadline: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+      participants?: { userId: string }[];
+    }
+  ): Event {
     return {
       id: prismaEvent.id,
       name: prismaEvent.name,
@@ -352,7 +366,7 @@ class EventStorageDB {
       requiredDays: prismaEvent.requiredDays,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
-      participants: prismaEvent.participants.map((p) => p.userId),
+      participants: prismaEvent.participants?.map((p) => p.userId) || [],
       matchedDates: prismaEvent.matchedDates ? 
         JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
         undefined,
