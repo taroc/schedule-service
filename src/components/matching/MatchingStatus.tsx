@@ -54,9 +54,6 @@ export default function MatchingStatus() {
     return new Date(date).toLocaleDateString('ja-JP');
   };
 
-  const formatDateTime = (date: Date | string) => {
-    return new Date(date).toLocaleString('ja-JP');
-  };
 
   return (
     <div className="space-y-6">
@@ -89,47 +86,28 @@ export default function MatchingStatus() {
               key={event.id}
               className="bg-green-50 border-2 border-green-200 rounded-lg p-6"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-xl font-semibold text-gray-900">
-                      {event.name}
-                    </h4>
-                    <span className="px-3 py-1 text-xs font-semibold rounded-full border bg-green-100 text-green-800 border-green-200">
-                      成立済み
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mb-3">{event.description}</p>
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <h4 className="text-xl font-semibold text-gray-900">
+                    {event.name}
+                  </h4>
+                  <span className="px-3 py-1 text-xs font-semibold rounded-full border bg-green-100 text-green-800 border-green-200">
+                    成立済み
+                  </span>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
-                <div>
-                  <span className="font-medium">作成者ID:</span> {event.creatorId}
-                </div>
-                <div>
-                  <span className="font-medium">作成日:</span> {formatDate(event.createdAt)}
-                </div>
-                <div>
-                  <span className="font-medium">必要人数:</span> {event.requiredParticipants}人
-                </div>
-                <div>
-                  <span className="font-medium">必要日数:</span> {event.requiredDays}日
-                </div>
-                <div>
-                  <span className="font-medium">成立日:</span> {formatDateTime(event.updatedAt)}
-                </div>
-                <div>
-                  <span className="font-medium">参加締切:</span>{' '}
-                  {event.deadline ? formatDateTime(event.deadline) : '期限なし'}
-                </div>
+                <p className="text-gray-600 mb-3">{event.description}</p>
               </div>
 
               <div className="space-y-3">
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">参加者:</span> {event.participants.length}人
-                  <div className="mt-1 text-xs text-gray-500">
-                    参加者ID: {event.participants.join(', ')}
+                <div className="bg-blue-100 border border-blue-300 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-semibold">参加者:</span>
+                    <span className="font-medium">
+                      {event.creatorId} (主催者){event.participants.length > 0 && ', '}{event.participants.join(', ')}
+                    </span>
                   </div>
                 </div>
 

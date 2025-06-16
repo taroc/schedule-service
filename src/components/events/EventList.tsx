@@ -140,7 +140,7 @@ export default function EventList({
 
           <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
             <div>
-              <span className="font-medium">作成者ID:</span> {event.creatorId}
+              <span className="font-medium">主催者ID:</span> {event.creatorId}
             </div>
             <div>
               <span className="font-medium">作成日:</span> {formatDate(event.createdAt)}

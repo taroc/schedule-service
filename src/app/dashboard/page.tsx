@@ -403,7 +403,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{event.name}</p>
                       <p className="text-sm text-gray-500">
-                        {event.creatorId === user.id ? '作成者' : '参加者'} • 
+                        {event.creatorId === user.id ? '主催者' : '参加者'} • 
                         {event.status === 'matched' ? ' 成立済み' : ' 調整中'}
                       </p>
                     </div>
