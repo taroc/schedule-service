@@ -385,37 +385,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 最近のアクティビティ */}
-      {[...myCreatedEvents, ...myParticipatingEvents].length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">最近のアクティビティ</h3>
-            <div className="space-y-3">
-              {[...myCreatedEvents, ...myParticipatingEvents]
-                .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                .slice(0, 3)
-                .map((event) => (
-                  <div key={event.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <div className={`w-3 h-3 rounded-full mr-3 ${
-                      event.status === 'matched' ? 'bg-green-400' : 
-                      event.status === 'open' ? 'bg-blue-400' : 'bg-gray-400'
-                    }`}></div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{event.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {event.creatorId === user.id ? '主催者' : '参加者'} • 
-                        {event.status === 'matched' ? ' 成立済み' : ' 調整中'}
-                      </p>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {new Date(event.updatedAt).toLocaleDateString('ja-JP')}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 
