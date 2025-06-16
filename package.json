@@ -17,7 +17,11 @@
     "db:down": "docker-compose down",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "deploy:db": "./scripts/deploy-db.sh",
+    "vercel:env": "vercel env pull .env.production",
+    "vercel:migrate": "npx prisma migrate deploy",
+    "vercel:studio": "npx prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",

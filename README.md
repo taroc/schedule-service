@@ -74,23 +74,50 @@ JWT_SECRET="your-strong-jwt-secret-key"
 
 ### Setup Instructions
 
-1. Connect your GitHub repository to Vercel
-2. Set up Vercel Postgres database in your project dashboard
-3. Copy the `DATABASE_URL` from Vercel Postgres to your environment variables
-4. Generate a strong JWT secret and add it to environment variables
-5. Deploy your application
+1. **Connect Repository**: Connect your GitHub repository to Vercel
+2. **Create Database**: 
+   - Go to your Vercel project dashboard
+   - Navigate to "Storage" tab
+   - Click "Create Database" → "Postgres"
+   - Choose a database name (e.g., `schedule-service-db`)
+3. **Set Environment Variables**:
+   - Go to "Settings" → "Environment Variables"
+   - Copy `DATABASE_URL` from the Postgres database page
+   - Add `JWT_SECRET` with a strong random value
+4. **Deploy Application**: Push to main branch or trigger manual deployment
 
 ### Database Migration
 
-After deploying to Vercel, you need to run the database migration:
+After deploying to Vercel, you **MUST** run the database migration:
 
 ```bash
-# Install Vercel CLI
+# Install Vercel CLI (if not already installed)
 npm i -g vercel
 
-# Run migration on production database
-vercel env pull .env.production
-npx prisma migrate deploy
+# Login to Vercel
+vercel login
+
+# Navigate to your project directory
+cd your-project
+
+# Option 1: Use the convenient script
+yarn deploy:db
+
+# Option 2: Manual steps
+yarn vercel:env          # Pull environment variables
+yarn vercel:migrate      # Run database migration
 ```
 
-The application will automatically generate Prisma Client during the build process with optimized settings for production.
+### Verification
+
+Check if the migration was successful:
+
+```bash
+# View database with Prisma Studio (optional)
+yarn vercel:studio
+
+# Or check migration status
+npx prisma migrate status
+```
+
+**Important**: The application will not work until the database migration is completed!
