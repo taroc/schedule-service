@@ -83,14 +83,6 @@ export default function Dashboard() {
 
       const allEvents: EventWithCreator[] = await allEventsRes.json();
 
-      // デバッグ: APIレスポンスを確認
-      console.log('=== Dashboard Debug ===');
-      console.log('Total events received:', allEvents.length);
-      console.log('Current user ID:', user.id);
-      console.log('Sample event structure:', allEvents[0]);
-      console.log('Sample participants field:', allEvents[0]?.participants);
-      console.log('Participants type:', typeof allEvents[0]?.participants);
-      console.log('Is participants array?', Array.isArray(allEvents[0]?.participants));
 
       // イベントを分類
       const myCreatedEventsData = allEvents.filter(event => event.creatorId === user.id);
@@ -103,10 +95,6 @@ export default function Dashboard() {
         (!event.participants || !Array.isArray(event.participants) || !event.participants.includes(user.id))
       );
 
-      // デバッグ: 分類結果を確認
-      console.log('My created events:', myCreatedEventsData.length);
-      console.log('My participating events:', myParticipatingEventsData.length);
-      console.log('Available events:', availableEventsData.length);
 
       // 状態を更新
       setMyCreatedEvents(myCreatedEventsData);
@@ -126,10 +114,6 @@ export default function Dashboard() {
         pendingEvents: allMyEvents.filter(e => e.status === 'open').length,
       };
       
-      // デバッグ: 統計結果を確認
-      console.log('Dashboard stats calculated:', stats);
-      console.log('My created events detail:', myCreatedEventsData.map(e => ({ id: e.id, name: e.name, status: e.status })));
-      console.log('My participating events detail:', myParticipatingEventsData.map(e => ({ id: e.id, name: e.name, status: e.status, participants: e.participants })));
       
       setDashboardStats(stats);
 

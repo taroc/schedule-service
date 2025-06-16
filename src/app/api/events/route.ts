@@ -121,11 +121,6 @@ export async function GET(request: NextRequest) {
       matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
     }));
     
-    // デバッグ: APIレスポンスを確認
-    console.log('=== API Events Response Debug ===');
-    console.log('Total events:', eventsResponse.length);
-    console.log('Sample event:', eventsResponse[0]);
-    console.log('Sample participants:', eventsResponse[0]?.participants);
     
     return NextResponse.json(eventsResponse);
   } catch (error) {
