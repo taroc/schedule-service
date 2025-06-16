@@ -82,8 +82,10 @@ JWT_SECRET="your-strong-jwt-secret-key"
    - Choose a database name (e.g., `schedule-service-db`)
 3. **Set Environment Variables**:
    - Go to "Settings" → "Environment Variables"
-   - Copy `DATABASE_URL` from the Postgres database page
-   - Add `JWT_SECRET` with a strong random value
+   - Add the following variables:
+     - `DATABASE_URL`: Prisma Accelerate URL (starts with `prisma+postgres://`)
+     - `DIRECT_URL`: Direct PostgreSQL URL for migrations (from database Connect tab)
+     - `JWT_SECRET`: Strong random value for JWT signing
 4. **Deploy Application**: Push to main branch or trigger manual deployment
 
 ### Database Migration

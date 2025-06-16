@@ -1165,6 +1165,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@prisma/extension-accelerate@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "@prisma/extension-accelerate@npm:2.0.1"
+  peerDependencies:
+    "@prisma/client": ">=4.16.1"
+  checksum: 10c0/7d87de42a316c679ce92489dadf88f795485fb45ff9ab4b0a20fff737caf2452076dcfe0b108c892e1899b0434eab8b35eef76a22ddf1241af1036c2e3c4b312
+  languageName: node
+  linkType: hard
+
 "@prisma/fetch-engine@npm:6.9.0":
   version: 6.9.0
   resolution: "@prisma/fetch-engine@npm:6.9.0"
@@ -6820,6 +6829,7 @@ __metadata:
   dependencies:
     "@eslint/eslintrc": "npm:^3"
     "@prisma/client": "npm:^6.9.0"
+    "@prisma/extension-accelerate": "npm:^2.0.1"
     "@tailwindcss/postcss": "npm:^4"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.6.3"
