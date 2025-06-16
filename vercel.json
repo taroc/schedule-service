@@ -4,6 +4,11 @@
       "ENABLE_EXPERIMENTAL_COREPACK": "1"
     }
   },
-  "buildCommand": "prisma generate && yarn build",
-  "installCommand": "yarn install"
+  "buildCommand": "prisma generate --no-engine && yarn build",
+  "installCommand": "yarn install",
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 10
+    }
+  }
 }
