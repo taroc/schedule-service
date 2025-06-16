@@ -167,7 +167,10 @@ class ScheduleStorage {
       // 全ユーザーがこの日に空いているかチェック
       const allAvailable = userIds.every(userId => {
         const userSchedules = schedulesByUser.get(userId) || [];
-        const daySchedule = userSchedules.find(s => s.date === dateStr);
+        const daySchedule = userSchedules.find(s => {
+          const scheduleDate = typeof s.date === 'string' ? s.date : s.date.toISOString().split('T')[0];
+          return scheduleDate === dateStr;
+        });
         
         // 未登録の場合はfalse（忙しい扱い）
         if (!daySchedule) {

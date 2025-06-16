@@ -3,7 +3,7 @@ import { userStorage } from '@/lib/userStorage';
 
 export async function GET() {
   try {
-    const users = userStorage.getAllUsers();
+    const users = await userStorage.getAllUsers();
     return NextResponse.json({ 
       users,
       count: users.length 

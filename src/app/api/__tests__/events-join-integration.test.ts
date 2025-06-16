@@ -5,7 +5,6 @@ import { POST as CreateEvent } from '../events/route';
 import { POST as Register } from '../auth/register/route';
 import { POST as SetAvailability } from '../schedules/availability/route';
 import { eventStorage } from '@/lib/eventStorage';
-import { userStorage } from '@/lib/userStorage';
 
 describe('Event Join API Integration - Automatic Matching', () => {
   // テスト毎にユニークなIDを生成する変数
@@ -136,7 +135,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user1JoinData.matching.reason).toContain('Insufficient participants');
 
     // イベントステータスの確認（まだopen）
-    const eventAfterUser1 = eventStorage.getEventById(eventId);
+    const eventAfterUser1 = await eventStorage.getEventById(eventId);
     expect(eventAfterUser1?.status).toBe('open');
     expect(eventAfterUser1?.participants).toHaveLength(1);
     expect(eventAfterUser1?.participants).toContain(mockUser1);
@@ -157,7 +156,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user2JoinData.matching.reason).toBe('Successfully matched');
 
     // Step 5: Verify event status was automatically updated
-    const finalEvent = eventStorage.getEventById(eventId);
+    const finalEvent = await eventStorage.getEventById(eventId);
     expect(finalEvent?.status).toBe('matched');
     expect(finalEvent?.participants).toHaveLength(2);
     expect(finalEvent?.participants).toContain(mockUser1);
@@ -203,7 +202,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     await POST(user2JoinRequest, { params: Promise.resolve({ id: eventId }) });
 
     // まだマッチングしていないことを確認
-    let currentEvent = eventStorage.getEventById(eventId);
+    let currentEvent = await eventStorage.getEventById(eventId);
     expect(currentEvent?.status).toBe('open');
 
     // Step 2: User1がスケジュールを設定（まだマッチングしない）
@@ -250,7 +249,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user2ScheduleData.matching.newMatches).toBe(1);
 
     // Step 4: Verify automatic status update
-    currentEvent = eventStorage.getEventById(eventId);
+    currentEvent = await eventStorage.getEventById(eventId);
     expect(currentEvent?.status).toBe('matched');
     expect(currentEvent?.matchedDates).toHaveLength(1);
   });
@@ -329,7 +328,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user2JoinData.matching.reason).toContain('No common available dates');
 
     // イベントはopenのまま
-    const finalEvent = eventStorage.getEventById(eventId);
+    const finalEvent = await eventStorage.getEventById(eventId);
     expect(finalEvent?.status).toBe('open');
     expect(finalEvent?.matchedDates).toBeUndefined();
   });

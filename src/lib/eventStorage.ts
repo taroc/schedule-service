@@ -1,6 +1,6 @@
 import { Event, CreateEventRequest, UpdateEventRequest, EventStatus } from '@/types/event';
 import { prisma } from './prisma';
-import type { Event as PrismaEvent, EventParticipant } from '@prisma/client';
+import type { Event as PrismaEvent } from '@prisma/client';
 
 class EventStorageDB {
   async createEvent(request: CreateEventRequest, creatorId: string): Promise<Event> {
@@ -231,7 +231,13 @@ class EventStorageDB {
       }
 
       // Only update provided fields
-      const updateData: any = {};
+      const updateData: {
+        name?: string;
+        description?: string;
+        requiredParticipants?: number;
+        requiredDays?: number;
+        deadline?: Date | null;
+      } = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.requiredParticipants !== undefined) updateData.requiredParticipants = updates.requiredParticipants;

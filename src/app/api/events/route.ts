@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       const participantEvents = await eventStorage.getParticipantEvents(participantId);
       events = participantEvents.filter(event => event.creatorId !== participantId);
     } else if (status) {
-      events = await eventStorage.getEventsByStatus(status as any);
+      events = await eventStorage.getEventsByStatus(status as 'open' | 'matched' | 'cancelled' | 'expired');
     } else {
       events = await eventStorage.getAllEvents();
     }
