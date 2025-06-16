@@ -12,17 +12,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "db:up": "docker-compose up -d",
-    "db:down": "docker-compose down",
-    "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset --force",
-    "db:reset:soft": "prisma migrate reset",
-    "db:studio": "prisma studio",
-    "db:seed": "npx prisma db seed",
-    "deploy:db": "./scripts/deploy-db.sh",
-    "vercel:env": "vercel env pull .env.production",
-    "vercel:migrate": "npx prisma migrate deploy",
-    "vercel:studio": "npx prisma studio"
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",

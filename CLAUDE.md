@@ -10,20 +10,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `yarn lint` - Run ESLint checks
 - `yarn test` - Run all tests (Vitest framework configured)
 - `yarn test <path>` - Run specific test file
-- `yarn db:up` - Start PostgreSQL database with Docker
-- `yarn db:down` - Stop PostgreSQL database
-- `yarn db:migrate` - Run Prisma migrations
-- `yarn db:reset` - Reset database with fresh migrations
 - `yarn db:studio` - Open Prisma Studio
 
 ## Architecture Overview
 
-This is a Next.js 15 schedule coordination service using the App Router architecture with JWT-based authentication.
+This is a Next.js 15 schedule coordination service using the App Router architecture with JWT-based authentication and Prisma Accelerate for high-performance database access.
 
 ### Authentication System
 - **JWT tokens** with 7-day expiration stored in localStorage
 - **bcryptjs** password hashing with 10 salt rounds
-- **PostgreSQL database** with Prisma ORM for persistent user storage
+- **Prisma Accelerate** for high-performance database access and global edge caching
 - **AuthContext** manages authentication state across the application
 
 ### Key Authentication Flow
@@ -33,12 +29,12 @@ This is a Next.js 15 schedule coordination service using the App Router architec
 4. API routes validate Bearer tokens
 
 ### Data Storage
-Uses PostgreSQL database with Prisma ORM for persistent data storage:
+Uses Prisma Accelerate for high-performance database access:
 - Database schema defined in `prisma/schema.prisma`
-- Prisma Client for type-safe database queries
-- Connection pooling and foreign key constraints
-- All storage classes use Prisma for database persistence (userStorage, eventStorage, scheduleStorage, matchingEngine)
-- Docker Compose setup for local PostgreSQL development
+- Prisma Client with Accelerate extension for type-safe database queries
+- Global edge caching and connection pooling via Prisma Accelerate
+- All storage classes use Prisma with Accelerate for database persistence (userStorage, eventStorage, scheduleStorage, matchingEngine)
+- No local database setup required - uses Prisma Accelerate for all environments
 
 ### API Routes
 **Authentication** (`/src/app/api/auth/`):
@@ -79,7 +75,7 @@ Uses PostgreSQL database with Prisma ORM for persistent data storage:
 ## Important Configuration
 - **Path mapping**: `@/*` maps to `./src/*`
 - **JWT secret**: Defaults to hardcoded value, set `JWT_SECRET` environment variable for production
-- **Database**: PostgreSQL database via Docker Compose (postgresql://postgres:postgres@localhost:5432/schedule_service_dev)
+- **Database**: Prisma Accelerate connection (prisma+postgres://accelerate.prisma-data.net/?api_key=...)
 - **Turbopack**: Enabled for fast development builds
 - **Japanese locale**: UI is in Japanese, HTML lang="ja"
 
@@ -91,7 +87,8 @@ Uses PostgreSQL database with Prisma ORM for persistent data storage:
 - Automatic matching triggers (on participant join and schedule update) ✓
 - UI improvements with visual event status distinction ✓
 - Comprehensive test coverage (unit + integration tests) ✓
-- Database persistence with PostgreSQL and Prisma ORM ✓
+- Database persistence with Prisma Accelerate ✓
+- Migration from local PostgreSQL to Prisma Accelerate ✓
 
 ## Automatic Matching System
 The system supports real-time schedule coordination where:
