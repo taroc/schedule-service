@@ -12,7 +12,6 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "postinstall": "prisma generate --no-engine",
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",
     "db:migrate": "prisma migrate dev",
