@@ -56,6 +56,12 @@ class EventStorageDB {
   async getAllEvents(): Promise<Event[]> {
     const events = await prisma.event.findMany({
       include: {
+        creator: {
+          select: {
+            id: true,
+            password: true,
+          },
+        },
         participants: {
           select: {
             userId: true,
@@ -70,7 +76,7 @@ class EventStorageDB {
       },
     });
 
-    return events.map(event => this.mapPrismaToEvent(event));
+    return events.map(event => this.mapPrismaToEventWithCreator(event));
   }
 
   async getEventsByCreator(creatorId: string): Promise<Event[]> {
@@ -373,6 +379,45 @@ class EventStorageDB {
       deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
       createdAt: new Date(prismaEvent.createdAt),
       updatedAt: new Date(prismaEvent.updatedAt),
+    };
+  }
+
+  private mapPrismaToEventWithCreator(
+    prismaEvent: {
+      id: string;
+      name: string;
+      description: string;
+      requiredParticipants: number;
+      requiredDays: number;
+      creatorId: string;
+      status: string;
+      matchedDates: string | null;
+      deadline: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+      participants?: { userId: string }[];
+      creator?: { id: string; password: string };
+    }
+  ): Event & { creator: { id: string; hashedPassword: string } } {
+    return {
+      id: prismaEvent.id,
+      name: prismaEvent.name,
+      description: prismaEvent.description,
+      requiredParticipants: prismaEvent.requiredParticipants,
+      requiredDays: prismaEvent.requiredDays,
+      creatorId: prismaEvent.creatorId,
+      status: prismaEvent.status as EventStatus,
+      participants: prismaEvent.participants?.map((p) => p.userId) || [],
+      matchedDates: prismaEvent.matchedDates ? 
+        JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
+        undefined,
+      deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
+      createdAt: new Date(prismaEvent.createdAt),
+      updatedAt: new Date(prismaEvent.updatedAt),
+      creator: {
+        id: prismaEvent.creator?.id || prismaEvent.creatorId,
+        hashedPassword: prismaEvent.creator?.password || '',
+      },
     };
   }
 }

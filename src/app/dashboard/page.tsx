@@ -65,65 +65,73 @@ export default function Dashboard() {
         return;
       }
 
-      // 作成したイベントを取得
-      const createdEventsRes = await fetch(`/api/events?creatorId=${user.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      let myCreatedEventsData: EventWithCreator[] = [];
-      if (createdEventsRes.ok) {
-        myCreatedEventsData = await createdEventsRes.json();
-        setMyCreatedEvents(myCreatedEventsData);
-      } else if (createdEventsRes.status === 401) {
-        showError('認証エラーが発生しました。再ログインしてください。');
-        logout();
-        return;
-      } else {
-        console.error('Created events fetch failed:', createdEventsRes.status);
-      }
-
-      // 参加可能なイベントを取得
-      const availableEventsRes = await fetch('/api/events?status=open', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      let availableEventsData: EventWithCreator[] = [];
-      if (availableEventsRes.ok) {
-        const allAvailable = await availableEventsRes.json();
-        // 自分が作成したものと既に参加しているものを除外
-        availableEventsData = allAvailable.filter((event: EventWithCreator) => 
-          event.creatorId !== user.id && !event.participants.includes(user.id)
-        );
-        setAvailableEvents(availableEventsData);
-      }
-
-      // 参加しているイベントを取得（全イベントから参加しているものをフィルター）
+      // 全イベントを一度に取得
       const allEventsRes = await fetch('/api/events', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      let myParticipatingEventsData: EventWithCreator[] = [];
-      if (allEventsRes.ok) {
-        const allEvents = await allEventsRes.json();
-        myParticipatingEventsData = allEvents.filter((event: EventWithCreator) => 
-          event.participants.includes(user.id) && event.creatorId !== user.id
-        );
-        setMyParticipatingEvents(myParticipatingEventsData);
+      if (!allEventsRes.ok) {
+        if (allEventsRes.status === 401) {
+          showError('認証エラーが発生しました。再ログインしてください。');
+          logout();
+          return;
+        } else {
+          console.error('Events fetch failed:', allEventsRes.status);
+          throw new Error('イベントの取得に失敗しました');
+        }
       }
+
+      const allEvents: EventWithCreator[] = await allEventsRes.json();
+
+      // デバッグ: APIレスポンスを確認
+      console.log('=== Dashboard Debug ===');
+      console.log('Total events received:', allEvents.length);
+      console.log('Current user ID:', user.id);
+      console.log('Sample event structure:', allEvents[0]);
+      console.log('Sample participants field:', allEvents[0]?.participants);
+      console.log('Participants type:', typeof allEvents[0]?.participants);
+      console.log('Is participants array?', Array.isArray(allEvents[0]?.participants));
+
+      // イベントを分類
+      const myCreatedEventsData = allEvents.filter(event => event.creatorId === user.id);
+      const myParticipatingEventsData = allEvents.filter(event => 
+        event.participants && Array.isArray(event.participants) && event.participants.includes(user.id) && event.creatorId !== user.id
+      );
+      const availableEventsData = allEvents.filter(event => 
+        event.status === 'open' && 
+        event.creatorId !== user.id && 
+        (!event.participants || !Array.isArray(event.participants) || !event.participants.includes(user.id))
+      );
+
+      // デバッグ: 分類結果を確認
+      console.log('My created events:', myCreatedEventsData.length);
+      console.log('My participating events:', myParticipatingEventsData.length);
+      console.log('Available events:', availableEventsData.length);
+
+      // 状態を更新
+      setMyCreatedEvents(myCreatedEventsData);
+      setMyParticipatingEvents(myParticipatingEventsData);
+      setAvailableEvents(availableEventsData);
 
       // ダッシュボード統計を計算
       const allMyEvents = [...myCreatedEventsData, ...myParticipatingEventsData];
       
-      // 成立済みイベントは作成したものと参加しているもの両方をカウント
-      const myMatchedEvents = myCreatedEventsData.filter(e => e.status === 'matched').length +
-                             myParticipatingEventsData.filter(e => e.status === 'matched').length;
+      // 成立済みイベントは自分が参加している（作成者または参加者として）成立済みのもののみ
+      const myMatchedEvents = allMyEvents.filter(e => e.status === 'matched').length;
       
-      setDashboardStats({
+      const stats = {
         createdEvents: myCreatedEventsData.length,
         participatingEvents: myParticipatingEventsData.length,
         matchedEvents: myMatchedEvents,
         pendingEvents: allMyEvents.filter(e => e.status === 'open').length,
-      });
+      };
+      
+      // デバッグ: 統計結果を確認
+      console.log('Dashboard stats calculated:', stats);
+      console.log('My created events detail:', myCreatedEventsData.map(e => ({ id: e.id, name: e.name, status: e.status })));
+      console.log('My participating events detail:', myParticipatingEventsData.map(e => ({ id: e.id, name: e.name, status: e.status, participants: e.participants })));
+      
+      setDashboardStats(stats);
 
     } catch (error) {
       console.error('Data loading error:', error);
@@ -261,7 +269,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">参加中のイベント</p>
+                <p className="text-sm font-medium text-gray-600">参加表明したイベント</p>
                 <p className="text-2xl font-semibold text-gray-900">{dashboardStats.participatingEvents}</p>
               </div>
             </div>
@@ -278,7 +286,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">成立済み</p>
+                <p className="text-sm font-medium text-gray-600">参加が決まったイベント</p>
                 <p className="text-2xl font-semibold text-gray-900">{dashboardStats.matchedEvents}</p>
               </div>
             </div>
@@ -372,14 +380,14 @@ export default function Dashboard() {
               <svg className="w-5 h-5 text-indigo-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              成立イベント
+              参加が決まったイベント
             </h3>
-            <p className="text-gray-600 mb-4">成立済みのイベントを確認できます</p>
+            <p className="text-gray-600 mb-4">参加が決まったイベントを確認できます</p>
             <button
               onClick={() => setActiveTab('completedEvents')}
               className="w-full border border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
-              成立イベントを見る
+              参加が決まったイベントを見る
             </button>
           </div>
         </div>
@@ -402,7 +410,7 @@ export default function Dashboard() {
         break;
       case 'participatingEvents':
         events = myParticipatingEvents;
-        title = '参加中のイベント';
+        title = '参加表明したイベント';
         break;
       case 'availableEvents':
         events = availableEvents;
@@ -434,7 +442,7 @@ export default function Dashboard() {
               onJoinEvent={handleJoinEvent}
               emptyMessage={
                 modal.type === 'myEvents' ? 'まだイベントを作成していません' :
-                modal.type === 'participatingEvents' ? '参加中のイベントがありません' :
+                modal.type === 'participatingEvents' ? '参加表明したイベントがありません' :
                 '現在参加可能なイベントがありません'
               }
             />
@@ -533,7 +541,7 @@ export default function Dashboard() {
 
               {activeTab === 'completedEvents' && (
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">成立イベント</h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">参加が決まったイベント</h2>
                   <MatchingStatus />
                 </div>
               )}

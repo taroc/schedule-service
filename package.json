@@ -12,7 +12,8 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "seed": "tsx scripts/seed-test-data.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
@@ -20,6 +21,7 @@
     "bcryptjs": "^3.0.2",
     "jsonwebtoken": "^9.0.2",
     "next": "15.3.3",
+    "node-fetch": "^3.3.2",
     "prisma": "^6.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -42,6 +44,7 @@
     "eslint-config-next": "15.3.3",
     "jsdom": "^26.1.0",
     "tailwindcss": "^4",
+    "tsx": "^4.20.3",
     "typescript": "^5",
     "vite": "^6.3.5",
     "vitest": "^3.2.3"

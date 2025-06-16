@@ -1,0 +1,401 @@
+#!/usr/bin/env tsx
+
+import { PrismaClient } from '@prisma/client';
+import { withAccelerate } from '@prisma/extension-accelerate';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient().$extends(withAccelerate());
+
+async function seedTestData() {
+  console.log('🌱 テストデータの登録を開始します...');
+
+  try {
+    // 既存のテストデータをクリア（既存ユーザーは保持）
+    console.log('📝 既存のテストデータをクリア中...');
+    await prisma.userSchedule.deleteMany({
+      where: {
+        userId: {
+          in: ['alice', 'bob', 'charlie', 'diana']
+        }
+      }
+    });
+    await prisma.eventParticipant.deleteMany({
+      where: {
+        OR: [
+          { userId: { in: ['alice', 'bob', 'charlie', 'diana'] } },
+          { event: { creatorId: { in: ['alice', 'bob', 'charlie', 'diana'] } } }
+        ]
+      }
+    });
+    await prisma.event.deleteMany({
+      where: {
+        creatorId: {
+          in: ['alice', 'bob', 'charlie', 'diana']
+        }
+      }
+    });
+    
+    // テストユーザーのみ削除して再作成
+    await prisma.user.deleteMany({
+      where: {
+        id: {
+          in: ['alice', 'bob', 'charlie', 'diana']
+        }
+      }
+    });
+
+    // テストユーザーの作成
+    console.log('👥 テストユーザーを作成中...');
+    const users = await Promise.all([
+      prisma.user.create({
+        data: {
+          id: 'alice',
+          password: await bcrypt.hash('password123', 10),
+        },
+      }),
+      prisma.user.create({
+        data: {
+          id: 'bob',
+          password: await bcrypt.hash('password123', 10),
+        },
+      }),
+      prisma.user.create({
+        data: {
+          id: 'charlie',
+          password: await bcrypt.hash('password123', 10),
+        },
+      }),
+      prisma.user.create({
+        data: {
+          id: 'diana',
+          password: await bcrypt.hash('password123', 10),
+        },
+      }),
+    ]);
+
+    console.log(`✅ ${users.length}人のユーザーを作成しました`);
+
+    // テストイベントの作成
+    console.log('📅 テストイベントを作成中...');
+    
+    // Alice主催のイベント
+    const aliceEvent1 = await prisma.event.create({
+      data: {
+        id: 'alice-event-1',
+        name: 'チーム懇親会',
+        description: 'プロジェクト完了を祝って懇親会を開催します！',
+        creatorId: 'alice',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        status: 'matched',
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
+        matchedDates: JSON.stringify([new Date(2024, 11, 20)]), // 2024年12月20日
+      },
+    });
+
+    // Alice イベント1の参加者を追加
+    await Promise.all([
+      prisma.eventParticipant.create({
+        data: { eventId: 'alice-event-1', userId: 'bob' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'alice-event-1', userId: 'charlie' },
+      }),
+    ]);
+
+    const aliceEvent2 = await prisma.event.create({
+      data: {
+        id: 'alice-event-2',
+        name: '年末忘年会',
+        description: 'みんなで楽しく年末を締めくくりましょう！',
+        creatorId: 'alice',
+        requiredParticipants: 3,
+        requiredDays: 1,
+        status: 'open',
+        deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14日後
+      },
+    });
+
+    // Alice イベント2の参加者を追加
+    await prisma.eventParticipant.create({
+      data: { eventId: 'alice-event-2', userId: 'bob' },
+    });
+
+    // Bob主催のイベント
+    const bobEvent1 = await prisma.event.create({
+      data: {
+        id: 'bob-event-1',
+        name: '技術勉強会',
+        description: '最新の技術トレンドについて学習しましょう',
+        creatorId: 'bob',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        status: 'matched',
+        deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後
+        matchedDates: JSON.stringify([new Date(2024, 11, 22)]), // 2024年12月22日
+      },
+    });
+
+    // Bob イベント1の参加者を追加
+    await Promise.all([
+      prisma.eventParticipant.create({
+        data: { eventId: 'bob-event-1', userId: 'alice' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'bob-event-1', userId: 'diana' },
+      }),
+    ]);
+
+    const bobEvent2 = await prisma.event.create({
+      data: {
+        id: 'bob-event-2',
+        name: 'ハッカソン',
+        description: '48時間でアプリを作成するイベントです',
+        creatorId: 'bob',
+        requiredParticipants: 4,
+        requiredDays: 2,
+        status: 'open',
+        deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後
+      },
+    });
+
+    // Bob イベント2の参加者を追加
+    await prisma.eventParticipant.create({
+      data: { eventId: 'bob-event-2', userId: 'charlie' },
+    });
+
+    // Charlie主催のイベント
+    const charlieEvent1 = await prisma.event.create({
+      data: {
+        id: 'charlie-event-1',
+        name: 'ランチ会',
+        description: '美味しいレストランでランチしませんか？',
+        creatorId: 'charlie',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        status: 'open',
+        deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後
+      },
+    });
+
+    // Diana主催のイベント
+    const dianaEvent1 = await prisma.event.create({
+      data: {
+        id: 'diana-event-1',
+        name: 'ボードゲーム会',
+        description: '様々なボードゲームを楽しみましょう！',
+        creatorId: 'diana',
+        requiredParticipants: 3,
+        requiredDays: 1,
+        status: 'matched',
+        deadline: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // 12日後
+        matchedDates: JSON.stringify([new Date(2024, 11, 25)]), // 2024年12月25日
+      },
+    });
+
+    // Diana イベント1の参加者を追加
+    await Promise.all([
+      prisma.eventParticipant.create({
+        data: { eventId: 'diana-event-1', userId: 'alice' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'diana-event-1', userId: 'bob' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'diana-event-1', userId: 'charlie' },
+      }),
+    ]);
+
+    // あと一人で成立するイベント（Charlie主催、あと1人必要）
+    const charlieEvent2 = await prisma.event.create({
+      data: {
+        id: 'charlie-event-2',
+        name: '映画鑑賞会',
+        description: '最新作を一緒に見に行きませんか？',
+        creatorId: 'charlie',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        status: 'open',
+        deadline: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 8日後
+      },
+    });
+
+    // Charlie イベント2の参加者を追加（あと1人で成立）
+    await prisma.eventParticipant.create({
+      data: { eventId: 'charlie-event-2', userId: 'alice' },
+    });
+
+    const allEvents = [aliceEvent1, aliceEvent2, bobEvent1, bobEvent2, charlieEvent1, charlieEvent2, dianaEvent1];
+    console.log(`✅ ${allEvents.length}個のイベントを作成しました`);
+
+    // スケジュールデータの作成
+    console.log('📋 スケジュールデータを作成中...');
+    
+    const schedules = await Promise.all([
+      // Alice のスケジュール
+      prisma.userSchedule.create({
+        data: {
+          id: 'alice-schedule-1',
+          userId: 'alice',
+          date: new Date(2024, 11, 20),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+      prisma.userSchedule.create({
+        data: {
+          id: 'alice-schedule-2',
+          userId: 'alice',
+          date: new Date(2024, 11, 22),
+          timeSlotsMorning: true,
+          timeSlotsAfternoon: true,
+          timeSlotsFullday: false,
+        },
+      }),
+      prisma.userSchedule.create({
+        data: {
+          id: 'alice-schedule-3',
+          userId: 'alice',
+          date: new Date(2024, 11, 25),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+
+      // Bob のスケジュール
+      prisma.userSchedule.create({
+        data: {
+          id: 'bob-schedule-1',
+          userId: 'bob',
+          date: new Date(2024, 11, 20),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+      prisma.userSchedule.create({
+        data: {
+          id: 'bob-schedule-2',
+          userId: 'bob',
+          date: new Date(2024, 11, 22),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+      prisma.userSchedule.create({
+        data: {
+          id: 'bob-schedule-3',
+          userId: 'bob',
+          date: new Date(2024, 11, 25),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+
+      // Charlie のスケジュール
+      prisma.userSchedule.create({
+        data: {
+          id: 'charlie-schedule-1',
+          userId: 'charlie',
+          date: new Date(2024, 11, 20),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+      prisma.userSchedule.create({
+        data: {
+          id: 'charlie-schedule-2',
+          userId: 'charlie',
+          date: new Date(2024, 11, 25),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+
+      // Diana のスケジュール
+      prisma.userSchedule.create({
+        data: {
+          id: 'diana-schedule-1',
+          userId: 'diana',
+          date: new Date(2024, 11, 22),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+      prisma.userSchedule.create({
+        data: {
+          id: 'diana-schedule-2',
+          userId: 'diana',
+          date: new Date(2024, 11, 25),
+          timeSlotsMorning: false,
+          timeSlotsAfternoon: false,
+          timeSlotsFullday: true,
+        },
+      }),
+    ]);
+
+    console.log(`✅ ${schedules.length}個のスケジュールを作成しました`);
+
+    // データの確認
+    console.log('\n📊 作成されたデータの概要:');
+    console.log('='.repeat(50));
+    
+    const userCount = await prisma.user.count();
+    const eventCount = await prisma.event.count();
+    const scheduleCount = await prisma.userSchedule.count();
+    const matchedEventCount = await prisma.event.count({ where: { status: 'matched' } });
+    const openEventCount = await prisma.event.count({ where: { status: 'open' } });
+
+    console.log(`👥 ユーザー数: ${userCount}`);
+    console.log(`📅 イベント数: ${eventCount}`);
+    console.log(`📋 スケジュール数: ${scheduleCount}`);
+    console.log(`✅ 成立済みイベント: ${matchedEventCount}`);
+    console.log(`⏳ 調整中イベント: ${openEventCount}`);
+
+    console.log('\n🔑 テストユーザーのログイン情報:');
+    console.log('='.repeat(50));
+    console.log('ユーザーID: alice, パスワード: password123');
+    console.log('ユーザーID: bob, パスワード: password123');
+    console.log('ユーザーID: charlie, パスワード: password123');
+    console.log('ユーザーID: diana, パスワード: password123');
+
+    console.log('\n🎯 各ユーザーの状況:');
+    console.log('='.repeat(50));
+    console.log('Alice: 主催2, 参加3, 成立済み3');
+    console.log('Bob: 主催2, 参加1, 成立済み3');
+    console.log('Charlie: 主催2, 参加2, 成立済み2');
+    console.log('Diana: 主催1, 参加1, 成立済み2');
+    console.log('');
+    console.log('💡 「映画鑑賞会」(Charlie主催)はあと1人参加すれば成立します！');
+
+    console.log('\n🎉 テストデータの登録が完了しました！');
+
+  } catch (error) {
+    console.error('❌ エラーが発生しました:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// スクリプトが直接実行された場合にのみ実行
+if (require.main === module) {
+  seedTestData()
+    .then(() => {
+      console.log('✨ スクリプトが正常に完了しました');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('💥 スクリプトでエラーが発生しました:', error);
+      process.exit(1);
+    });
+}
+
+export { seedTestData };

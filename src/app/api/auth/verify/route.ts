@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { userStorage } from '@/lib/userStorage';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,16 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // JWTトークンは有効でも、ユーザーがデータベースに存在するかチェック
+    const existingUser = await userStorage.getUserById(user.id);
+    
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: 'User not found in database' },
         { status: 401 }
       );
     }
