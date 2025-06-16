@@ -26,9 +26,9 @@ describe('eventStorage', () => {
   beforeEach(async () => {
     // テスト前にテストユーザーを作成
     await userStorage.createUser({
-      userId: 'user-123',
+      userId: mockCreatorId,
       password: 'password123'
-    }, mockCreatorId)
+    })
   })
 
   describe('createEvent', () => {
@@ -232,17 +232,17 @@ describe('eventStorage', () => {
       const commonDate2 = new Date('2025-01-02')
       
       await scheduleStorage.bulkSetAvailability({
-        dates: [commonDate1.toISOString(), commonDate2.toISOString()],
+        dates: [commonDate1.toISOString().split('T')[0], commonDate2.toISOString().split('T')[0]],
         timeSlots: { morning: true, afternoon: false, fullday: false }
       }, user1)
       
       await scheduleStorage.bulkSetAvailability({
-        dates: [commonDate1.toISOString(), commonDate2.toISOString()],
+        dates: [commonDate1.toISOString().split('T')[0], commonDate2.toISOString().split('T')[0]],
         timeSlots: { morning: false, afternoon: true, fullday: false }
       }, user2)
       
       await scheduleStorage.bulkSetAvailability({
-        dates: [commonDate1.toISOString(), commonDate2.toISOString()],
+        dates: [commonDate1.toISOString().split('T')[0], commonDate2.toISOString().split('T')[0]],
         timeSlots: { morning: false, afternoon: false, fullday: true }
       }, user3)
       

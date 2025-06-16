@@ -83,7 +83,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     // Step 2: Set common schedule for both users
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowISO = tomorrow.toISOString();
+    const tomorrowISO = tomorrow.toISOString().split('T')[0];
 
     // User1のスケジュール設定
     const user1ScheduleRequest = new NextRequest('http://localhost:3000/api/schedules/availability', {
@@ -216,7 +216,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
         'Authorization': `Bearer ${user1Token}`
       },
       body: JSON.stringify({
-        dates: [tomorrow.toISOString()],
+        dates: [tomorrow.toISOString().split('T')[0]],
         timeSlots: { morning: false, afternoon: false, fullday: true }
       })
     });
@@ -236,7 +236,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
         'Authorization': `Bearer ${user2Token}`
       },
       body: JSON.stringify({
-        dates: [tomorrow.toISOString()],
+        dates: [tomorrow.toISOString().split('T')[0]],
         timeSlots: { morning: false, afternoon: false, fullday: true }
       })
     });
@@ -288,7 +288,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
         'Authorization': `Bearer ${user1Token}`
       },
       body: JSON.stringify({
-        dates: [tomorrow.toISOString()],
+        dates: [tomorrow.toISOString().split('T')[0]],
         timeSlots: { morning: false, afternoon: false, fullday: true }
       })
     });
@@ -302,7 +302,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
         'Authorization': `Bearer ${user2Token}`
       },
       body: JSON.stringify({
-        dates: [dayAfter.toISOString()],
+        dates: [dayAfter.toISOString().split('T')[0]],
         timeSlots: { morning: false, afternoon: false, fullday: true }
       })
     });

@@ -8,15 +8,14 @@ class ScheduleStorage {
       const processedSchedules: UserSchedule[] = [];
 
       for (const dateString of request.dates) {
-        const date = new Date(dateString);
-        const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const date = new Date(dateString + 'T00:00:00.000Z'); // UTC日付として作成
 
         // 既存の予定を検索
         const existingSchedule = await tx.userSchedule.findUnique({
           where: {
             userId_date: {
               userId: userId,
-              date: dateStr
+              date: date
             }
           }
         });
@@ -33,7 +32,7 @@ class ScheduleStorage {
             where: {
               userId_date: {
                 userId: userId,
-                date: dateStr
+                date: date
               }
             },
             data: {
@@ -52,7 +51,7 @@ class ScheduleStorage {
             data: {
               id: scheduleId,
               userId: userId,
-              date: dateStr,
+              date: date,
               timeSlotsMorning: request.timeSlots.morning,
               timeSlotsAfternoon: request.timeSlots.afternoon,
               timeSlotsFullday: request.timeSlots.fullday,
@@ -81,15 +80,12 @@ class ScheduleStorage {
     startDate: Date,
     endDate: Date
   ): Promise<UserSchedule[]> {
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
-
     const schedules = await prisma.userSchedule.findMany({
       where: {
         userId,
         date: {
-          gte: startDateStr,
-          lte: endDateStr
+          gte: startDate,
+          lte: endDate
         }
       },
       orderBy: { date: 'asc' }
@@ -99,13 +95,11 @@ class ScheduleStorage {
   }
 
   async getScheduleByUserAndDate(userId: string, date: Date): Promise<UserSchedule | null> {
-    const dateStr = date.toISOString().split('T')[0];
-    
     const schedule = await prisma.userSchedule.findUnique({
       where: {
         userId_date: {
           userId: userId,
-          date: dateStr
+          date: date
         }
       }
     });
@@ -131,15 +125,12 @@ class ScheduleStorage {
     endDate: Date,
     requiredDays: number
   ): Promise<Date[]> {
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
-
     // 指定期間内の全スケジュールを取得
     const allSchedules = await prisma.userSchedule.findMany({
       where: {
         date: {
-          gte: startDateStr,
-          lte: endDateStr
+          gte: startDate,
+          lte: endDate
         }
       },
       orderBy: [
@@ -168,7 +159,7 @@ class ScheduleStorage {
       const allAvailable = userIds.every(userId => {
         const userSchedules = schedulesByUser.get(userId) || [];
         const daySchedule = userSchedules.find(s => {
-          const scheduleDate = typeof s.date === 'string' ? s.date : s.date.toISOString().split('T')[0];
+          const scheduleDate = s.date.toISOString().split('T')[0];
           return scheduleDate === dateStr;
         });
         
@@ -231,7 +222,7 @@ class ScheduleStorage {
     return {
       id: prismaSchedule.id,
       userId: prismaSchedule.userId,
-      date: new Date(prismaSchedule.date + 'T00:00:00.000Z'), // UTC日付として解釈
+      date: prismaSchedule.date,
       timeSlots: {
         morning: Boolean(prismaSchedule.timeSlotsMorning),
         afternoon: Boolean(prismaSchedule.timeSlotsAfternoon),

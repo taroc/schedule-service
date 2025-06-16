@@ -10,6 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `yarn lint` - Run ESLint checks
 - `yarn test` - Run all tests (Vitest framework configured)
 - `yarn test <path>` - Run specific test file
+- `yarn db:up` - Start PostgreSQL database with Docker
+- `yarn db:down` - Stop PostgreSQL database
+- `yarn db:migrate` - Run Prisma migrations
+- `yarn db:reset` - Reset database with fresh migrations
+- `yarn db:studio` - Open Prisma Studio
 
 ## Architecture Overview
 
@@ -18,7 +23,7 @@ This is a Next.js 15 schedule coordination service using the App Router architec
 ### Authentication System
 - **JWT tokens** with 7-day expiration stored in localStorage
 - **bcryptjs** password hashing with 10 salt rounds
-- **SQLite database** for persistent user storage
+- **PostgreSQL database** with Prisma ORM for persistent user storage
 - **AuthContext** manages authentication state across the application
 
 ### Key Authentication Flow
@@ -28,11 +33,12 @@ This is a Next.js 15 schedule coordination service using the App Router architec
 4. API routes validate Bearer tokens
 
 ### Data Storage
-Uses SQLite database with better-sqlite3 for persistent data storage:
-- Database connection and schema management in `/src/lib/database.ts`
-- WAL mode enabled for better concurrency
-- Foreign key constraints for data integrity
-- All storage classes use database persistence (userStorage, eventStorage, scheduleStorage, matchingEngine)
+Uses PostgreSQL database with Prisma ORM for persistent data storage:
+- Database schema defined in `prisma/schema.prisma`
+- Prisma Client for type-safe database queries
+- Connection pooling and foreign key constraints
+- All storage classes use Prisma for database persistence (userStorage, eventStorage, scheduleStorage, matchingEngine)
+- Docker Compose setup for local PostgreSQL development
 
 ### API Routes
 **Authentication** (`/src/app/api/auth/`):
@@ -73,7 +79,7 @@ Uses SQLite database with better-sqlite3 for persistent data storage:
 ## Important Configuration
 - **Path mapping**: `@/*` maps to `./src/*`
 - **JWT secret**: Defaults to hardcoded value, set `JWT_SECRET` environment variable for production
-- **Database**: SQLite database stored in `/data/schedule.db`
+- **Database**: PostgreSQL database via Docker Compose (postgresql://postgres:postgres@localhost:5432/schedule_service_dev)
 - **Turbopack**: Enabled for fast development builds
 - **Japanese locale**: UI is in Japanese, HTML lang="ja"
 
@@ -85,7 +91,7 @@ Uses SQLite database with better-sqlite3 for persistent data storage:
 - Automatic matching triggers (on participant join and schedule update) ✓
 - UI improvements with visual event status distinction ✓
 - Comprehensive test coverage (unit + integration tests) ✓
-- Database persistence with SQLite ✓
+- Database persistence with PostgreSQL and Prisma ORM ✓
 
 ## Automatic Matching System
 The system supports real-time schedule coordination where:
