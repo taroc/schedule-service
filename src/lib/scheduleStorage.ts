@@ -1,0 +1,243 @@
+import { UserSchedule, BulkAvailabilityRequest } from '@/types/schedule';
+import { prisma } from './prisma';
+import { UserSchedule as PrismaUserSchedule } from '@prisma/client';
+
+class ScheduleStorage {
+  async bulkSetAvailability(request: BulkAvailabilityRequest, userId: string): Promise<UserSchedule[]> {
+    return await prisma.$transaction(async (tx) => {
+      const processedSchedules: UserSchedule[] = [];
+
+      for (const dateString of request.dates) {
+        const date = new Date(dateString);
+        const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+        // 既存の予定を検索
+        const existingSchedule = await tx.userSchedule.findUnique({
+          where: {
+            userId_date: {
+              userId: userId,
+              date: dateStr
+            }
+          }
+        });
+
+        if (existingSchedule) {
+          // 既存の予定を更新（OR演算で時間帯を追加）
+          const newTimeSlots = {
+            morning: request.timeSlots.morning || Boolean(existingSchedule.timeSlotsMorning),
+            afternoon: request.timeSlots.afternoon || Boolean(existingSchedule.timeSlotsAfternoon),
+            fullday: request.timeSlots.fullday || Boolean(existingSchedule.timeSlotsFullday),
+          };
+
+          const updatedSchedule = await tx.userSchedule.update({
+            where: {
+              userId_date: {
+                userId: userId,
+                date: dateStr
+              }
+            },
+            data: {
+              timeSlotsMorning: newTimeSlots.morning,
+              timeSlotsAfternoon: newTimeSlots.afternoon,
+              timeSlotsFullday: newTimeSlots.fullday,
+            }
+          });
+
+          processedSchedules.push(this.mapPrismaToSchedule(updatedSchedule));
+        } else {
+          // 新しい予定を作成
+          const scheduleId = Math.random().toString(36).substring(2, 15);
+
+          const newSchedule = await tx.userSchedule.create({
+            data: {
+              id: scheduleId,
+              userId: userId,
+              date: dateStr,
+              timeSlotsMorning: request.timeSlots.morning,
+              timeSlotsAfternoon: request.timeSlots.afternoon,
+              timeSlotsFullday: request.timeSlots.fullday,
+            }
+          });
+
+          processedSchedules.push(this.mapPrismaToSchedule(newSchedule));
+        }
+      }
+
+      return processedSchedules;
+    });
+  }
+
+  async getUserSchedules(userId: string): Promise<UserSchedule[]> {
+    const schedules = await prisma.userSchedule.findMany({
+      where: { userId },
+      orderBy: { date: 'asc' }
+    });
+
+    return schedules.map(schedule => this.mapPrismaToSchedule(schedule));
+  }
+
+  async getUserSchedulesByDateRange(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<UserSchedule[]> {
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    const schedules = await prisma.userSchedule.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startDateStr,
+          lte: endDateStr
+        }
+      },
+      orderBy: { date: 'asc' }
+    });
+
+    return schedules.map(schedule => this.mapPrismaToSchedule(schedule));
+  }
+
+  async getScheduleByUserAndDate(userId: string, date: Date): Promise<UserSchedule | null> {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const schedule = await prisma.userSchedule.findUnique({
+      where: {
+        userId_date: {
+          userId: userId,
+          date: dateStr
+        }
+      }
+    });
+
+    if (!schedule) {
+      return null;
+    }
+
+    return this.mapPrismaToSchedule(schedule);
+  }
+
+  async getUserAvailableDates(userId: string, startDate: Date, endDate: Date): Promise<Date[]> {
+    const schedules = await this.getUserSchedulesByDateRange(userId, startDate, endDate);
+    
+    return schedules
+      .filter(s => s.timeSlots.morning || s.timeSlots.afternoon || s.timeSlots.fullday)
+      .map(s => s.date);
+  }
+
+  async getCommonAvailableDates(
+    userIds: string[],
+    startDate: Date,
+    endDate: Date,
+    requiredDays: number
+  ): Promise<Date[]> {
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // 指定期間内の全スケジュールを取得
+    const allSchedules = await prisma.userSchedule.findMany({
+      where: {
+        date: {
+          gte: startDateStr,
+          lte: endDateStr
+        }
+      },
+      orderBy: [
+        { userId: 'asc' },
+        { date: 'asc' }
+      ]
+    });
+    
+    // ユーザーIDごとにグループ化
+    const schedulesByUser = new Map<string, PrismaUserSchedule[]>();
+    for (const schedule of allSchedules) {
+      if (!schedulesByUser.has(schedule.userId)) {
+        schedulesByUser.set(schedule.userId, []);
+      }
+      schedulesByUser.get(schedule.userId)!.push(schedule);
+    }
+
+    const commonDates: Date[] = [];
+    
+    // 日付ごとにチェック
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      // 全ユーザーがこの日に空いているかチェック
+      const allAvailable = userIds.every(userId => {
+        const userSchedules = schedulesByUser.get(userId) || [];
+        const daySchedule = userSchedules.find(s => s.date === dateStr);
+        
+        // 未登録の場合はfalse（忙しい扱い）
+        if (!daySchedule) {
+          return false;
+        }
+        
+        // いずれかの時間帯が空いていればtrue
+        return daySchedule.timeSlotsMorning || 
+               daySchedule.timeSlotsAfternoon || 
+               daySchedule.timeSlotsFullday;
+      });
+      
+      if (allAvailable) {
+        commonDates.push(new Date(currentDate));
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // 連続した日程を見つける
+    return this.findConsecutiveDates(commonDates, requiredDays);
+  }
+
+  private findConsecutiveDates(dates: Date[], requiredDays: number): Date[] {
+    if (dates.length < requiredDays) return [];
+    
+    dates.sort((a, b) => a.getTime() - b.getTime());
+    
+    for (let i = 0; i <= dates.length - requiredDays; i++) {
+      const consecutiveDates: Date[] = [dates[i]];
+      
+      // Check if we already have enough dates (handles requiredDays = 1 case)
+      if (consecutiveDates.length === requiredDays) {
+        return consecutiveDates;
+      }
+      
+      for (let j = i + 1; j < dates.length; j++) {
+        const prevDate = consecutiveDates[consecutiveDates.length - 1];
+        const currentDate = dates[j];
+        const dayDiff = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (dayDiff === 1) {
+          consecutiveDates.push(currentDate);
+          
+          if (consecutiveDates.length === requiredDays) {
+            return consecutiveDates;
+          }
+        } else {
+          break;
+        }
+      }
+    }
+    
+    return [];
+  }
+
+  private mapPrismaToSchedule(prismaSchedule: PrismaUserSchedule): UserSchedule {
+    return {
+      id: prismaSchedule.id,
+      userId: prismaSchedule.userId,
+      date: new Date(prismaSchedule.date + 'T00:00:00.000Z'), // UTC日付として解釈
+      timeSlots: {
+        morning: Boolean(prismaSchedule.timeSlotsMorning),
+        afternoon: Boolean(prismaSchedule.timeSlotsAfternoon),
+        fullday: Boolean(prismaSchedule.timeSlotsFullday),
+      },
+      createdAt: prismaSchedule.createdAt,
+      updatedAt: prismaSchedule.updatedAt
+    };
+  }
+}
+
+export const scheduleStorage = new ScheduleStorage();

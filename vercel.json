@@ -1,0 +1,9 @@
+{
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  },
+  "buildCommand": "prisma generate && yarn build",
+  "installCommand": "yarn install"
+}
