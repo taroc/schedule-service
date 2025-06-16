@@ -47,9 +47,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - `yarn db:up` - Start PostgreSQL database with Docker
 - `yarn db:down` - Stop PostgreSQL database
-- `yarn db:migrate` - Run Prisma migrations
-- `yarn db:reset` - Reset database with fresh migrations  
-- `yarn db:studio` - Open Prisma Studio
+- `yarn db:migrate` - Run Prisma migrations (development)
+- `yarn db:reset` - Reset database with fresh migrations (force)
+- `yarn db:reset:soft` - Reset database with confirmation prompt
+- `yarn db:studio` - Open Prisma Studio (http://localhost:5555)
+- `yarn db:seed` - Seed database with sample data (if configured)
 
 ## Learn More
 
