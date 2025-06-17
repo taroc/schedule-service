@@ -354,16 +354,14 @@ export default function Dashboard() {
               </span>
             )}
           </h3>
-          <div className="max-h-64 overflow-y-auto">
-            <EventList
-              events={availableEvents}
-              currentUserId={user.id}
-              showJoinButton={true}
-              onJoinEvent={handleJoinEvent}
-              displayMode="available"
-              emptyMessage="現在参加可能なイベントがありません"
-            />
-          </div>
+          <EventList
+            events={availableEvents}
+            currentUserId={user.id}
+            showJoinButton={true}
+            onJoinEvent={handleJoinEvent}
+            displayMode="available"
+            emptyMessage="現在参加可能なイベントがありません"
+          />
         </div>
       </div>
 
