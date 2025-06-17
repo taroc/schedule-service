@@ -19,7 +19,7 @@ export default function AuthPage() {
     
     try {
       await login(userId, password);
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログインに失敗しました');
     } finally {
@@ -33,7 +33,7 @@ export default function AuthPage() {
     
     try {
       await register(userId, password);
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : '登録に失敗しました');
     } finally {

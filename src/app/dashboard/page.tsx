@@ -40,7 +40,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/auth');
+      router.replace('/auth');
     }
   }, [user, isLoading, router]);
 
