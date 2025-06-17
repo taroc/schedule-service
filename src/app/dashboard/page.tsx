@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateEventForm from '@/components/events/CreateEventForm';
 import EventList from '@/components/events/EventList';
@@ -27,6 +27,7 @@ interface DashboardModal {
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { notifications, showSuccess, showError, showInfo, removeNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [modal, setModal] = useState<DashboardModal>({ type: null, isOpen: false });
@@ -44,11 +45,33 @@ export default function Dashboard() {
     }
   }, [user, isLoading, router]);
 
+  // URLパラメータからタブを初期化
+  useEffect(() => {
+    const tab = searchParams.get('tab') as TabType;
+    if (tab && ['dashboard', 'createEvent', 'availability'].includes(tab)) {
+      setActiveTab(tab);
+    } else {
+      setActiveTab('dashboard');
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (user) {
       loadAllData();
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // タブ変更とURL更新
+  const changeTab = (newTab: TabType) => {
+    const params = new URLSearchParams(searchParams);
+    if (newTab === 'dashboard') {
+      params.delete('tab');
+    } else {
+      params.set('tab', newTab);
+    }
+    const newUrl = params.toString() ? `/dashboard?${params.toString()}` : '/dashboard';
+    router.push(newUrl);
+  };
 
   const loadAllData = async () => {
     if (!user) return;
@@ -145,7 +168,7 @@ export default function Dashboard() {
         throw new Error(errorData.error || 'イベントの作成に失敗しました');
       }
 
-      setActiveTab('dashboard');
+      changeTab('dashboard');
       await loadAllData();
       showSuccess('イベントを作成しました！');
     } catch (err) {
@@ -289,7 +312,7 @@ export default function Dashboard() {
             </h3>
             <p className="text-gray-600 mb-4">日程調整が必要なイベントを作成しましょう</p>
             <button
-              onClick={() => setActiveTab('createEvent')}
+              onClick={() => changeTab('createEvent')}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               イベントを作成する
@@ -308,7 +331,7 @@ export default function Dashboard() {
             </h3>
             <p className="text-gray-600 mb-4">空き時間を登録して日程調整に参加しましょう</p>
             <button
-              onClick={() => setActiveTab('availability')}
+              onClick={() => changeTab('availability')}
               className="w-full border border-green-500 text-green-600 hover:bg-green-50 font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               予定を更新する
@@ -369,7 +392,7 @@ export default function Dashboard() {
 
     let events: EventWithCreator[] = [];
     let title = '';
-    let showJoinButton = false;
+    const showJoinButton = false;
 
     switch (modal.type) {
       case 'myEvents':
@@ -474,7 +497,7 @@ export default function Dashboard() {
           {activeTab !== 'dashboard' && (
             <div className="mb-6">
               <button
-                onClick={() => setActiveTab('dashboard')}
+                onClick={() => changeTab('dashboard')}
                 className="flex items-center text-blue-600 hover:text-blue-800 font-medium hover:cursor-pointer"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -495,7 +518,7 @@ export default function Dashboard() {
                   <h2 className="text-lg font-medium text-gray-900 mb-6">新しいイベントを作成</h2>
                   <CreateEventForm
                     onSubmit={handleCreateEvent}
-                    onCancel={() => setActiveTab('dashboard')}
+                    onCancel={() => changeTab('dashboard')}
                     error={error}
                   />
                 </div>
