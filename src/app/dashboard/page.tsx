@@ -354,33 +354,16 @@ export default function Dashboard() {
               </span>
             )}
           </h3>
-          {availableEvents.length > 0 ? (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {availableEvents.map((event) => (
-                <div key={event.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{event.name}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{event.description}</p>
-                      <div className="flex items-center mt-2 text-xs text-gray-500">
-                        <span>作成者: {event.creatorId}</span>
-                        <span className="ml-4">必要人数: {event.requiredParticipants}人</span>
-                        <span className="ml-4">必要日数: {event.requiredDays}日</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleJoinEvent(event.id)}
-                      className="ml-4 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-                    >
-                      参加する
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">現在参加可能なイベントがありません</p>
-          )}
+          <div className="max-h-64 overflow-y-auto">
+            <EventList
+              events={availableEvents}
+              currentUserId={user.id}
+              showJoinButton={true}
+              onJoinEvent={handleJoinEvent}
+              displayMode="available"
+              emptyMessage="現在参加可能なイベントがありません"
+            />
+          </div>
         </div>
       </div>
 
@@ -432,6 +415,11 @@ export default function Dashboard() {
               currentUserId={user.id}
               showJoinButton={showJoinButton}
               onJoinEvent={handleJoinEvent}
+              displayMode={
+                modal.type === 'myEvents' ? 'created' :
+                modal.type === 'participatingEvents' ? 'participating' :
+                modal.type === 'completedEvents' ? 'completed' : 'default'
+              }
               emptyMessage={
                 modal.type === 'myEvents' ? 'まだイベントを作成していません' :
                 modal.type === 'participatingEvents' ? '参加表明したイベントがありません' :
