@@ -170,9 +170,6 @@ export default function EventList({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-base text-gray-600">
           <div>
-            <span className="font-medium text-gray-700">主催者ID:</span> {event.creatorId}
-          </div>
-          <div>
             <span className="font-medium text-gray-700">作成日:</span> {formatDate(event.createdAt)}
           </div>
           <div>
@@ -212,28 +209,40 @@ export default function EventList({
           </div>
 
           <div>
-            <span className="font-medium text-gray-700">参加者 ({event.participants.length}人):</span>
-            {event.participants && event.participants.length > 0 ? (
-              <div className="mt-1">
-                <div className="flex flex-wrap gap-2">
-                  {event.participants.map((participantId) => (
+            <span className="font-medium text-gray-700">メンバー ({event.participants.length + 1}人):</span>
+            <div className="mt-1">
+              <div className="flex flex-wrap gap-2">
+                {/* 主催者を最初に表示 */}
+                <span 
+                  className={`px-2 py-1 rounded text-sm font-medium ${
+                    event.creatorId === currentUserId 
+                      ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' 
+                      : 'bg-purple-100 text-purple-800'
+                  }`}
+                >
+                  {event.creatorId}
+                  <span className="ml-1 text-xs">👑</span>
+                  {event.creatorId === currentUserId && ' (あなた)'}
+                </span>
+                
+                {/* 参加者を表示 */}
+                {event.participants && event.participants.length > 0 && 
+                  event.participants.map((participantId) => (
                     <span 
                       key={participantId}
                       className={`px-2 py-1 rounded text-sm ${
                         participantId === currentUserId 
-                          ? 'bg-blue-100 text-blue-800 font-medium' 
+                          ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
                           : 'bg-gray-100 text-gray-700'
                       }`}
                     >
                       {participantId}
                       {participantId === currentUserId && ' (あなた)'}
                     </span>
-                  ))}
-                </div>
+                  ))
+                }
               </div>
-            ) : (
-              <span className="text-gray-500"> まだ参加者がいません</span>
-            )}
+            </div>
           </div>
 
           {event.status === 'matched' && event.matchedDates && (
@@ -300,22 +309,43 @@ export default function EventList({
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM9 16a7 7 0 000-14 7 7 0 000 14zm1-9a1 1 0 10-2 0 1 1 0 002 0z" />
                 </svg>
-                <span className="font-semibold text-lg">参加者 ({event.participants.length}人)</span>
+                <span className="font-semibold text-lg">メンバー ({event.participants.length + 1}人)</span>
               </div>
-              {event.participants && event.participants.length > 0 && (
-                <div className="mt-2 text-base text-green-800">
-                  {event.participants.join(', ')}
-                  {isParticipating(event) && (
-                    <span className="ml-2 bg-green-200 text-green-800 px-2 py-1 rounded text-sm font-medium">あなたも参加</span>
-                  )}
+              <div className="mt-2">
+                <div className="flex flex-wrap gap-2">
+                  {/* 主催者を最初に表示 */}
+                  <span 
+                    className={`px-2 py-1 rounded text-sm font-medium ${
+                      event.creatorId === currentUserId 
+                        ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' 
+                        : 'bg-purple-100 text-purple-800'
+                    }`}
+                  >
+                    {event.creatorId}
+                    <span className="ml-1 text-xs">👑</span>
+                    {event.creatorId === currentUserId && ' (あなた)'}
+                  </span>
+                  
+                  {/* 参加者を表示 */}
+                  {event.participants && event.participants.length > 0 && 
+                    event.participants.map((participantId) => (
+                      <span 
+                        key={participantId}
+                        className={`px-2 py-1 rounded text-sm ${
+                          participantId === currentUserId 
+                            ? 'bg-green-200 text-green-800 font-medium border-2 border-green-400' 
+                            : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {participantId}
+                        {participantId === currentUserId && ' (あなた)'}
+                      </span>
+                    ))
+                  }
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* その他の情報は控えめに */}
-            <div className="text-base text-gray-600">
-              <span className="font-medium">主催者:</span> {event.creatorId}
-            </div>
 
             {/* 詳細表示ボタン */}
             <div className="mt-4 pt-3 border-t border-gray-200">
@@ -379,14 +409,44 @@ export default function EventList({
                       <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM9 16a7 7 0 000-14 7 7 0 000 14z" />
                     </svg>
                   )}
-                  <span className="font-medium">参加者:</span> {event.participants.length}人
-                  {isParticipating(event) && (
+                  <span className="font-medium">メンバー:</span> {event.participants.length + 1}人
+                  {(isParticipating(event) || event.creatorId === currentUserId) && (
                     <span className="ml-2 text-blue-600 font-medium">（参加中）</span>
                   )}
                 </div>
-                {event.participants && event.participants.length > 0 && displayMode === 'participating' && (
-                  <div className="mt-1 text-sm text-blue-600">
-                    参加者: {event.participants.join(', ')}
+                {displayMode === 'participating' && (
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-2">
+                      {/* 主催者を最初に表示 */}
+                      <span 
+                        className={`px-2 py-1 rounded text-sm font-medium ${
+                          event.creatorId === currentUserId 
+                            ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' 
+                            : 'bg-purple-100 text-purple-800'
+                        }`}
+                      >
+                        {event.creatorId}
+                        <span className="ml-1 text-xs">👑</span>
+                        {event.creatorId === currentUserId && ' (あなた)'}
+                      </span>
+                      
+                      {/* 参加者を表示 */}
+                      {event.participants && event.participants.length > 0 && 
+                        event.participants.map((participantId) => (
+                          <span 
+                            key={participantId}
+                            className={`px-2 py-1 rounded text-sm ${
+                              participantId === currentUserId 
+                                ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
+                                : 'bg-blue-50 text-blue-700'
+                            }`}
+                          >
+                            {participantId}
+                            {participantId === currentUserId && ' (あなた)'}
+                          </span>
+                        ))
+                      }
+                    </div>
                   </div>
                 )}
               </div>
@@ -443,10 +503,7 @@ export default function EventList({
 
           {/* 詳細情報 - 作成者モードで表示 */}
           {displayConfig.showDetailed && displayMode === 'created' && (
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-500 pt-2 border-t">
-              <div>
-                <span className="font-medium">主催者ID:</span> {event.creatorId}
-              </div>
+            <div className="text-sm text-gray-500 pt-2 border-t">
               <div>
                 <span className="font-medium">作成日:</span> {formatDate(event.createdAt)}
               </div>
