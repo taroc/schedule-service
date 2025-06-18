@@ -411,7 +411,7 @@ export default function EventList({
             <button
               onClick={() => handleJoinButtonClick(event)}
               disabled={loadingEventIds.has(event.id)}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed cursor-pointer text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
             >
               {loadingEventIds.has(event.id) ? (
                 <>

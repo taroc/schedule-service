@@ -113,6 +113,27 @@ The system supports real-time schedule coordination where:
 - **Run tests**: `yarn test` (watch mode), `yarn test:run` (single run), `yarn test:coverage` (with coverage)
 - **Test coverage**: Automatic matching scenarios are fully tested and verified
 
+## UI/UX Guidelines
+
+### Interactive Elements
+- **All clickable elements MUST have `cursor-pointer` class** to indicate interactivity
+- **Buttons, links, clickable cards, and interactive text** should include `cursor-pointer`
+- **Disabled buttons** should use `disabled:cursor-not-allowed` to show unavailable state
+- **Examples**:
+  ```tsx
+  // Good: Button with pointer cursor
+  <button className="bg-blue-500 hover:bg-blue-600 cursor-pointer">Click me</button>
+  
+  // Good: Disabled button with appropriate cursor
+  <button disabled className="bg-gray-300 disabled:cursor-not-allowed">Disabled</button>
+  
+  // Good: Clickable card
+  <div className="border rounded-lg cursor-pointer hover:shadow-md" onClick={handleClick}>
+  
+  // Good: Conditional clickable text
+  <h3 className={`text-xl ${isClickable ? 'cursor-pointer hover:text-blue-600' : ''}`}>
+  ```
+
 ## Documentation
 - **README.md**: Main project documentation with setup instructions and feature overview
 - **prisma/schema.prisma**: Database schema definitions
