@@ -236,11 +236,6 @@ export default function EventList({
               {event.name}
             </h3>
             {getStatusBadge(event.status)}
-            {urgentDeadline.urgent && (
-              <span className={`px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 animate-pulse`}>
-                緊急
-              </span>
-            )}
           </div>
 
           {/* displayModeに応じた優先度1情報 */}
