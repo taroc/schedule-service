@@ -27,7 +27,7 @@ export default function EventList({
   emptyMessage = 'イベントがありません',
   displayMode = 'default'
 }: EventListProps) {
-  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  // const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
   const [joinModalState, setJoinModalState] = useState<{
     isOpen: boolean;
     eventId: string;
@@ -39,15 +39,16 @@ export default function EventList({
   });
   const [isJoining, setIsJoining] = useState(false);
 
-  const toggleExpanded = (eventId: string) => {
-    const newExpanded = new Set(expandedEvents);
-    if (newExpanded.has(eventId)) {
-      newExpanded.delete(eventId);
-    } else {
-      newExpanded.add(eventId);
-    }
-    setExpandedEvents(newExpanded);
-  };
+  // 将来の詳細表示機能用
+  // const toggleExpanded = (eventId: string) => {
+  //   const newExpanded = new Set(expandedEvents);
+  //   if (newExpanded.has(eventId)) {
+  //     newExpanded.delete(eventId);
+  //   } else {
+  //     newExpanded.add(eventId);
+  //   }
+  //   setExpandedEvents(newExpanded);
+  // };
 
   const handleJoinButtonClick = (event: EventWithCreator) => {
     setJoinModalState({
@@ -148,21 +149,22 @@ export default function EventList({
     return dateModeMap[dateMode as keyof typeof dateModeMap] || dateMode;
   };
 
-  const getDeadlineStatus = (deadline: Date) => {
-    const now = new Date();
-    const timeDiff = deadline.getTime() - now.getTime();
-    const hoursDiff = timeDiff / (1000 * 60 * 60);
-    
-    if (timeDiff <= 0) {
-      return { text: '期限切れ', className: 'text-red-600' };
-    } else if (hoursDiff <= 24) {
-      return { text: '24時間以内', className: 'text-orange-600' };
-    } else if (hoursDiff <= 72) {
-      return { text: '3日以内', className: 'text-yellow-600' };
-    } else {
-      return { text: '', className: 'text-gray-600' };
-    }
-  };
+  // 将来の機能用（現在はgetDeadlineUrgencyを使用）
+  // const getDeadlineStatus = (deadline: Date) => {
+  //   const now = new Date();
+  //   const timeDiff = deadline.getTime() - now.getTime();
+  //   const hoursDiff = timeDiff / (1000 * 60 * 60);
+  //   
+  //   if (timeDiff <= 0) {
+  //     return { text: '期限切れ', className: 'text-red-600' };
+  //   } else if (hoursDiff <= 24) {
+  //     return { text: '24時間以内', className: 'text-orange-600' };
+  //   } else if (hoursDiff <= 72) {
+  //     return { text: '3日以内', className: 'text-yellow-600' };
+  //   } else {
+  //     return { text: '', className: 'text-gray-600' };
+  //   }
+  // };
 
   const canJoin = (event: EventWithCreator) => {
     return (
@@ -178,446 +180,228 @@ export default function EventList({
     return currentUserId && event.participants.includes(currentUserId);
   };
 
-  const getDisplayConfig = (mode: EventDisplayMode) => {
-    switch (mode) {
-      case 'created':
-        return {
-          priorityInfo: ['participants', 'deadline', 'requirements'],
-          showDetailed: true,
-          emphasize: 'management'
-        };
-      case 'participating':
-        return {
-          priorityInfo: ['status', 'participants', 'deadline', 'matched'],
-          showDetailed: true,
-          emphasize: 'participation'
-        };
-      case 'completed':
-        return {
-          priorityInfo: ['matched', 'participants'],
-          showDetailed: false,
-          emphasize: 'execution'
-        };
-      case 'available':
-        return {
-          priorityInfo: ['description', 'requirements', 'deadline'],
-          showDetailed: false,
-          emphasize: 'decision'
-        };
-      default:
-        return {
-          priorityInfo: ['status', 'participants', 'requirements'],
-          showDetailed: true,
-          emphasize: 'general'
-        };
-    }
+  // 優先度に基づく情報レンダリング用のヘルパー関数群
+  const getParticipantStatusText = (event: EventWithCreator, includeSelf: boolean = false) => {
+    const current = event.participants.length;
+    const required = event.requiredParticipants;
+    const selfText = includeSelf && currentUserId && isParticipating(event) ? '（あなたを含む）' : '';
+    return `${current}/${required}人${selfText}`;
   };
 
-  const renderDetailedInfo = (event: EventWithCreator) => {
-    return (
-      <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-        <h4 className="font-semibold text-lg text-gray-900 mb-3">詳細情報</h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-base text-gray-600">
-          <div>
-            <span className="font-medium text-gray-700">作成日:</span> {formatDate(event.createdAt)}
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">必要人数:</span> {event.requiredParticipants}人
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">必要日数:</span> {event.requiredDays}日
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">日程モード:</span> {getDateModeText(event.dateMode)}
-          </div>
-          {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
-            <div className="md:col-span-2">
-              <span className="font-medium text-gray-700">指定期間:</span> {formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <span className="font-medium text-gray-700">説明:</span>
-            <p className="mt-1 text-base text-gray-600">{event.description}</p>
-          </div>
-
-          <div>
-            <span className="font-medium text-gray-700">参加締切:</span>{' '}
-            {event.deadline ? (
-              (() => {
-                const deadline = event.deadline instanceof Date ? event.deadline : new Date(event.deadline);
-                const deadlineStatus = getDeadlineStatus(deadline);
-                return (
-                  <span className={deadlineStatus.className}>
-                    {formatDateTime(deadline)}
-                    {deadlineStatus.text && (
-                      <span className="ml-2 text-sm font-semibold">
-                        ({deadlineStatus.text})
-                      </span>
-                    )}
-                  </span>
-                );
-              })()
-            ) : (
-              <span className="text-gray-500">期限なし</span>
-            )}
-          </div>
-
-          <div>
-            <span className="font-semibold text-lg text-gray-700">メンバー ({event.participants.length + 1}人):</span>
-            <div className="mt-2">
-              <div className="flex flex-wrap gap-2">
-                {/* 主催者を最初に表示 */}
-                <span 
-                  className={`px-3 py-2 rounded text-base font-medium ${
-                    event.creatorId === currentUserId 
-                      ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' 
-                      : 'bg-purple-100 text-purple-800'
-                  }`}
-                >
-                  {event.creatorId}
-                  <span className="ml-1 text-sm">👑</span>
-                  {event.creatorId === currentUserId && ' (あなた)'}
-                </span>
-                
-                {/* 参加者を表示 */}
-                {event.participants && event.participants.length > 0 && 
-                  event.participants.map((participantId) => (
-                    <span 
-                      key={participantId}
-                      className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
-                        participantId === currentUserId 
-                          ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {participantId}
-                      {participantId === currentUserId && ' (あなた)'}
-                    </span>
-                  ))
-                }
-              </div>
-            </div>
-          </div>
-
-          {event.status === 'matched' && event.matchedDates && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center gap-3 text-green-700">
-                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <span className="font-semibold text-xl">成立日程:</span>
-                  <div className="text-xl font-bold">
-                    {event.matchedDates.map(date => formatDate(date)).join(', ')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  const getSuccessProbability = (event: EventWithCreator) => {
+    const current = event.participants.length;
+    const required = event.requiredParticipants;
+    const remaining = required - current;
+    
+    if (remaining <= 0) return { text: '成立条件達成', color: 'text-green-600', urgent: false };
+    if (remaining === 1) return { text: 'あと1人で成立', color: 'text-orange-600', urgent: true };
+    if (remaining <= 2) return { text: `あと${remaining}人で成立`, color: 'text-yellow-600', urgent: false };
+    return { text: `あと${remaining}人必要`, color: 'text-gray-600', urgent: false };
   };
 
-  const renderEventCard = (event: EventWithCreator) => {
-    const statusConfig = getStatusConfig(event.status);
-    const displayConfig = getDisplayConfig(displayMode);
+  const getDeadlineUrgency = (event: EventWithCreator) => {
+    if (!event.deadline) return { urgent: false, text: '期限なし', color: 'text-gray-500' };
+    
+    const now = new Date();
+    const deadline = new Date(event.deadline);
+    const timeDiff = deadline.getTime() - now.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (timeDiff <= 0) return { urgent: true, text: '期限切れ', color: 'text-red-600' };
+    if (hoursDiff <= 24) return { urgent: true, text: '24時間以内', color: 'text-red-600' };
+    if (hoursDiff <= 72) return { urgent: true, text: '3日以内', color: 'text-orange-600' };
+    return { urgent: false, text: formatDateTime(deadline), color: 'text-gray-600' };
+  };
 
-    // 成立済みイベント用の特別表示
-    if (displayMode === 'completed' && event.status === 'matched') {
-      return (
-        <div
-          key={event.id}
-          className={`bg-white shadow-md rounded-lg p-6 border-2 hover:shadow-lg transition-all duration-200 ${statusConfig.cardClass}`}
-        >
-          {/* 成立済みイベント - 参加者と日程を最優先 */}
-          <div className="mb-4">
-            <div className="flex items-center gap-3 mb-3">
-              <h3 className={`text-xl font-semibold text-gray-900 ${onEventClick ? 'cursor-pointer hover:text-blue-600' : ''}`}
-                  onClick={() => onEventClick?.(event)}>
-                {event.name}
-              </h3>
-              {getStatusBadge(event.status)}
-            </div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-gray-600">
-                <span className="font-medium">日程モード:</span> {getDateModeText(event.dateMode)}
-              </span>
-              {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
-                <span className="text-sm text-gray-600">
-                  ({formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)})
-                </span>
-              )}
-            </div>
-            
-            {/* 成立日程 - 最も目立つ表示 */}
-            {event.matchedDates && (
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-5 mb-4">
-                <div className="flex items-center gap-4">
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <div className="font-bold text-2xl">開催日程</div>
-                    <div className="text-blue-100 text-2xl font-bold">
-                      {event.matchedDates.map(date => formatDate(date)).join(', ')}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+  // 将来のレスポンシブ対応用
+  // const shouldShowInfo = (infoType: string, priority: number, screenSize: 'mobile' | 'tablet' | 'desktop' = 'desktop') => {
+  //   // レスポンシブ対応: 画面サイズに応じて表示する優先度を制限
+  //   const maxPriority = screenSize === 'mobile' ? 1 : screenSize === 'tablet' ? 2 : 3;
+  //   return priority <= maxPriority;
+  // };
 
-            {/* 参加者情報 - 2番目に重要 */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-3 text-green-700">
-                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM9 16a7 7 0 000-14 7 7 0 000 14zm1-9a1 1 0 10-2 0 1 1 0 002 0z" />
-                </svg>
-                <span className="font-bold text-xl">メンバー ({event.participants.length + 1}人)</span>
-              </div>
-              <div className="mt-3">
-                <div className="flex flex-wrap gap-2">
-                  {/* 主催者を最初に表示 */}
-                  <span 
-                    className={`px-3 py-2 rounded text-base font-medium ${
-                      event.creatorId === currentUserId 
-                        ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' 
-                        : 'bg-purple-100 text-purple-800'
-                    }`}
-                  >
-                    {event.creatorId}
-                    <span className="ml-1 text-sm">👑</span>
-                    {event.creatorId === currentUserId && ' (あなた)'}
-                  </span>
-                  
-                  {/* 参加者を表示 */}
-                  {event.participants && event.participants.length > 0 && 
-                    event.participants.map((participantId) => (
-                      <span 
-                        key={participantId}
-                        className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
-                          participantId === currentUserId 
-                            ? 'bg-green-200 text-green-800 font-medium border-2 border-green-400' 
-                            : 'bg-green-100 text-green-700'
-                        }`}
-                      >
-                        {participantId}
-                        {participantId === currentUserId && ' (あなた)'}
-                      </span>
-                    ))
-                  }
-                </div>
-              </div>
-            </div>
-
-
-            {/* 詳細表示ボタン */}
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <button
-                onClick={() => toggleExpanded(event.id)}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-base font-medium transition-colors"
-              >
-                <svg 
-                  className={`w-5 h-5 transition-transform ${expandedEvents.has(event.id) ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-                {expandedEvents.has(event.id) ? '詳細を隠す' : '詳細を見る'}
-              </button>
-            </div>
-
-            {/* 詳細情報表示 */}
-            {expandedEvents.has(event.id) && renderDetailedInfo(event)}
-          </div>
-        </div>
-      );
-    }
-
-    // その他のモード用の表示
+  // 優先度に基づく情報要素のレンダリング
+  const renderPriorityInfo = (event: EventWithCreator) => {
+    const urgentDeadline = getDeadlineUrgency(event);
+    const successProb = getSuccessProbability(event);
+    
     return (
-      <div
-        key={event.id}
-        className={`bg-white shadow-md rounded-lg p-6 border-2 hover:shadow-lg transition-all duration-200 ${statusConfig.cardClass}`}
-      >
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 
-                className={`text-xl font-semibold text-gray-900 ${
-                  onEventClick ? 'cursor-pointer hover:text-blue-600' : ''
-                }`}
-                onClick={() => onEventClick?.(event)}
-              >
-                {event.name}
-              </h3>
-              {getStatusBadge(event.status)}
-            </div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-gray-600">
-                <span className="font-medium">日程モード:</span> {getDateModeText(event.dateMode)}
+      <div className="space-y-3">
+        {/* 優先度1: 最重要情報 */}
+        <div className="space-y-2">
+          {/* イベント名（常に優先度1） */}
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className={`text-xl font-bold text-gray-900 ${onEventClick ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                onClick={() => onEventClick?.(event)}>
+              {event.name}
+            </h3>
+            {getStatusBadge(event.status)}
+            {urgentDeadline.urgent && (
+              <span className={`px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 animate-pulse`}>
+                緊急
               </span>
-              {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
-                <span className="text-sm text-gray-600">
-                  ({formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)})
-                </span>
-              )}
-            </div>
-            {(displayConfig.priorityInfo.includes('description') || displayMode === 'available') && (
-              <p className="text-base text-gray-600 mb-3">{event.description}</p>
             )}
           </div>
-        </div>
 
-        {/* 優先情報に基づく表示 */}
-        <div className="space-y-3">
-          {/* 参加者情報 - 参加中イベントでは強調 */}
-          {displayConfig.priorityInfo.includes('participants') && (
-            <div className={`${displayMode === 'participating' ? 'bg-blue-50 border border-blue-200 rounded-lg p-3' : ''}`}>
-              <div className={`text-base ${displayMode === 'participating' ? 'text-blue-700' : 'text-gray-600'}`}>
-                <div className="flex items-center gap-2">
-                  {displayMode === 'participating' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM9 16a7 7 0 000-14 7 7 0 000 14z" />
-                    </svg>
-                  )}
-                  <span className="font-semibold">メンバー:</span> {event.participants.length + 1}人
-                  {(isParticipating(event) || event.creatorId === currentUserId) && (
-                    <span className="ml-2 text-blue-600 font-medium">（参加中）</span>
-                  )}
-                </div>
-                {displayMode === 'participating' && (
-                  <div className="mt-3">
-                    <div className="flex flex-wrap gap-2">
-                      {/* 主催者を最初に表示 */}
-                      <span 
-                        className={`px-3 py-2 rounded text-base font-medium ${
-                          event.creatorId === currentUserId 
-                            ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' 
-                            : 'bg-purple-100 text-purple-800'
-                        }`}
-                      >
-                        {event.creatorId}
-                        <span className="ml-1 text-sm">👑</span>
-                        {event.creatorId === currentUserId && ' (あなた)'}
-                      </span>
-                      
-                      {/* 参加者を表示 */}
-                      {event.participants && event.participants.length > 0 && 
-                        event.participants.map((participantId) => (
-                          <span 
-                            key={participantId}
-                            className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
-                              participantId === currentUserId 
-                                ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
-                                : 'bg-blue-50 text-blue-700'
-                            }`}
-                          >
-                            {participantId}
-                            {participantId === currentUserId && ' (あなた)'}
-                          </span>
-                        ))
-                      }
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* displayModeに応じた優先度1情報 */}
+          {displayMode === 'created' && (
+            <div className="flex items-center gap-4 text-lg">
+              <span className="font-semibold text-gray-700">
+                参加状況: <span className="text-blue-600">{getParticipantStatusText(event)}</span>
+              </span>
+              {successProb.urgent && (
+                <span className={`font-semibold ${successProb.color}`}>{successProb.text}</span>
+              )}
             </div>
           )}
 
-          {/* 締切情報 */}
-          {displayConfig.priorityInfo.includes('deadline') && event.deadline && (
-            <div className="text-base text-gray-600">
-              <span className="font-medium">参加締切:</span>{' '}
-              {(() => {
-                const deadline = event.deadline instanceof Date ? event.deadline : new Date(event.deadline);
-                const deadlineStatus = getDeadlineStatus(deadline);
-                return (
-                  <span className={deadlineStatus.className}>
-                    {formatDateTime(deadline)}
-                    {deadlineStatus.text && (
-                      <span className="ml-2 text-sm font-semibold">
-                        ({deadlineStatus.text})
-                      </span>
-                    )}
-                  </span>
-                );
-              })()}
+          {displayMode === 'participating' && (
+            <div className="flex items-center gap-4 text-lg">
+              <span className="font-semibold text-gray-700">
+                参加状況: <span className="text-green-600">{getParticipantStatusText(event, true)}</span>
+              </span>
             </div>
           )}
 
-          {/* 要件情報 */}
-          {displayConfig.priorityInfo.includes('requirements') && (
-            <div className="grid grid-cols-2 gap-4 text-base text-gray-600">
-              <div>
-                <span className="font-medium">必要人数:</span> {event.requiredParticipants}人
-              </div>
-              <div>
-                <span className="font-medium">必要日数:</span> {event.requiredDays}日
-              </div>
-            </div>
-          )}
-
-          {/* 成立日程 - 参加中イベントで表示 */}
-          {displayConfig.priorityInfo.includes('matched') && event.status === 'matched' && event.matchedDates && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-3 text-blue-700">
-                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+          {displayMode === 'completed' && event.matchedDates && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-green-700">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <span className="font-bold text-xl">成立日程:</span>
-                <span className="font-bold text-xl">
+                <span className="font-semibold">確定日程:</span>
+                <span className="text-lg font-bold">
                   {event.matchedDates.map(date => formatDate(date)).join(', ')}
                 </span>
               </div>
             </div>
           )}
 
-          {/* 詳細情報 - 作成者モードで表示 */}
-          {displayConfig.showDetailed && displayMode === 'created' && (
-            <div className="text-sm text-gray-500 pt-2 border-t">
-              <div>
-                <span className="font-medium">作成日:</span> {formatDate(event.createdAt)}
+          {displayMode === 'available' && (
+            <div className="space-y-2">
+              <p className="text-gray-600 text-base leading-relaxed">{event.description}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">締切:</span>
+                <span className={`text-sm font-semibold ${urgentDeadline.color}`}>
+                  {urgentDeadline.text}
+                </span>
               </div>
             </div>
           )}
+        </div>
 
-          {/* アクションボタン */}
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
-            <button
-              onClick={() => toggleExpanded(event.id)}
-              className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-base font-medium transition-colors"
-            >
-              <svg 
-                className={`w-5 h-5 transition-transform ${expandedEvents.has(event.id) ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              {expandedEvents.has(event.id) ? '詳細を隠す' : '詳細を見る'}
-            </button>
+        {/* 優先度2: 重要情報（タブレット以上で表示） */}
+        <div className="hidden md:block space-y-2 text-sm text-gray-600">
+          {displayMode === 'created' && (
+            <div className="flex items-center gap-4">
+              <span>締切: <span className={urgentDeadline.color}>{urgentDeadline.text}</span></span>
+              {!successProb.urgent && (
+                <span className={successProb.color}>{successProb.text}</span>
+              )}
+            </div>
+          )}
 
-            {canJoin(event) && (
-              <button
-                onClick={() => handleJoinButtonClick(event)}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-medium text-base py-3 px-5 rounded transition-colors hover:cursor-pointer"
-              >
-                参加する
-              </button>
+          {displayMode === 'participating' && (
+            <div className="flex items-center gap-4">
+              <span className={successProb.color}>{successProb.text}</span>
+              <span>締切: <span className={urgentDeadline.color}>{urgentDeadline.text}</span></span>
+            </div>
+          )}
+
+          {displayMode === 'available' && (
+            <div className="flex items-center gap-4">
+              <span>参加状況: {getParticipantStatusText(event)}</span>
+              <span>必要日数: {event.requiredDays}日</span>
+              <span>日程モード: {getDateModeText(event.dateMode)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 参加者表示（優先度に応じて詳細度を調整） */}
+        {(displayMode === 'completed' || displayMode === 'participating') && (
+          <div className="hidden md:block">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-medium text-gray-700">参加メンバー:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {/* 作成者表示 */}
+              <span className="px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 border-2 border-purple-200">
+                {event.creatorId}
+                <span className="ml-1 text-xs">👑</span>
+                {event.creatorId === currentUserId && ' (あなた)'}
+              </span>
+              
+              {/* 参加者表示 */}
+              {event.participants && event.participants.length > 0 && 
+                event.participants.map((participantId) => (
+                  <span 
+                    key={participantId}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      participantId === currentUserId 
+                        ? 'bg-green-200 text-green-800 font-semibold border-2 border-green-400' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {participantId}
+                    {participantId === currentUserId && ' (あなた)'}
+                  </span>
+                ))
+              }
+            </div>
+          </div>
+        )}
+
+        {/* 優先度3: 補助情報（デスクトップのみ） */}
+        <div className="hidden lg:block text-xs text-gray-500 space-y-1">
+          <div className="flex items-center gap-4">
+            <span>作成日: {formatDate(event.createdAt)}</span>
+            {displayMode !== 'available' && (
+              <span>日程モード: {getDateModeText(event.dateMode)}</span>
+            )}
+            {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
+              <span>期間: {formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)}</span>
             )}
           </div>
-
-          {/* 詳細情報表示 */}
-          {expandedEvents.has(event.id) && renderDetailedInfo(event)}
         </div>
+
+        {/* 参加ボタン（availableモードのみ） */}
+        {displayMode === 'available' && showJoinButton && canJoin(event) && (
+          <div className="pt-3 border-t border-gray-200">
+            <button
+              onClick={() => handleJoinButtonClick(event)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+            >
+              参加する
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 将来の拡張用（現在はrenderPriorityInfo内で直接実装）
+  // 各displayModeに応じた優先度設定は renderPriorityInfo 内で直接実装済み
+
+  // 将来の詳細表示機能用（現在は使用しない）
+  // const renderDetailedInfo = (event: EventWithCreator) => {
+  //   return (
+  //     <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+  //       <h4 className="font-semibold text-lg text-gray-900 mb-3">詳細情報</h4>
+  //       ...
+  //     </div>
+  //   );
+  // };
+
+  // 新しい優先度ベースのイベントカードレンダリング
+  const renderEventCard = (event: EventWithCreator) => {
+    const statusConfig = getStatusConfig(event.status);
+
+    return (
+      <div
+        key={event.id}
+        className={`bg-white shadow-md rounded-lg p-6 border-2 hover:shadow-lg transition-all duration-200 ${statusConfig.cardClass}`}
+      >
+        {renderPriorityInfo(event)}
       </div>
     );
   };
