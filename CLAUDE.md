@@ -5,12 +5,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 - `yarn dev` - Start development server with Turbopack (http://localhost:3000)
-- `yarn build` - Build production application  
+- `yarn build` - Build production application (includes Prisma Client generation)
 - `yarn start` - Start production server
 - `yarn lint` - Run ESLint checks
 - `yarn test` - Run all tests (Vitest framework configured)
 - `yarn test <path>` - Run specific test file
+- `yarn test:ui` - Run tests with Vitest UI
+- `yarn test:run` - Run tests once and exit
+- `yarn test:coverage` - Run tests with coverage report
 - `yarn db:studio` - Open Prisma Studio
+- `yarn seed` - Seed test data using scripts/seed-test-data.ts
 
 ## Architecture Overview
 
@@ -79,16 +83,16 @@ Uses Prisma Accelerate for high-performance database access:
 - **Turbopack**: Enabled for fast development builds
 - **Japanese locale**: UI is in Japanese, HTML lang="ja"
 
-## Completed Features
-- Phase 1: User authentication and event management ✓
-- Phase 2: User schedule management with time slots (morning, afternoon, full day) ✓ 
-- Phase 3: Automatic matching engine for event scheduling ✓
-- Event deadline functionality ✓
-- Automatic matching triggers (on participant join and schedule update) ✓
-- UI improvements with visual event status distinction ✓
-- Comprehensive test coverage (unit + integration tests) ✓
-- Database persistence with Prisma Accelerate ✓
-- Migration from local PostgreSQL to Prisma Accelerate ✓
+## Implementation Status
+- ✅ Phase 1: User authentication and event management
+- ✅ Phase 2: User schedule management with time slots (morning, afternoon, full day)
+- ✅ Phase 3: Automatic matching engine for event scheduling
+- ✅ Event deadline functionality
+- ✅ Automatic matching triggers (on participant join and schedule update)
+- ✅ UI improvements with visual event status distinction
+- ✅ Comprehensive test coverage (unit + integration tests)
+- ✅ Database persistence with Prisma Accelerate
+- ⚠️ Test stability improvements needed (85/159 tests currently failing)
 
 ## Automatic Matching System
 The system supports real-time schedule coordination where:
@@ -104,8 +108,12 @@ The system supports real-time schedule coordination where:
 ## Testing Strategy
 - **Unit tests**: `src/lib/__tests__/matchingEngine.test.ts` (16 tests) - Core matching logic
 - **API integration tests**: `src/app/api/__tests__/events-join-integration.test.ts` (3 tests) - End-to-end scenarios
-- **Run tests**: `yarn test` (all tests) or `yarn test <specific-file>`
+- **Test framework**: Vitest with jsdom environment and React Testing Library
+- **Test setup**: `src/test/setup.ts` configures global test environment
+- **Run tests**: `yarn test` (watch mode), `yarn test:run` (single run), `yarn test:coverage` (with coverage)
 - **Test coverage**: Automatic matching scenarios are fully tested and verified
 
 ## Documentation
-- **ARCHITECTURE.md**: Comprehensive system documentation with specifications, database design, API design, and improvement recommendations
+- **README.md**: Main project documentation with setup instructions and feature overview
+- **prisma/schema.prisma**: Database schema definitions
+- **src/types/**: TypeScript type definitions for the application
