@@ -108,14 +108,20 @@ export default function Dashboard() {
 
 
       // イベントを分類
-      const myCreatedEventsData = allEvents.filter(event => event.creatorId === user.id);
+      const myCreatedEventsData = allEvents.filter(event => {
+        // 自分が作成したイベント（成立済みは期限切れでも表示）
+        if (event.creatorId !== user.id) return false;
+        
+        const isExpired = event.deadline && new Date(event.deadline) < new Date();
+        return !isExpired || event.status === 'matched';
+      });
       const myParticipatingEventsData = allEvents.filter(event => {
-        // 期限切れチェック
+        // 期限切れチェック（ただし成立済みイベントは期限切れでも表示）
         const isExpired = event.deadline && new Date(event.deadline) < new Date();
         
         return event.participants && Array.isArray(event.participants) && event.participants.includes(user.id) && 
                event.creatorId !== user.id && 
-               !isExpired;
+               (!isExpired || event.status === 'matched');
       });
       const availableEventsData = allEvents.filter(event => {
         // 期限切れチェック
@@ -142,6 +148,25 @@ export default function Dashboard() {
 
       // ダッシュボード統計を計算
       const allMyEvents = [...myCreatedEventsData, ...myParticipatingEventsData];
+      
+      // デバッグログ
+      console.log('🔍 Dashboard Debug Info:', {
+        userId: user.id,
+        totalEvents: allEvents.length,
+        allEventsStatus: allEvents.map(e => ({ id: e.id, name: e.name, status: e.status, creatorId: e.creatorId, participants: e.participants })),
+        myCreatedEvents: myCreatedEventsData.length,
+        myCreatedEventsDetails: myCreatedEventsData.map(e => ({ id: e.id, name: e.name, status: e.status, participants: e.participants })),
+        myParticipatingEvents: myParticipatingEventsData.length,
+        myParticipatingEventsDetails: myParticipatingEventsData.map(e => ({ id: e.id, name: e.name, status: e.status, creatorId: e.creatorId, participants: e.participants })),
+        allMyEvents: allMyEvents.length,
+        matchedEventsDetails: allMyEvents.filter(e => e.status === 'matched').map(e => ({
+          id: e.id,
+          name: e.name,
+          status: e.status,
+          creatorId: e.creatorId,
+          participants: e.participants
+        }))
+      });
       
       // 成立済みイベントは自分が参加している（作成者または参加者として）成立済みのもののみ
       const myMatchedEvents = allMyEvents.filter(e => e.status === 'matched').length;
@@ -423,6 +448,19 @@ export default function Dashboard() {
         // 自分が関わっている成立済みイベント
         const allMyEvents = [...myCreatedEvents, ...myParticipatingEvents];
         events = allMyEvents.filter(event => event.status === 'matched');
+        console.log('🔍 Completed Events Modal Debug:', {
+          myCreatedEvents: myCreatedEvents.length,
+          myParticipatingEvents: myParticipatingEvents.length,
+          allMyEvents: allMyEvents.length,
+          filteredCompletedEvents: events.length,
+          completedEventsDetails: events.map(e => ({
+            id: e.id,
+            name: e.name,
+            status: e.status,
+            creatorId: e.creatorId,
+            participants: e.participants
+          }))
+        });
         title = '参加が決まったイベント';
         break;
       case 'allEvents':
