@@ -101,29 +101,38 @@ export default function AvailabilityManager() {
 
     setIsSubmitting(true);
     try {
+      const requestData = {
+        dates: selectedDates.map(d => d.toISOString().split('T')[0]),
+        timeSlots: selectedTimeSlots,
+      };
+      
+      console.log('空き時間登録リクエスト:', requestData);
+      
       const response = await fetch('/api/schedules/availability', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          dates: selectedDates.map(d => d.toISOString()),
-          timeSlots: selectedTimeSlots,
-        }),
+        body: JSON.stringify(requestData),
       });
 
+      console.log('レスポンスステータス:', response.status);
+
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('成功レスポンス:', responseData);
         await fetchSchedules();
         setSelectedDates([]);
         alert(`${selectedDates.length}日の空き時間を登録しました`);
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('エラーレスポンス:', errorData);
         throw new Error(errorData.error || 'Failed to register availability');
       }
     } catch (error) {
       console.error('Error registering availability:', error);
-      alert('空き時間の登録に失敗しました');
+      alert(`空き時間の登録に失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }
