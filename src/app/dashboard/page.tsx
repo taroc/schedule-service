@@ -8,7 +8,7 @@ import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
 import NotificationToast from '@/components/ui/NotificationToast';
 import { useNotification } from '@/hooks/useNotification';
-import { CreateEventRequest, EventWithCreator } from '@/types/event';
+import { CreateEventRequest, EventWithCreator, EventPriority } from '@/types/event';
 
 type TabType = 'dashboard' | 'createEvent' | 'availability';
 
@@ -178,7 +178,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleJoinEvent = async (eventId: string) => {
+  const handleJoinEvent = async (eventId: string, priority: EventPriority) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -186,8 +186,10 @@ export default function Dashboard() {
       const response = await fetch(`/api/events/${eventId}/join`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ priority })
       });
 
       if (!response.ok) {

@@ -279,20 +279,19 @@ class MatchingEngine {
    * イベントを優先度順にソート
    */
   private sortEventsByPriority(events: Event[]): Event[] {
-    const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
-    
+    // 参加者別優先度の実装は後回しにして、一旦作成日時順でソート
     return events.sort((a, b) => {
-      // 1. 優先度順
-      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-      if (priorityDiff !== 0) return priorityDiff;
-      
-      // 2. 期限が近い順
+      // 期限が近い順
       if (a.deadline && b.deadline) {
         const deadlineDiff = a.deadline.getTime() - b.deadline.getTime();
         if (deadlineDiff !== 0) return deadlineDiff;
       }
       
-      // 3. 作成日時が古い順（先着順）
+      // 一方だけに期限がある場合、期限があるものを優先
+      if (a.deadline && !b.deadline) return -1;
+      if (!a.deadline && b.deadline) return 1;
+      
+      // 作成日時の早い順
       return a.createdAt.getTime() - b.createdAt.getTime();
     });
   }

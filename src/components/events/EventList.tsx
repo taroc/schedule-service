@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { EventWithCreator } from '@/types/event';
+import { EventWithCreator, EventPriority } from '@/types/event';
+import JoinEventModal from './JoinEventModal';
 
 type EventDisplayMode = 'created' | 'participating' | 'completed' | 'available' | 'default';
 
@@ -9,7 +10,7 @@ interface EventListProps {
   events: EventWithCreator[];
   isLoading?: boolean;
   onEventClick?: (event: EventWithCreator) => void;
-  onJoinEvent?: (eventId: string) => void;
+  onJoinEvent?: (eventId: string, priority: EventPriority) => void;
   currentUserId?: string;
   showJoinButton?: boolean;
   emptyMessage?: string;
@@ -27,6 +28,16 @@ export default function EventList({
   displayMode = 'default'
 }: EventListProps) {
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  const [joinModalState, setJoinModalState] = useState<{
+    isOpen: boolean;
+    eventId: string;
+    eventName: string;
+  }>({
+    isOpen: false,
+    eventId: '',
+    eventName: ''
+  });
+  const [isJoining, setIsJoining] = useState(false);
 
   const toggleExpanded = (eventId: string) => {
     const newExpanded = new Set(expandedEvents);
@@ -36,6 +47,36 @@ export default function EventList({
       newExpanded.add(eventId);
     }
     setExpandedEvents(newExpanded);
+  };
+
+  const handleJoinButtonClick = (event: EventWithCreator) => {
+    setJoinModalState({
+      isOpen: true,
+      eventId: event.id,
+      eventName: event.name
+    });
+  };
+
+  const handleJoinModalClose = () => {
+    setJoinModalState({
+      isOpen: false,
+      eventId: '',
+      eventName: ''
+    });
+    setIsJoining(false);
+  };
+
+  const handleJoinConfirm = async (priority: EventPriority) => {
+    if (!onJoinEvent || !joinModalState.eventId) return;
+    
+    setIsJoining(true);
+    try {
+      await onJoinEvent(joinModalState.eventId, priority);
+      handleJoinModalClose();
+    } catch {
+      setIsJoining(false);
+      // エラーハンドリングは親コンポーネントで行う
+    }
   };
   if (isLoading) {
     return (
@@ -616,7 +657,7 @@ export default function EventList({
 
             {canJoin(event) && (
               <button
-                onClick={() => onJoinEvent?.(event.id)}
+                onClick={() => handleJoinButtonClick(event)}
                 className="bg-blue-500 hover:bg-blue-600 text-white font-medium text-base py-3 px-5 rounded transition-colors hover:cursor-pointer"
               >
                 参加する
@@ -632,8 +673,18 @@ export default function EventList({
   };
 
   return (
-    <div className="space-y-4">
-      {events.map((event) => renderEventCard(event))}
-    </div>
+    <>
+      <div className="space-y-4">
+        {events.map((event) => renderEventCard(event))}
+      </div>
+      
+      <JoinEventModal
+        isOpen={joinModalState.isOpen}
+        eventName={joinModalState.eventName}
+        onClose={handleJoinModalClose}
+        onJoin={handleJoinConfirm}
+        isLoading={isJoining}
+      />
+    </>
   );
 }
