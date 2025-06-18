@@ -207,7 +207,7 @@ describe('matchingEngine', () => {
 
       // 最初の参加者を追加（まだマッチングしない）
       await eventStorage.addParticipant(event.id, mockUser1);
-      let currentEvent = await await eventStorage.getEventById(event.id);
+      let currentEvent = await eventStorage.getEventById(event.id);
       expect(currentEvent?.status).toBe('open');
 
       // Act - 2番目の参加者追加でマッチング成立
@@ -475,7 +475,7 @@ describe('matchingEngine', () => {
       }, mockUser2);
 
       // イベントが最初はopenステータスであることを確認
-      let currentEvent = await await eventStorage.getEventById(event.id);
+      let currentEvent = await eventStorage.getEventById(event.id);
       expect(currentEvent?.status).toBe('open');
 
       // Act - マッチングチェック実行
@@ -616,6 +616,278 @@ describe('matchingEngine', () => {
       // 通常のイベントはopenのまま
       const updatedNormalEvent = await eventStorage.getEventById(normalEvent.id);
       expect(updatedNormalEvent?.status).toBe('open');
+    });
+  });
+
+  describe('柔軟な日程マッチング', () => {
+    it('should match consecutive dates with consecutive mode', async () => {
+      // Arrange
+      const eventRequest: CreateEventRequest = {
+        name: 'Consecutive Test Event',
+        description: 'Test consecutive date matching',
+        requiredParticipants: 2,
+        requiredDays: 2,
+        dateMode: 'consecutive'
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      await eventStorage.addParticipant(event.id, mockUser2);
+
+      // 連続した2日間の空き時間を設定
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const dayAfter = new Date(today);
+      dayAfter.setDate(today.getDate() + 2);
+
+      const dates = [
+        today.toISOString().split('T')[0],
+        tomorrow.toISOString().split('T')[0],
+        // dayAfterは設定しない（連続でない日程も存在）
+      ];
+
+      for (const userId of [mockUser1, mockUser2]) {
+        await scheduleStorage.bulkSetAvailability({
+          dates,
+          timeSlots: { morning: false, afternoon: false, fullday: true }
+        }, userId);
+      }
+
+      // Act
+      const result = await matchingEngine.checkEventMatching(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(true);
+      expect(result.matchedDates).toHaveLength(2);
+    });
+
+    it('should match flexible dates with flexible mode', async () => {
+      // Arrange
+      const eventRequest: CreateEventRequest = {
+        name: 'Flexible Test Event',
+        description: 'Test flexible date matching',
+        requiredParticipants: 2,
+        requiredDays: 2,
+        dateMode: 'flexible'
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      await eventStorage.addParticipant(event.id, mockUser2);
+
+      // 非連続だが2日間の空き時間を設定（月・水）
+      const today = new Date();
+      const dayAfterTomorrow = new Date(today);
+      dayAfterTomorrow.setDate(today.getDate() + 2);
+
+      const dates = [
+        today.toISOString().split('T')[0],
+        dayAfterTomorrow.toISOString().split('T')[0],
+      ];
+
+      for (const userId of [mockUser1, mockUser2]) {
+        await scheduleStorage.bulkSetAvailability({
+          dates,
+          timeSlots: { morning: false, afternoon: false, fullday: true }
+        }, userId);
+      }
+
+      // Act
+      const result = await matchingEngine.checkEventMatching(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(true);
+      expect(result.matchedDates).toHaveLength(2);
+    });
+
+    it('should match dates within specified period', async () => {
+      // Arrange
+      const periodStart = new Date();
+      periodStart.setDate(periodStart.getDate() + 1); // 明日から
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() + 7); // 1週間後まで
+
+      const eventRequest: CreateEventRequest = {
+        name: 'Period Test Event',
+        description: 'Test within period date matching',
+        requiredParticipants: 2,
+        requiredDays: 2,
+        dateMode: 'within_period',
+        periodStart,
+        periodEnd
+      };
+
+      const event = await eventStorage.createEvent(eventRequest, mockCreator);
+      await eventStorage.addParticipant(event.id, mockUser1);
+      await eventStorage.addParticipant(event.id, mockUser2);
+
+      // 期間内の日程を設定
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfter = new Date();
+      dayAfter.setDate(dayAfter.getDate() + 3);
+
+      const dates = [
+        tomorrow.toISOString().split('T')[0],
+        dayAfter.toISOString().split('T')[0],
+      ];
+
+      for (const userId of [mockUser1, mockUser2]) {
+        await scheduleStorage.bulkSetAvailability({
+          dates,
+          timeSlots: { morning: false, afternoon: false, fullday: true }
+        }, userId);
+      }
+
+      // Act
+      const result = await matchingEngine.checkEventMatching(event.id);
+
+      // Assert
+      expect(result.isMatched).toBe(true);
+      expect(result.matchedDates).toHaveLength(2);
+    });
+  });
+
+  describe('優先度システム', () => {
+    it('should create events with different priorities', async () => {
+      // Arrange
+      const highPriorityRequest: CreateEventRequest = {
+        name: 'High Priority Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        priority: 'high'
+      };
+
+      const lowPriorityRequest: CreateEventRequest = {
+        name: 'Low Priority Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        priority: 'low'
+      };
+
+      // Act
+      const highEvent = await eventStorage.createEvent(highPriorityRequest, mockCreator);
+      const lowEvent = await eventStorage.createEvent(lowPriorityRequest, mockCreator);
+
+      // Assert
+      expect(highEvent.priority).toBe('high');
+      expect(lowEvent.priority).toBe('low');
+    });
+  });
+
+  describe('グローバルマッチング', () => {
+    it('should prevent double booking with global matching', async () => {
+      // Arrange - 同じ日程で成立する可能性のある2つのイベントを作成
+      const event1Request: CreateEventRequest = {
+        name: 'High Priority Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        priority: 'high'
+      };
+
+      const event2Request: CreateEventRequest = {
+        name: 'Low Priority Event',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        priority: 'low'
+      };
+
+      const event1 = await eventStorage.createEvent(event1Request, mockCreator);
+      const event2 = await eventStorage.createEvent(event2Request, mockCreator);
+
+      // 同じ参加者が両方のイベントに参加
+      await eventStorage.addParticipant(event1.id, mockUser1);
+      await eventStorage.addParticipant(event1.id, mockUser2);
+      await eventStorage.addParticipant(event2.id, mockUser1);
+      await eventStorage.addParticipant(event2.id, mockUser2);
+
+      // 同じ日程で両方とも成立可能な状態にする
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      for (const userId of [mockUser1, mockUser2]) {
+        await scheduleStorage.bulkSetAvailability({
+          dates: [tomorrow.toISOString().split('T')[0]],
+          timeSlots: { morning: false, afternoon: false, fullday: true }
+        }, userId);
+      }
+
+      // Act - グローバルマッチング実行
+      const results = await matchingEngine.globalMatching();
+
+      // Assert
+      expect(results).toHaveLength(2);
+      
+      const event1Result = results.find(r => r.eventId === event1.id);
+      const event2Result = results.find(r => r.eventId === event2.id);
+
+      // 高優先度のイベントのみが成立し、低優先度はダブルブッキング防止で成立しない
+      expect(event1Result?.isMatched).toBe(true);
+      expect(event2Result?.isMatched).toBe(false);
+      expect(event2Result?.reason).toBe('No available dates without conflicts');
+    });
+
+    it('should handle multiple events with different participants', async () => {
+      // Arrange
+      const mockUser3 = `user-3-${Math.random().toString(36).substring(7)}`;
+      await userStorage.createUser({
+        userId: mockUser3,
+        password: 'password123'
+      });
+
+      const event1Request: CreateEventRequest = {
+        name: 'Event 1',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        priority: 'medium'
+      };
+
+      const event2Request: CreateEventRequest = {
+        name: 'Event 2',
+        description: 'Test Description',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        priority: 'medium'
+      };
+
+      const event1 = await eventStorage.createEvent(event1Request, mockCreator);
+      const event2 = await eventStorage.createEvent(event2Request, mockCreator);
+
+      // 異なる参加者でイベントを設定
+      await eventStorage.addParticipant(event1.id, mockUser1);
+      await eventStorage.addParticipant(event1.id, mockUser2);
+      await eventStorage.addParticipant(event2.id, mockUser1);
+      await eventStorage.addParticipant(event2.id, mockUser3);
+
+      // 共通の日程を設定
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      for (const userId of [mockUser1, mockUser2, mockUser3]) {
+        await scheduleStorage.bulkSetAvailability({
+          dates: [tomorrow.toISOString().split('T')[0]],
+          timeSlots: { morning: false, afternoon: false, fullday: true }
+        }, userId);
+      }
+
+      // Act
+      const results = await matchingEngine.globalMatching();
+
+      // Assert
+      expect(results).toHaveLength(2);
+      
+      const event1Result = results.find(r => r.eventId === event1.id);
+      const event2Result = results.find(r => r.eventId === event2.id);
+
+      // event1が先に成立し、event2はuser1のダブルブッキングで成立しない
+      expect(event1Result?.isMatched).toBe(true);
+      expect(event2Result?.isMatched).toBe(false);
     });
   });
 });

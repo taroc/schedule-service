@@ -1,9 +1,19 @@
-import { Event, CreateEventRequest, UpdateEventRequest, EventStatus } from '@/types/event';
+import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, EventPriority, DateMode, ReservationStatus } from '@/types/event';
 import { prisma } from './prisma';
 
 class EventStorageDB {
   async createEvent(request: CreateEventRequest, creatorId: string): Promise<Event> {
     const eventId = Math.random().toString(36).substring(2, 15);
+
+    // 入力値の検証
+    if (request.dateMode === 'within_period') {
+      if (!request.periodStart || !request.periodEnd) {
+        throw new Error('Period start and end dates are required for within_period mode');
+      }
+      if (request.periodStart >= request.periodEnd) {
+        throw new Error('Period start must be before period end');
+      }
+    }
 
     const event = await prisma.event.create({
       data: {
@@ -15,6 +25,13 @@ class EventStorageDB {
         creatorId,
         status: 'open',
         deadline: request.deadline || null,
+        
+        // 新機能フィールド
+        priority: request.priority || 'medium',
+        dateMode: request.dateMode || 'consecutive',
+        periodStart: request.periodStart || null,
+        periodEnd: request.periodEnd || null,
+        reservationStatus: 'open',
       },
       include: {
         participants: {
@@ -235,6 +252,16 @@ class EventStorageDB {
         return null;
       }
 
+      // 入力値の検証
+      if (updates.dateMode === 'within_period') {
+        if (!updates.periodStart || !updates.periodEnd) {
+          throw new Error('Period start and end dates are required for within_period mode');
+        }
+        if (updates.periodStart >= updates.periodEnd) {
+          throw new Error('Period start must be before period end');
+        }
+      }
+
       // Only update provided fields
       const updateData: {
         name?: string;
@@ -242,12 +269,22 @@ class EventStorageDB {
         requiredParticipants?: number;
         requiredDays?: number;
         deadline?: Date | null;
+        priority?: string;
+        dateMode?: string;
+        periodStart?: Date | null;
+        periodEnd?: Date | null;
       } = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.requiredParticipants !== undefined) updateData.requiredParticipants = updates.requiredParticipants;
       if (updates.requiredDays !== undefined) updateData.requiredDays = updates.requiredDays;
       if (updates.deadline !== undefined) updateData.deadline = updates.deadline;
+      
+      // 新機能フィールド
+      if (updates.priority !== undefined) updateData.priority = updates.priority;
+      if (updates.dateMode !== undefined) updateData.dateMode = updates.dateMode;
+      if (updates.periodStart !== undefined) updateData.periodStart = updates.periodStart;
+      if (updates.periodEnd !== undefined) updateData.periodEnd = updates.periodEnd;
 
       const updatedEvent = await prisma.event.update({
         where: { id: eventId },
@@ -361,6 +398,11 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
+      priority: string;
+      dateMode: string;
+      periodStart: Date | null;
+      periodEnd: Date | null;
+      reservationStatus: string;
       participants?: { userId: string }[];
     }
   ): Event {
@@ -379,6 +421,13 @@ class EventStorageDB {
       deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
       createdAt: new Date(prismaEvent.createdAt),
       updatedAt: new Date(prismaEvent.updatedAt),
+      
+      // 新機能フィールド
+      priority: prismaEvent.priority as EventPriority,
+      dateMode: prismaEvent.dateMode as DateMode,
+      periodStart: prismaEvent.periodStart ? new Date(prismaEvent.periodStart) : undefined,
+      periodEnd: prismaEvent.periodEnd ? new Date(prismaEvent.periodEnd) : undefined,
+      reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
     };
   }
 

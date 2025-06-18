@@ -31,11 +31,21 @@ model Event {
   deadline             DateTime?
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
+  
+  // 新機能フィールド
+  priority             String             @default("medium")
+  dateMode             String             @default("consecutive") @map("date_mode")
+  periodStart          DateTime?          @map("period_start")
+  periodEnd            DateTime?          @map("period_end")
+  reservationStatus    String             @default("open") @map("reservation_status")
+  
   participants         EventParticipant[]
   creator              User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@index([creatorId])
   @@index([status])
+  @@index([priority])
+  @@index([reservationStatus])
   @@map("events")
 }
 

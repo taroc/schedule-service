@@ -28,10 +28,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    // deadlineをISO 8601文字列からDateオブジェクトに変換
+    // DateオブジェクトとDateModeの変換
     const eventRequest: CreateEventRequest = {
       ...body,
-      deadline: body.deadline ? new Date(body.deadline) : undefined
+      deadline: body.deadline ? new Date(body.deadline) : undefined,
+      periodStart: body.periodStart ? new Date(body.periodStart) : undefined,
+      periodEnd: body.periodEnd ? new Date(body.periodEnd) : undefined,
+      priority: body.priority || 'medium',
+      dateMode: body.dateMode || 'consecutive'
     };
     
     // バリデーション
@@ -46,6 +50,39 @@ export async function POST(request: NextRequest) {
     if (eventRequest.requiredParticipants < 1 || eventRequest.requiredDays < 1) {
       return NextResponse.json(
         { error: 'Required participants and days must be greater than 0' },
+        { status: 400 }
+      );
+    }
+
+    // 期間指定モードの場合の追加バリデーション
+    if (eventRequest.dateMode === 'within_period') {
+      if (!eventRequest.periodStart || !eventRequest.periodEnd) {
+        return NextResponse.json(
+          { error: 'Period start and end dates are required for within_period mode' },
+          { status: 400 }
+        );
+      }
+      
+      if (eventRequest.periodStart >= eventRequest.periodEnd) {
+        return NextResponse.json(
+          { error: 'Period start must be before period end' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 有効なpriority値のチェック
+    if (eventRequest.priority && !['high', 'medium', 'low'].includes(eventRequest.priority)) {
+      return NextResponse.json(
+        { error: 'Priority must be high, medium, or low' },
+        { status: 400 }
+      );
+    }
+
+    // 有効なdateMode値のチェック
+    if (eventRequest.dateMode && !['consecutive', 'flexible', 'within_period'].includes(eventRequest.dateMode)) {
+      return NextResponse.json(
+        { error: 'Date mode must be consecutive, flexible, or within_period' },
         { status: 400 }
       );
     }
