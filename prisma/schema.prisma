@@ -50,7 +50,6 @@ model Event {
 model EventParticipant {
   eventId  String   @map("event_id")
   userId   String   @map("user_id")
-  priority String   @default("medium") // 参加者が指定する優先度
   joinedAt DateTime @default(now()) @map("joined_at")
   event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -58,7 +57,6 @@ model EventParticipant {
   @@id([eventId, userId])
   @@index([eventId])
   @@index([userId])
-  @@index([eventId, priority])
   @@map("event_participants")
 }
 

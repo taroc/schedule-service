@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { EventWithCreator, EventPriority } from '@/types/event';
+import { EventWithCreator } from '@/types/event';
 import JoinEventModal from './JoinEventModal';
 
 type EventDisplayMode = 'created' | 'participating' | 'completed' | 'available' | 'default';
@@ -10,7 +10,7 @@ interface EventListProps {
   events: EventWithCreator[];
   isLoading?: boolean;
   onEventClick?: (event: EventWithCreator) => void;
-  onJoinEvent?: (eventId: string, priority: EventPriority) => void;
+  onJoinEvent?: (eventId: string) => void;
   currentUserId?: string;
   showJoinButton?: boolean;
   emptyMessage?: string;
@@ -66,12 +66,12 @@ export default function EventList({
     setIsJoining(false);
   };
 
-  const handleJoinConfirm = async (priority: EventPriority) => {
+  const handleJoinConfirm = async () => {
     if (!onJoinEvent || !joinModalState.eventId) return;
     
     setIsJoining(true);
     try {
-      await onJoinEvent(joinModalState.eventId, priority);
+      await onJoinEvent(joinModalState.eventId);
       handleJoinModalClose();
     } catch {
       setIsJoining(false);
@@ -139,15 +139,6 @@ export default function EventList({
     return new Date(date).toLocaleString('ja-JP');
   };
 
-  const getPriorityText = (priority: string) => {
-    const priorityMap = {
-      'high': '高（緊急・重要）',
-      'medium': '中（標準）',
-      'low': '低（後回しでも良い）'
-    };
-    return priorityMap[priority as keyof typeof priorityMap] || priority;
-  };
-
   const getDateModeText = (dateMode: string) => {
     const dateModeMap = {
       'consecutive': '連続日程',
@@ -155,23 +146,6 @@ export default function EventList({
       'within_period': '期間指定'
     };
     return dateModeMap[dateMode as keyof typeof dateModeMap] || dateMode;
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    const priorityConfig = {
-      'high': { text: '高', className: 'bg-red-100 text-red-800 border-red-200' },
-      'medium': { text: '中', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-      'low': { text: '低', className: 'bg-gray-100 text-gray-800 border-gray-200' }
-    };
-    
-    const config = priorityConfig[priority as keyof typeof priorityConfig];
-    if (!config) return null;
-    
-    return (
-      <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${config.className}`}>
-        {config.text}
-      </span>
-    );
   };
 
   const getDeadlineStatus = (deadline: Date) => {
@@ -254,15 +228,6 @@ export default function EventList({
           <div>
             <span className="font-medium text-gray-700">必要日数:</span> {event.requiredDays}日
           </div>
-          {currentUserId && event.participantDetails && (
-            <div>
-              <span className="font-medium text-gray-700">あなたの優先度:</span>{' '}
-              {(() => {
-                const userParticipation = event.participantDetails.find(p => p.userId === currentUserId);
-                return userParticipation ? getPriorityText(userParticipation.priority) : '未参加';
-              })()}
-            </div>
-          )}
           <div>
             <span className="font-medium text-gray-700">日程モード:</span> {getDateModeText(event.dateMode)}
           </div>
@@ -319,19 +284,18 @@ export default function EventList({
                 </span>
                 
                 {/* 参加者を表示 */}
-                {event.participantDetails && event.participantDetails.length > 0 && 
-                  event.participantDetails.map((participation) => (
+                {event.participants && event.participants.length > 0 && 
+                  event.participants.map((participantId) => (
                     <span 
-                      key={participation.userId}
+                      key={participantId}
                       className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
-                        participation.userId === currentUserId 
+                        participantId === currentUserId 
                           ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
                           : 'bg-gray-100 text-gray-700'
                       }`}
                     >
-                      {participation.userId}
-                      {participation.userId === currentUserId && ' (あなた)'}
-                      {getPriorityBadge(participation.priority)}
+                      {participantId}
+                      {participantId === currentUserId && ' (あなた)'}
                     </span>
                   ))
                 }
@@ -378,12 +342,6 @@ export default function EventList({
                 {event.name}
               </h3>
               {getStatusBadge(event.status)}
-              {currentUserId && event.participantDetails && 
-                (() => {
-                  const userParticipation = event.participantDetails.find(p => p.userId === currentUserId);
-                  return userParticipation ? getPriorityBadge(userParticipation.priority) : null;
-                })()
-              }
             </div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-sm text-gray-600">
@@ -437,19 +395,18 @@ export default function EventList({
                   </span>
                   
                   {/* 参加者を表示 */}
-                  {event.participantDetails && event.participantDetails.length > 0 && 
-                    event.participantDetails.map((participation) => (
+                  {event.participants && event.participants.length > 0 && 
+                    event.participants.map((participantId) => (
                       <span 
-                        key={participation.userId}
+                        key={participantId}
                         className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
-                          participation.userId === currentUserId 
+                          participantId === currentUserId 
                             ? 'bg-green-200 text-green-800 font-medium border-2 border-green-400' 
                             : 'bg-green-100 text-green-700'
                         }`}
                       >
-                        {participation.userId}
-                        {participation.userId === currentUserId && ' (あなた)'}
-                        {getPriorityBadge(participation.priority)}
+                        {participantId}
+                        {participantId === currentUserId && ' (あなた)'}
                       </span>
                     ))
                   }
@@ -501,12 +458,6 @@ export default function EventList({
                 {event.name}
               </h3>
               {getStatusBadge(event.status)}
-              {currentUserId && event.participantDetails && 
-                (() => {
-                  const userParticipation = event.participantDetails.find(p => p.userId === currentUserId);
-                  return userParticipation ? getPriorityBadge(userParticipation.priority) : null;
-                })()
-              }
             </div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-sm text-gray-600">
@@ -558,19 +509,18 @@ export default function EventList({
                       </span>
                       
                       {/* 参加者を表示 */}
-                      {event.participantDetails && event.participantDetails.length > 0 && 
-                        event.participantDetails.map((participation) => (
+                      {event.participants && event.participants.length > 0 && 
+                        event.participants.map((participantId) => (
                           <span 
-                            key={participation.userId}
+                            key={participantId}
                             className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
-                              participation.userId === currentUserId 
+                              participantId === currentUserId 
                                 ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
                                 : 'bg-blue-50 text-blue-700'
                             }`}
                           >
-                            {participation.userId}
-                            {participation.userId === currentUserId && ' (あなた)'}
-                            {getPriorityBadge(participation.priority)}
+                            {participantId}
+                            {participantId === currentUserId && ' (あなた)'}
                           </span>
                         ))
                       }

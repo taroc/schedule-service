@@ -1,4 +1,4 @@
-import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, EventPriority, DateMode, ReservationStatus, EventParticipation } from '@/types/event';
+import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, DateMode, ReservationStatus, EventParticipation } from '@/types/event';
 import { prisma } from './prisma';
 
 class EventStorageDB {
@@ -36,7 +36,6 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
-            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -55,7 +54,6 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
-            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -83,7 +81,6 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
-            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -105,7 +102,6 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
-            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -127,7 +123,6 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
-            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -142,7 +137,7 @@ class EventStorageDB {
     return events.map(event => this.mapPrismaToEvent(event));
   }
 
-  async addParticipant(eventId: string, userId: string, priority: EventPriority = 'medium'): Promise<boolean> {
+  async addParticipant(eventId: string, userId: string): Promise<{ success: boolean; error?: string }> {
     try {
       const event = await prisma.event.findUnique({
         where: { id: eventId },
@@ -150,12 +145,12 @@ class EventStorageDB {
       });
 
       if (!event) {
-        return false;
+        return { success: false, error: 'Event not found' };
       }
 
       // 作成者は参加できない
       if (event.creatorId === userId) {
-        return false;
+        return { success: false, error: 'Event creator cannot join their own event' };
       }
 
       // 既に参加しているかチェック
@@ -169,20 +164,28 @@ class EventStorageDB {
       });
 
       if (existingParticipant) {
-        return false;
+        return { success: false, error: 'Already joined this event' };
+      }
+
+      // ダブルブッキングチェック
+      const conflictCheck = await this.checkForScheduleConflicts(eventId, userId);
+      if (!conflictCheck.canJoin) {
+        return { 
+          success: false, 
+          error: `日程が重複しています: ${conflictCheck.conflictingEvents.join(', ')}`
+        };
       }
 
       await prisma.eventParticipant.create({
         data: {
           eventId,
           userId,
-          priority,
         },
       });
 
-      return true;
+      return { success: true };
     } catch {
-      return false;
+      return { success: false, error: 'Failed to join event' };
     }
   }
 
@@ -212,11 +215,83 @@ class EventStorageDB {
       return participants.map(p => ({
         eventId: p.eventId,
         userId: p.userId,
-        priority: p.priority as EventPriority,
         joinedAt: p.joinedAt,
       }));
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * ユーザーがイベントに参加する際の日程競合をチェック
+   */
+  async checkForScheduleConflicts(eventId: string, userId: string): Promise<{
+    canJoin: boolean;
+    conflictingEvents: string[];
+  }> {
+    try {
+      // 参加しようとするイベントの情報を取得
+      const targetEvent = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { 
+          name: true,
+          matchedDates: true,
+          status: true
+        }
+      });
+
+      if (!targetEvent) {
+        return { canJoin: false, conflictingEvents: ['Event not found'] };
+      }
+
+      // まだ成立していないイベントは競合チェック不要
+      if (targetEvent.status !== 'matched' || !targetEvent.matchedDates) {
+        return { canJoin: true, conflictingEvents: [] };
+      }
+
+      // 成立済みイベントの日程を取得
+      const targetDates = JSON.parse(targetEvent.matchedDates) as string[];
+
+      // ユーザーが参加している他の成立済みイベントを取得
+      const userEvents = await prisma.event.findMany({
+        where: {
+          status: 'matched',
+          matchedDates: { not: null },
+          participants: {
+            some: {
+              userId: userId
+            }
+          }
+        },
+        select: {
+          id: true,
+          name: true,
+          matchedDates: true
+        }
+      });
+
+      const conflictingEvents: string[] = [];
+
+      // 日程の重複をチェック
+      for (const userEvent of userEvents) {
+        if (userEvent.matchedDates) {
+          const userEventDates = JSON.parse(userEvent.matchedDates) as string[];
+          
+          // 日程が重複している場合
+          const hasOverlap = targetDates.some(date => userEventDates.includes(date));
+          if (hasOverlap) {
+            conflictingEvents.push(userEvent.name);
+          }
+        }
+      }
+
+      return {
+        canJoin: conflictingEvents.length === 0,
+        conflictingEvents
+      };
+    } catch (error) {
+      console.error('Schedule conflict check failed:', error);
+      return { canJoin: false, conflictingEvents: ['Error checking schedule conflicts'] };
     }
   }
 
@@ -233,7 +308,6 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
-            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -315,7 +389,6 @@ class EventStorageDB {
           participants: {
             select: {
               userId: true,
-              priority: true,
             },
             orderBy: {
               joinedAt: 'asc',
@@ -354,7 +427,6 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
-            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -426,7 +498,7 @@ class EventStorageDB {
       periodStart: Date | null;
       periodEnd: Date | null;
       reservationStatus: string;
-      participants?: { userId: string; priority: string }[];
+      participants?: { userId: string }[];
     }
   ): Event {
     return {
@@ -438,12 +510,6 @@ class EventStorageDB {
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
-      participantDetails: prismaEvent.participants?.map((p) => ({
-        eventId: prismaEvent.id,
-        userId: p.userId,
-        priority: p.priority as EventPriority,
-        joinedAt: new Date(), // この情報はクエリで取得されない場合があるため
-      })) || [],
       matchedDates: prismaEvent.matchedDates ? 
         JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
         undefined,
@@ -476,7 +542,7 @@ class EventStorageDB {
       periodStart: Date | null;
       periodEnd: Date | null;
       reservationStatus: string;
-      participants?: { userId: string; priority: string }[];
+      participants?: { userId: string }[];
       creator?: { id: string; password: string };
     }
   ): Event & { creator: { id: string; hashedPassword: string } } {
@@ -489,12 +555,6 @@ class EventStorageDB {
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
-      participantDetails: prismaEvent.participants?.map((p) => ({
-        eventId: prismaEvent.id,
-        userId: p.userId,
-        priority: p.priority as EventPriority,
-        joinedAt: new Date(), // この情報はクエリで取得されない場合があるため
-      })) || [],
       matchedDates: prismaEvent.matchedDates ? 
         JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
         undefined,

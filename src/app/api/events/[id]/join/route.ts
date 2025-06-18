@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eventStorage } from '@/lib/eventStorage';
 import { matchingEngine } from '@/lib/matchingEngine';
 import { verifyToken } from '@/lib/auth';
-import { JoinEventRequest } from '@/types/event';
 
 export async function POST(
   request: NextRequest,
@@ -65,15 +64,11 @@ export async function POST(
       );
     }
 
-    // リクエストボディから優先度を取得
-    const body: JoinEventRequest = await request.json().catch(() => ({}));
-    const priority = body.priority || 'medium';
-
-    const success = await eventStorage.addParticipant(resolvedParams.id, user.id, priority);
+    const result = await eventStorage.addParticipant(resolvedParams.id, user.id);
     
-    if (!success) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Already joined or failed to join event' },
+        { error: result.error || 'Failed to join event' },
         { status: 400 }
       );
     }

@@ -8,8 +8,7 @@ export interface Event {
   createdAt: Date;
   updatedAt: Date;
   status: EventStatus;
-  participants: string[];        // 参加者ID配列（後方互換のため残す）
-  participantDetails?: EventParticipation[]; // 参加者詳細情報（優先度含む）
+  participants: string[];        // 参加者ID配列
   matchedDates?: Date[];         // 成立した日程
   deadline?: Date;               // 参加締切
   
@@ -21,8 +20,6 @@ export interface Event {
 }
 
 export type EventStatus = 'open' | 'matched' | 'cancelled' | 'expired';
-
-export type EventPriority = 'high' | 'medium' | 'low';
 
 export type DateMode = 'consecutive' | 'flexible' | 'within_period';
 
@@ -57,12 +54,7 @@ export interface UpdateEventRequest {
 export interface EventParticipation {
   eventId: string;
   userId: string;
-  priority: EventPriority;  // 参加者が指定する優先度
   joinedAt: Date;
-}
-
-export interface JoinEventRequest {
-  priority?: EventPriority; // デフォルト: 'medium'
 }
 
 // EventWithCreator is now equivalent to Event since user names are not stored
