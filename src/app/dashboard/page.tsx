@@ -20,7 +20,7 @@ interface DashboardStats {
 }
 
 interface DashboardModal {
-  type: 'myEvents' | 'participatingEvents' | 'completedEvents' | null;
+  type: 'myEvents' | 'participatingEvents' | 'completedEvents' | 'allEvents' | null;
   isOpen: boolean;
 }
 
@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [myCreatedEvents, setMyCreatedEvents] = useState<EventWithCreator[]>([]);
   const [myParticipatingEvents, setMyParticipatingEvents] = useState<EventWithCreator[]>([]);
   const [availableEvents, setAvailableEvents] = useState<EventWithCreator[]>([]);
+  const [allValidEvents, setAllValidEvents] = useState<EventWithCreator[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [error, setError] = useState('');
@@ -123,14 +124,21 @@ export default function Dashboard() {
         return event.status === 'open' && 
                !isExpired &&
                event.creatorId !== user.id && 
-               (!event.participants || !Array.isArray(event.participants) || !event.participants.includes(user.id));
+               (!event.participants || !Array.isArray(event.participants) || !event.participants.includes(user.id)) &&
+               event.requiredParticipants > (event.participants ? event.participants.length : 0); // 必要人数に達していない
       });
 
+      // 期限が来ていない全イベント（自分が作成したもの以外）
+      const allValidEventsData = allEvents.filter(event => {
+        const isExpired = event.deadline && new Date(event.deadline) < new Date();
+        return !isExpired && event.creatorId !== user.id;
+      });
 
       // 状態を更新
       setMyCreatedEvents(myCreatedEventsData);
       setMyParticipatingEvents(myParticipatingEventsData);
       setAvailableEvents(availableEventsData);
+      setAllValidEvents(allValidEventsData);
 
       // ダッシュボード統計を計算
       const allMyEvents = [...myCreatedEventsData, ...myParticipatingEventsData];
@@ -254,7 +262,7 @@ export default function Dashboard() {
 
       {/* 統計カード */}
       {dashboardStats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div 
             className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => openModal('myEvents')}
@@ -305,6 +313,23 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          <div 
+            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => openModal('allEvents')}
+          >
+            <div className="flex items-center">
+              <div className="p-2 rounded-full bg-orange-100">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">期限内の全イベント</p>
+                <p className="text-2xl font-semibold text-gray-900">{allValidEvents.length}</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -347,6 +372,7 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
       </div>
 
       {/* 参加できるイベント一覧 */}
@@ -399,6 +425,10 @@ export default function Dashboard() {
         events = allMyEvents.filter(event => event.status === 'matched');
         title = '参加が決まったイベント';
         break;
+      case 'allEvents':
+        events = allValidEvents;
+        title = '期限内の全イベント';
+        break;
     }
 
     return (
@@ -425,12 +455,14 @@ export default function Dashboard() {
               displayMode={
                 modal.type === 'myEvents' ? 'created' :
                 modal.type === 'participatingEvents' ? 'participating' :
-                modal.type === 'completedEvents' ? 'completed' : 'default'
+                modal.type === 'completedEvents' ? 'completed' :
+                modal.type === 'allEvents' ? 'allEvents' : 'default'
               }
               emptyMessage={
                 modal.type === 'myEvents' ? 'まだイベントを作成していません' :
                 modal.type === 'participatingEvents' ? '参加表明したイベントがありません' :
-                '参加が決まったイベントがありません'
+                modal.type === 'completedEvents' ? '参加が決まったイベントがありません' :
+                modal.type === 'allEvents' ? '期限内のイベントがありません' : ''
               }
             />
           </div>
@@ -525,6 +557,7 @@ export default function Dashboard() {
                   <AvailabilityManager />
                 </div>
               )}
+
             </div>
           </div>
         </div>

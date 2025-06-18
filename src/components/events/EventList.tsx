@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { EventWithCreator } from '@/types/event';
 import JoinEventModal from './JoinEventModal';
 
-type EventDisplayMode = 'created' | 'participating' | 'completed' | 'available' | 'default';
+type EventDisplayMode = 'created' | 'participating' | 'completed' | 'available' | 'allEvents' | 'default';
 
 interface EventListProps {
   events: EventWithCreator[];
@@ -172,12 +172,41 @@ export default function EventList({
       currentUserId &&
       event.status === 'open' &&
       event.creatorId !== currentUserId &&
-      !event.participants.includes(currentUserId)
+      !event.participants.includes(currentUserId) &&
+      event.requiredParticipants > (event.participants ? event.participants.length : 0)
     );
   };
 
   const isParticipating = (event: EventWithCreator) => {
     return currentUserId && event.participants.includes(currentUserId);
+  };
+
+  const getParticipationStatus = (event: EventWithCreator) => {
+    if (!currentUserId) return { status: 'unknown', reason: '' };
+    
+    // 自分が作成したイベント
+    if (event.creatorId === currentUserId) {
+      return { status: 'owner', reason: '作成者' };
+    }
+    
+    // 既に参加している
+    if (event.participants.includes(currentUserId)) {
+      return { status: 'participating', reason: '参加済み' };
+    }
+    
+    // ステータスが募集中でない
+    if (event.status !== 'open') {
+      return { status: 'closed', reason: '募集終了' };
+    }
+    
+    // 必要人数に達している
+    const currentParticipants = event.participants ? event.participants.length : 0;
+    if (event.requiredParticipants <= currentParticipants) {
+      return { status: 'full', reason: '満員' };
+    }
+    
+    // 参加可能
+    return { status: 'available', reason: '参加可能' };
   };
 
   // 優先度に基づく情報レンダリング用のヘルパー関数群
@@ -272,7 +301,7 @@ export default function EventList({
             </div>
           )}
 
-          {displayMode === 'available' && (
+          {(displayMode === 'available' || displayMode === 'allEvents') && (
             <div className="space-y-3">
               {/* 概要（優先度2） */}
               <p className="text-gray-700 text-lg leading-relaxed font-medium">{event.description}</p>
@@ -296,6 +325,29 @@ export default function EventList({
                 <span className="text-base font-semibold text-gray-700">参加状況:</span>
                 <span className="text-base font-bold text-green-600">{getParticipantStatusText(event)}</span>
               </div>
+
+              {/* 全イベント表示時：自分の参加ステータス */}
+              {displayMode === 'allEvents' && (
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-700">あなたの状況:</span>
+                  {(() => {
+                    const status = getParticipationStatus(event);
+                    const statusColors = {
+                      owner: 'text-purple-600',
+                      participating: 'text-green-600', 
+                      available: 'text-blue-600',
+                      full: 'text-orange-600',
+                      closed: 'text-red-600',
+                      unknown: 'text-gray-600'
+                    };
+                    return (
+                      <span className={`text-base font-bold ${statusColors[status.status]}`}>
+                        {status.reason}
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -318,7 +370,7 @@ export default function EventList({
             </div>
           )}
 
-          {displayMode === 'available' && (
+          {(displayMode === 'available' || displayMode === 'allEvents') && (
             <div className="flex items-center gap-4">
               <span>日程モード: {getDateModeText(event.dateMode)}</span>
             </div>
@@ -372,8 +424,8 @@ export default function EventList({
           </div>
         </div>
 
-        {/* 参加ボタン（availableモードのみ） */}
-        {displayMode === 'available' && showJoinButton && canJoin(event) && (
+        {/* 参加ボタン（availableモードと全イベントモード） */}
+        {(displayMode === 'available' || displayMode === 'allEvents') && showJoinButton && canJoin(event) && (
           <div className="pt-3 border-t border-gray-200">
             <button
               onClick={() => handleJoinButtonClick(event)}
