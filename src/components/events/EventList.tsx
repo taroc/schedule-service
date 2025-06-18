@@ -273,13 +273,28 @@ export default function EventList({
           )}
 
           {displayMode === 'available' && (
-            <div className="space-y-2">
-              <p className="text-gray-600 text-base leading-relaxed">{event.description}</p>
+            <div className="space-y-3">
+              {/* 概要（優先度2） */}
+              <p className="text-gray-700 text-lg leading-relaxed font-medium">{event.description}</p>
+              
+              {/* 締切（優先度3） */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">締切:</span>
-                <span className={`text-sm font-semibold ${urgentDeadline.color}`}>
+                <span className="text-base font-semibold text-gray-700">締切:</span>
+                <span className={`text-base font-bold ${urgentDeadline.color}`}>
                   {urgentDeadline.text}
                 </span>
+              </div>
+              
+              {/* 必要日数（優先度4） */}
+              <div className="flex items-center gap-2">
+                <span className="text-base font-semibold text-gray-700">必要日数:</span>
+                <span className="text-base font-bold text-blue-600">{event.requiredDays}日</span>
+              </div>
+              
+              {/* 参加状況（優先度5） */}
+              <div className="flex items-center gap-2">
+                <span className="text-base font-semibold text-gray-700">参加状況:</span>
+                <span className="text-base font-bold text-green-600">{getParticipantStatusText(event)}</span>
               </div>
             </div>
           )}
@@ -305,8 +320,6 @@ export default function EventList({
 
           {displayMode === 'available' && (
             <div className="flex items-center gap-4">
-              <span>参加状況: {getParticipantStatusText(event)}</span>
-              <span>必要日数: {event.requiredDays}日</span>
               <span>日程モード: {getDateModeText(event.dateMode)}</span>
             </div>
           )}

@@ -108,14 +108,23 @@ export default function Dashboard() {
 
       // イベントを分類
       const myCreatedEventsData = allEvents.filter(event => event.creatorId === user.id);
-      const myParticipatingEventsData = allEvents.filter(event => 
-        event.participants && Array.isArray(event.participants) && event.participants.includes(user.id) && event.creatorId !== user.id
-      );
-      const availableEventsData = allEvents.filter(event => 
-        event.status === 'open' && 
-        event.creatorId !== user.id && 
-        (!event.participants || !Array.isArray(event.participants) || !event.participants.includes(user.id))
-      );
+      const myParticipatingEventsData = allEvents.filter(event => {
+        // 期限切れチェック
+        const isExpired = event.deadline && new Date(event.deadline) < new Date();
+        
+        return event.participants && Array.isArray(event.participants) && event.participants.includes(user.id) && 
+               event.creatorId !== user.id && 
+               !isExpired;
+      });
+      const availableEventsData = allEvents.filter(event => {
+        // 期限切れチェック
+        const isExpired = event.deadline && new Date(event.deadline) < new Date();
+        
+        return event.status === 'open' && 
+               !isExpired &&
+               event.creatorId !== user.id && 
+               (!event.participants || !Array.isArray(event.participants) || !event.participants.includes(user.id));
+      });
 
 
       // 状態を更新
