@@ -213,9 +213,15 @@ export default function EventList({
           <div>
             <span className="font-medium text-gray-700">必要日数:</span> {event.requiredDays}日
           </div>
-          <div>
-            <span className="font-medium text-gray-700">優先度:</span> {getPriorityText(event.priority)}
-          </div>
+          {currentUserId && event.participantDetails && (
+            <div>
+              <span className="font-medium text-gray-700">あなたの優先度:</span>{' '}
+              {(() => {
+                const userParticipation = event.participantDetails.find(p => p.userId === currentUserId);
+                return userParticipation ? getPriorityText(userParticipation.priority) : '未参加';
+              })()}
+            </div>
+          )}
           <div>
             <span className="font-medium text-gray-700">日程モード:</span> {getDateModeText(event.dateMode)}
           </div>
@@ -272,18 +278,19 @@ export default function EventList({
                 </span>
                 
                 {/* 参加者を表示 */}
-                {event.participants && event.participants.length > 0 && 
-                  event.participants.map((participantId) => (
+                {event.participantDetails && event.participantDetails.length > 0 && 
+                  event.participantDetails.map((participation) => (
                     <span 
-                      key={participantId}
-                      className={`px-3 py-2 rounded text-base ${
-                        participantId === currentUserId 
+                      key={participation.userId}
+                      className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
+                        participation.userId === currentUserId 
                           ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
                           : 'bg-gray-100 text-gray-700'
                       }`}
                     >
-                      {participantId}
-                      {participantId === currentUserId && ' (あなた)'}
+                      {participation.userId}
+                      {participation.userId === currentUserId && ' (あなた)'}
+                      {getPriorityBadge(participation.priority)}
                     </span>
                   ))
                 }
@@ -330,7 +337,12 @@ export default function EventList({
                 {event.name}
               </h3>
               {getStatusBadge(event.status)}
-              {getPriorityBadge(event.priority)}
+              {currentUserId && event.participantDetails && 
+                (() => {
+                  const userParticipation = event.participantDetails.find(p => p.userId === currentUserId);
+                  return userParticipation ? getPriorityBadge(userParticipation.priority) : null;
+                })()
+              }
             </div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-sm text-gray-600">
@@ -384,18 +396,19 @@ export default function EventList({
                   </span>
                   
                   {/* 参加者を表示 */}
-                  {event.participants && event.participants.length > 0 && 
-                    event.participants.map((participantId) => (
+                  {event.participantDetails && event.participantDetails.length > 0 && 
+                    event.participantDetails.map((participation) => (
                       <span 
-                        key={participantId}
-                        className={`px-3 py-2 rounded text-base ${
-                          participantId === currentUserId 
+                        key={participation.userId}
+                        className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
+                          participation.userId === currentUserId 
                             ? 'bg-green-200 text-green-800 font-medium border-2 border-green-400' 
                             : 'bg-green-100 text-green-700'
                         }`}
                       >
-                        {participantId}
-                        {participantId === currentUserId && ' (あなた)'}
+                        {participation.userId}
+                        {participation.userId === currentUserId && ' (あなた)'}
+                        {getPriorityBadge(participation.priority)}
                       </span>
                     ))
                   }
@@ -447,7 +460,12 @@ export default function EventList({
                 {event.name}
               </h3>
               {getStatusBadge(event.status)}
-              {getPriorityBadge(event.priority)}
+              {currentUserId && event.participantDetails && 
+                (() => {
+                  const userParticipation = event.participantDetails.find(p => p.userId === currentUserId);
+                  return userParticipation ? getPriorityBadge(userParticipation.priority) : null;
+                })()
+              }
             </div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-sm text-gray-600">
@@ -499,18 +517,19 @@ export default function EventList({
                       </span>
                       
                       {/* 参加者を表示 */}
-                      {event.participants && event.participants.length > 0 && 
-                        event.participants.map((participantId) => (
+                      {event.participantDetails && event.participantDetails.length > 0 && 
+                        event.participantDetails.map((participation) => (
                           <span 
-                            key={participantId}
-                            className={`px-3 py-2 rounded text-base ${
-                              participantId === currentUserId 
+                            key={participation.userId}
+                            className={`px-3 py-2 rounded text-base flex items-center gap-1 ${
+                              participation.userId === currentUserId 
                                 ? 'bg-blue-100 text-blue-800 font-medium border-2 border-blue-300' 
                                 : 'bg-blue-50 text-blue-700'
                             }`}
                           >
-                            {participantId}
-                            {participantId === currentUserId && ' (あなた)'}
+                            {participation.userId}
+                            {participation.userId === currentUserId && ' (あなた)'}
+                            {getPriorityBadge(participation.priority)}
                           </span>
                         ))
                       }

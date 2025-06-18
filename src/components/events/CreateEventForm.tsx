@@ -22,7 +22,6 @@ export default function CreateEventForm({
     requiredParticipants: 1,
     requiredDays: 1,
     deadline: undefined,
-    priority: 'medium',
     dateMode: 'consecutive',
     periodStart: undefined,
     periodEnd: undefined
@@ -172,25 +171,6 @@ export default function CreateEventForm({
           </p>
         </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            優先度 *
-          </label>
-          <select
-            name="priority"
-            value={formData.priority}
-            onChange={handleSelectChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            required
-          >
-            <option value="low">低（後回しでも良い）</option>
-            <option value="medium">中（標準）</option>
-            <option value="high">高（緊急・重要）</option>
-          </select>
-          <p className="text-gray-500 text-xs mt-1">
-            他のイベントと日程が重複した場合の優先度
-          </p>
-        </div>
 
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">

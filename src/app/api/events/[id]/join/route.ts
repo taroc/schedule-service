@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eventStorage } from '@/lib/eventStorage';
 import { matchingEngine } from '@/lib/matchingEngine';
 import { verifyToken } from '@/lib/auth';
+import { JoinEventRequest } from '@/types/event';
 
 export async function POST(
   request: NextRequest,
@@ -64,7 +65,11 @@ export async function POST(
       );
     }
 
-    const success = await eventStorage.addParticipant(resolvedParams.id, user.id);
+    // リクエストボディから優先度を取得
+    const body: JoinEventRequest = await request.json().catch(() => ({}));
+    const priority = body.priority || 'medium';
+
+    const success = await eventStorage.addParticipant(resolvedParams.id, user.id, priority);
     
     if (!success) {
       return NextResponse.json(

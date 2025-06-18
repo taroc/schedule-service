@@ -33,7 +33,6 @@ model Event {
   updatedAt            DateTime           @updatedAt @map("updated_at")
   
   // 新機能フィールド
-  priority             String             @default("medium")
   dateMode             String             @default("consecutive") @map("date_mode")
   periodStart          DateTime?          @map("period_start")
   periodEnd            DateTime?          @map("period_end")
@@ -44,7 +43,6 @@ model Event {
 
   @@index([creatorId])
   @@index([status])
-  @@index([priority])
   @@index([reservationStatus])
   @@map("events")
 }
@@ -52,6 +50,7 @@ model Event {
 model EventParticipant {
   eventId  String   @map("event_id")
   userId   String   @map("user_id")
+  priority String   @default("medium") // 参加者が指定する優先度
   joinedAt DateTime @default(now()) @map("joined_at")
   event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -59,6 +58,7 @@ model EventParticipant {
   @@id([eventId, userId])
   @@index([eventId])
   @@index([userId])
+  @@index([eventId, priority])
   @@map("event_participants")
 }
 

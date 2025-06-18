@@ -71,13 +71,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 有効なpriority値のチェック
-    if (eventRequest.priority && !['high', 'medium', 'low'].includes(eventRequest.priority)) {
-      return NextResponse.json(
-        { error: 'Priority must be high, medium, or low' },
-        { status: 400 }
-      );
-    }
 
     // 有効なdateMode値のチェック
     if (eventRequest.dateMode && !['consecutive', 'flexible', 'within_period'].includes(eventRequest.dateMode)) {

@@ -1,4 +1,4 @@
-import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, EventPriority, DateMode, ReservationStatus } from '@/types/event';
+import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, EventPriority, DateMode, ReservationStatus, EventParticipation } from '@/types/event';
 import { prisma } from './prisma';
 
 class EventStorageDB {
@@ -27,7 +27,6 @@ class EventStorageDB {
         deadline: request.deadline || null,
         
         // 新機能フィールド
-        priority: request.priority || 'medium',
         dateMode: request.dateMode || 'consecutive',
         periodStart: request.periodStart || null,
         periodEnd: request.periodEnd || null,
@@ -37,6 +36,7 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
+            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -55,6 +55,7 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
+            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -82,6 +83,7 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
+            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -103,6 +105,7 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
+            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -124,6 +127,7 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
+            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -138,7 +142,7 @@ class EventStorageDB {
     return events.map(event => this.mapPrismaToEvent(event));
   }
 
-  async addParticipant(eventId: string, userId: string): Promise<boolean> {
+  async addParticipant(eventId: string, userId: string, priority: EventPriority = 'medium'): Promise<boolean> {
     try {
       const event = await prisma.event.findUnique({
         where: { id: eventId },
@@ -172,6 +176,7 @@ class EventStorageDB {
         data: {
           eventId,
           userId,
+          priority,
         },
       });
 
@@ -197,6 +202,24 @@ class EventStorageDB {
     }
   }
 
+  async getEventParticipants(eventId: string): Promise<EventParticipation[]> {
+    try {
+      const participants = await prisma.eventParticipant.findMany({
+        where: { eventId },
+        orderBy: { joinedAt: 'asc' },
+      });
+
+      return participants.map(p => ({
+        eventId: p.eventId,
+        userId: p.userId,
+        priority: p.priority as EventPriority,
+        joinedAt: p.joinedAt,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   async getParticipantEvents(userId: string): Promise<Event[]> {
     const events = await prisma.event.findMany({
       where: {
@@ -210,6 +233,7 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
+            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -269,7 +293,6 @@ class EventStorageDB {
         requiredParticipants?: number;
         requiredDays?: number;
         deadline?: Date | null;
-        priority?: string;
         dateMode?: string;
         periodStart?: Date | null;
         periodEnd?: Date | null;
@@ -281,7 +304,6 @@ class EventStorageDB {
       if (updates.deadline !== undefined) updateData.deadline = updates.deadline;
       
       // 新機能フィールド
-      if (updates.priority !== undefined) updateData.priority = updates.priority;
       if (updates.dateMode !== undefined) updateData.dateMode = updates.dateMode;
       if (updates.periodStart !== undefined) updateData.periodStart = updates.periodStart;
       if (updates.periodEnd !== undefined) updateData.periodEnd = updates.periodEnd;
@@ -293,6 +315,7 @@ class EventStorageDB {
           participants: {
             select: {
               userId: true,
+              priority: true,
             },
             orderBy: {
               joinedAt: 'asc',
@@ -331,6 +354,7 @@ class EventStorageDB {
         participants: {
           select: {
             userId: true,
+            priority: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -398,12 +422,11 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
-      priority: string;
       dateMode: string;
       periodStart: Date | null;
       periodEnd: Date | null;
       reservationStatus: string;
-      participants?: { userId: string }[];
+      participants?: { userId: string; priority: string }[];
     }
   ): Event {
     return {
@@ -415,6 +438,12 @@ class EventStorageDB {
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
+      participantDetails: prismaEvent.participants?.map((p) => ({
+        eventId: prismaEvent.id,
+        userId: p.userId,
+        priority: p.priority as EventPriority,
+        joinedAt: new Date(), // この情報はクエリで取得されない場合があるため
+      })) || [],
       matchedDates: prismaEvent.matchedDates ? 
         JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
         undefined,
@@ -423,7 +452,6 @@ class EventStorageDB {
       updatedAt: new Date(prismaEvent.updatedAt),
       
       // 新機能フィールド
-      priority: prismaEvent.priority as EventPriority,
       dateMode: prismaEvent.dateMode as DateMode,
       periodStart: prismaEvent.periodStart ? new Date(prismaEvent.periodStart) : undefined,
       periodEnd: prismaEvent.periodEnd ? new Date(prismaEvent.periodEnd) : undefined,
@@ -444,12 +472,11 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
-      priority: string;
       dateMode: string;
       periodStart: Date | null;
       periodEnd: Date | null;
       reservationStatus: string;
-      participants?: { userId: string }[];
+      participants?: { userId: string; priority: string }[];
       creator?: { id: string; password: string };
     }
   ): Event & { creator: { id: string; hashedPassword: string } } {
@@ -462,6 +489,12 @@ class EventStorageDB {
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
+      participantDetails: prismaEvent.participants?.map((p) => ({
+        eventId: prismaEvent.id,
+        userId: p.userId,
+        priority: p.priority as EventPriority,
+        joinedAt: new Date(), // この情報はクエリで取得されない場合があるため
+      })) || [],
       matchedDates: prismaEvent.matchedDates ? 
         JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
         undefined,
@@ -470,7 +503,6 @@ class EventStorageDB {
       updatedAt: new Date(prismaEvent.updatedAt),
       
       // 新機能フィールド
-      priority: prismaEvent.priority as EventPriority,
       dateMode: prismaEvent.dateMode as DateMode,
       periodStart: prismaEvent.periodStart ? new Date(prismaEvent.periodStart) : undefined,
       periodEnd: prismaEvent.periodEnd ? new Date(prismaEvent.periodEnd) : undefined,
