@@ -444,6 +444,11 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
+      priority: string;
+      dateMode: string;
+      periodStart: Date | null;
+      periodEnd: Date | null;
+      reservationStatus: string;
       participants?: { userId: string }[];
       creator?: { id: string; password: string };
     }
@@ -463,6 +468,14 @@ class EventStorageDB {
       deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
       createdAt: new Date(prismaEvent.createdAt),
       updatedAt: new Date(prismaEvent.updatedAt),
+      
+      // 新機能フィールド
+      priority: prismaEvent.priority as EventPriority,
+      dateMode: prismaEvent.dateMode as DateMode,
+      periodStart: prismaEvent.periodStart ? new Date(prismaEvent.periodStart) : undefined,
+      periodEnd: prismaEvent.periodEnd ? new Date(prismaEvent.periodEnd) : undefined,
+      reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
+      
       creator: {
         id: prismaEvent.creator?.id || prismaEvent.creatorId,
         hashedPassword: prismaEvent.creator?.password || '',

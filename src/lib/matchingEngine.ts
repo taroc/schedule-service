@@ -1,6 +1,6 @@
 import { eventStorage } from './eventStorage';
 import { scheduleStorage } from './scheduleStorage';
-import { Event, EventPriority, DateMode } from '@/types/event';
+import { Event, DateMode } from '@/types/event';
 
 export interface MatchingResult {
   eventId: string;

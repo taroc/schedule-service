@@ -21,10 +21,16 @@ export default function CreateEventForm({
     description: '',
     requiredParticipants: 1,
     requiredDays: 1,
-    deadline: undefined
+    deadline: undefined,
+    priority: 'medium',
+    dateMode: 'consecutive',
+    periodStart: undefined,
+    periodEnd: undefined
   });
   
   const [deadlineDate, setDeadlineDate] = useState('');
+  const [periodStartDate, setPeriodStartDate] = useState('');
+  const [periodEndDate, setPeriodEndDate] = useState('');
 
   // 期限の日付が変更されたときにformDataを更新（23:59に固定）
   useEffect(() => {
@@ -35,6 +41,26 @@ export default function CreateEventForm({
       setFormData(prev => ({ ...prev, deadline: undefined }));
     }
   }, [deadlineDate]);
+
+  // 期間開始日が変更されたときにformDataを更新
+  useEffect(() => {
+    if (periodStartDate) {
+      const periodStart = new Date(`${periodStartDate}T00:00:00`);
+      setFormData(prev => ({ ...prev, periodStart }));
+    } else {
+      setFormData(prev => ({ ...prev, periodStart: undefined }));
+    }
+  }, [periodStartDate]);
+
+  // 期間終了日が変更されたときにformDataを更新
+  useEffect(() => {
+    if (periodEndDate) {
+      const periodEnd = new Date(`${periodEndDate}T23:59:59`);
+      setFormData(prev => ({ ...prev, periodEnd }));
+    } else {
+      setFormData(prev => ({ ...prev, periodEnd: undefined }));
+    }
+  }, [periodEndDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,8 +75,24 @@ export default function CreateEventForm({
     }));
   };
 
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleDeadlineDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDeadlineDate(e.target.value);
+  };
+
+  const handlePeriodStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPeriodStartDate(e.target.value);
+  };
+
+  const handlePeriodEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPeriodEndDate(e.target.value);
   };
 
   return (
@@ -126,9 +168,85 @@ export default function CreateEventForm({
             required
           />
           <p className="text-gray-500 text-xs mt-1">
-            連続して確保したい日数
+            確保したい日数
           </p>
         </div>
+
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            優先度 *
+          </label>
+          <select
+            name="priority"
+            value={formData.priority}
+            onChange={handleSelectChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            required
+          >
+            <option value="low">低（後回しでも良い）</option>
+            <option value="medium">中（標準）</option>
+            <option value="high">高（緊急・重要）</option>
+          </select>
+          <p className="text-gray-500 text-xs mt-1">
+            他のイベントと日程が重複した場合の優先度
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            日程モード *
+          </label>
+          <select
+            name="dateMode"
+            value={formData.dateMode}
+            onChange={handleSelectChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            required
+          >
+            <option value="consecutive">連続日程（必要日数分の連続した日程）</option>
+            <option value="flexible">柔軟日程（連続でなくても必要日数確保）</option>
+            <option value="within_period">期間指定（指定期間内で必要日数確保）</option>
+          </select>
+          <p className="text-gray-500 text-xs mt-1">
+            日程の確保方法を選択
+          </p>
+        </div>
+
+        {formData.dateMode === 'within_period' && (
+          <div className="mb-4 p-4 border border-blue-200 rounded-md bg-blue-50">
+            <h3 className="text-sm font-bold text-blue-800 mb-3">期間指定設定</h3>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                期間開始日 *
+              </label>
+              <input
+                type="date"
+                value={periodStartDate}
+                onChange={handlePeriodStartDateChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                required
+              />
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                期間終了日 *
+              </label>
+              <input
+                type="date"
+                value={periodEndDate}
+                onChange={handlePeriodEndDateChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                required
+              />
+            </div>
+            
+            <p className="text-blue-600 text-xs">
+              この期間内で{formData.requiredDays}日間の日程を確保します
+            </p>
+          </div>
+        )}
 
         <div className="mb-6">
           <label className="block text-gray-700 text-sm font-bold mb-2">

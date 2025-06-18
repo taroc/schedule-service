@@ -98,6 +98,41 @@ export default function EventList({
     return new Date(date).toLocaleString('ja-JP');
   };
 
+  const getPriorityText = (priority: string) => {
+    const priorityMap = {
+      'high': '高（緊急・重要）',
+      'medium': '中（標準）',
+      'low': '低（後回しでも良い）'
+    };
+    return priorityMap[priority as keyof typeof priorityMap] || priority;
+  };
+
+  const getDateModeText = (dateMode: string) => {
+    const dateModeMap = {
+      'consecutive': '連続日程',
+      'flexible': '柔軟日程',
+      'within_period': '期間指定'
+    };
+    return dateModeMap[dateMode as keyof typeof dateModeMap] || dateMode;
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const priorityConfig = {
+      'high': { text: '高', className: 'bg-red-100 text-red-800 border-red-200' },
+      'medium': { text: '中', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      'low': { text: '低', className: 'bg-gray-100 text-gray-800 border-gray-200' }
+    };
+    
+    const config = priorityConfig[priority as keyof typeof priorityConfig];
+    if (!config) return null;
+    
+    return (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${config.className}`}>
+        {config.text}
+      </span>
+    );
+  };
+
   const getDeadlineStatus = (deadline: Date) => {
     const now = new Date();
     const timeDiff = deadline.getTime() - now.getTime();
@@ -178,6 +213,17 @@ export default function EventList({
           <div>
             <span className="font-medium text-gray-700">必要日数:</span> {event.requiredDays}日
           </div>
+          <div>
+            <span className="font-medium text-gray-700">優先度:</span> {getPriorityText(event.priority)}
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">日程モード:</span> {getDateModeText(event.dateMode)}
+          </div>
+          {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
+            <div className="md:col-span-2">
+              <span className="font-medium text-gray-700">指定期間:</span> {formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)}
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -284,6 +330,17 @@ export default function EventList({
                 {event.name}
               </h3>
               {getStatusBadge(event.status)}
+              {getPriorityBadge(event.priority)}
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm text-gray-600">
+                <span className="font-medium">日程モード:</span> {getDateModeText(event.dateMode)}
+              </span>
+              {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
+                <span className="text-sm text-gray-600">
+                  ({formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)})
+                </span>
+              )}
             </div>
             
             {/* 成立日程 - 最も目立つ表示 */}
@@ -390,6 +447,17 @@ export default function EventList({
                 {event.name}
               </h3>
               {getStatusBadge(event.status)}
+              {getPriorityBadge(event.priority)}
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm text-gray-600">
+                <span className="font-medium">日程モード:</span> {getDateModeText(event.dateMode)}
+              </span>
+              {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
+                <span className="text-sm text-gray-600">
+                  ({formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)})
+                </span>
+              )}
             </div>
             {(displayConfig.priorityInfo.includes('description') || displayMode === 'available') && (
               <p className="text-base text-gray-600 mb-3">{event.description}</p>
