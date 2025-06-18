@@ -64,8 +64,8 @@ model UserSchedule {
   id                 String   @id
   userId             String   @map("user_id")
   date               DateTime
-  timeSlotsMorning   Boolean  @default(false) @map("time_slots_morning")
-  timeSlotsAfternoon Boolean  @default(false) @map("time_slots_afternoon")
+  timeSlotsDaytime   Boolean  @default(false) @map("time_slots_daytime")
+  timeSlotsEvening   Boolean  @default(false) @map("time_slots_evening")
   timeSlotsFullday   Boolean  @default(false) @map("time_slots_fullday")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")

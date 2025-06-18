@@ -119,8 +119,15 @@ export default function MultiSelectCalendar({
       // 時間帯別の表示
       if (day.timeSlots.fullday) {
         className += 'bg-green-200 border-2 border-green-500 ';
-      } else if (day.timeSlots.morning || day.timeSlots.afternoon) {
-        className += 'bg-green-100 border-2 border-green-400 ';
+      } else if (day.timeSlots.daytime && day.timeSlots.evening) {
+        // 昼と夜両方
+        className += 'bg-gradient-to-r from-blue-200 to-purple-200 border-2 border-indigo-400 ';
+      } else if (day.timeSlots.daytime) {
+        // 昼のみ
+        className += 'bg-blue-200 border-2 border-blue-400 ';
+      } else if (day.timeSlots.evening) {
+        // 夜のみ
+        className += 'bg-purple-200 border-2 border-purple-400 ';
       } else {
         className += 'bg-red-100 border-2 border-red-400 ';
       }
@@ -137,15 +144,15 @@ export default function MultiSelectCalendar({
     
     const indicators = [];
     
-    if (day.timeSlots.morning) {
+    if (day.timeSlots.daytime) {
       indicators.push(
-        <div key="morning" className="absolute top-0 left-0 w-1 h-1 bg-green-500 rounded-full"></div>
+        <div key="daytime" className="absolute top-0 left-0 w-1 h-1 bg-blue-500 rounded-full"></div>
       );
     }
     
-    if (day.timeSlots.afternoon) {
+    if (day.timeSlots.evening) {
       indicators.push(
-        <div key="afternoon" className="absolute top-0 right-0 w-1 h-1 bg-green-500 rounded-full"></div>
+        <div key="evening" className="absolute top-0 right-0 w-1 h-1 bg-purple-500 rounded-full"></div>
       );
     }
     
@@ -243,11 +250,23 @@ export default function MultiSelectCalendar({
             <span className="text-gray-700">一日空き</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-100 border-2 border-green-400 rounded relative">
-              <div className="absolute top-0 left-0 w-1 h-1 bg-green-500 rounded-full"></div>
-              <div className="absolute top-0 right-0 w-1 h-1 bg-green-500 rounded-full"></div>
+            <div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded relative">
+              <div className="absolute top-0 left-0 w-1 h-1 bg-blue-500 rounded-full"></div>
             </div>
-            <span className="text-gray-700">部分的に空き</span>
+            <span className="text-gray-700">昼空き</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-purple-200 border-2 border-purple-400 rounded relative">
+              <div className="absolute top-0 right-0 w-1 h-1 bg-purple-500 rounded-full"></div>
+            </div>
+            <span className="text-gray-700">夜空き</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gradient-to-r from-blue-200 to-purple-200 border-2 border-indigo-400 rounded relative">
+              <div className="absolute top-0 left-0 w-1 h-1 bg-blue-500 rounded-full"></div>
+              <div className="absolute top-0 right-0 w-1 h-1 bg-purple-500 rounded-full"></div>
+            </div>
+            <span className="text-gray-700">昼・夜空き</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
@@ -255,7 +274,7 @@ export default function MultiSelectCalendar({
           </div>
         </div>
         <div className="text-xs text-gray-500 mt-2">
-          ※ 左上：午前、右上：午後、下中央：一日中の空き状況を表示
+          ※ 左上：昼、右上：夜、下中央：一日中の空き状況を表示
         </div>
       </div>
     </div>

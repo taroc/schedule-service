@@ -23,8 +23,8 @@ class ScheduleStorage {
         if (existingSchedule) {
           // 既存の予定を更新（OR演算で時間帯を追加）
           const newTimeSlots = {
-            morning: request.timeSlots.morning || Boolean(existingSchedule.timeSlotsMorning),
-            afternoon: request.timeSlots.afternoon || Boolean(existingSchedule.timeSlotsAfternoon),
+            daytime: request.timeSlots.daytime || Boolean(existingSchedule.timeSlotsDaytime),
+            evening: request.timeSlots.evening || Boolean(existingSchedule.timeSlotsEvening),
             fullday: request.timeSlots.fullday || Boolean(existingSchedule.timeSlotsFullday),
           };
 
@@ -36,8 +36,8 @@ class ScheduleStorage {
               }
             },
             data: {
-              timeSlotsMorning: newTimeSlots.morning,
-              timeSlotsAfternoon: newTimeSlots.afternoon,
+              timeSlotsDaytime: newTimeSlots.daytime,
+              timeSlotsEvening: newTimeSlots.evening,
               timeSlotsFullday: newTimeSlots.fullday,
             }
           });
@@ -52,8 +52,8 @@ class ScheduleStorage {
               id: scheduleId,
               userId: userId,
               date: date,
-              timeSlotsMorning: request.timeSlots.morning,
-              timeSlotsAfternoon: request.timeSlots.afternoon,
+              timeSlotsDaytime: request.timeSlots.daytime,
+              timeSlotsEvening: request.timeSlots.evening,
               timeSlotsFullday: request.timeSlots.fullday,
             }
           });
@@ -355,8 +355,8 @@ class ScheduleStorage {
       userId: prismaSchedule.userId,
       date: prismaSchedule.date,
       timeSlots: {
-        morning: Boolean(prismaSchedule.timeSlotsMorning),
-        afternoon: Boolean(prismaSchedule.timeSlotsAfternoon),
+        daytime: Boolean(prismaSchedule.timeSlotsDaytime),
+        evening: Boolean(prismaSchedule.timeSlotsEvening),
         fullday: Boolean(prismaSchedule.timeSlotsFullday),
       },
       createdAt: prismaSchedule.createdAt,

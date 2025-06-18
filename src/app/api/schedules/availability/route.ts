@@ -29,15 +29,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 時間帯の検証
-    const { morning, afternoon, fullday } = body.timeSlots;
-    if (typeof morning !== 'boolean' || typeof afternoon !== 'boolean' || typeof fullday !== 'boolean') {
+    const { daytime, evening, fullday } = body.timeSlots;
+    if (typeof daytime !== 'boolean' || typeof evening !== 'boolean' || typeof fullday !== 'boolean') {
       return NextResponse.json({ 
-        error: 'TimeSlots must contain boolean values for morning, afternoon, and fullday' 
+        error: 'TimeSlots must contain boolean values for daytime, evening, and fullday' 
       }, { status: 400 });
     }
 
     // 少なくとも1つの時間帯が選択されているかチェック
-    if (!morning && !afternoon && !fullday) {
+    if (!daytime && !evening && !fullday) {
       return NextResponse.json({ 
         error: 'At least one time slot must be selected' 
       }, { status: 400 });

@@ -1,10 +1,10 @@
 // 時間帯の種類
-export type TimeSlot = 'morning' | 'afternoon' | 'fullday';
+export type TimeSlot = 'daytime' | 'evening' | 'fullday';
 
 // 時間帯別の空き状況
 export interface TimeSlotAvailability {
-  morning: boolean;    // 午前中の空き状況
-  afternoon: boolean;  // 午後の空き状況
+  daytime: boolean;    // 昼の空き状況
+  evening: boolean;    // 夜の空き状況
   fullday: boolean;    // 一日中の空き状況
 }
 

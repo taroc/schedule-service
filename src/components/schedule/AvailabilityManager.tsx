@@ -11,8 +11,8 @@ export default function AvailabilityManager() {
   const [loading, setLoading] = useState(true);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<TimeSlotAvailability>({
-    morning: false,
-    afternoon: false,
+    daytime: false,
+    evening: false,
     fullday: true  // デフォルトは一日中
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,8 +50,8 @@ export default function AvailabilityManager() {
           updatedAt: new Date(schedule.updatedAt),
           // timeSlotsがない場合はデフォルト値を設定
           timeSlots: schedule.timeSlots || {
-            morning: false,
-            afternoon: false,
+            daytime: false,
+            evening: false,
             fullday: false
           }
         }));
@@ -72,12 +72,12 @@ export default function AvailabilityManager() {
     if (slot === 'fullday') {
       // 一日中が選択された場合、他を無効にする
       setSelectedTimeSlots({
-        morning: false,
-        afternoon: false,
+        daytime: false,
+        evening: false,
         fullday: true
       });
     } else {
-      // 午前や午後が選択された場合、一日中を無効にする
+      // 昼や夜が選択された場合、一日中を無効にする
       const newTimeSlots = {
         ...selectedTimeSlots,
         fullday: false,
@@ -93,7 +93,7 @@ export default function AvailabilityManager() {
       return;
     }
 
-    const hasAnyTimeSlot = selectedTimeSlots.morning || selectedTimeSlots.afternoon || selectedTimeSlots.fullday;
+    const hasAnyTimeSlot = selectedTimeSlots.daytime || selectedTimeSlots.evening || selectedTimeSlots.fullday;
     if (!hasAnyTimeSlot) {
       alert('時間帯を選択してください');
       return;
@@ -174,26 +174,26 @@ export default function AvailabilityManager() {
           <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
             <input
               type="checkbox"
-              checked={selectedTimeSlots.morning}
-              onChange={() => handleTimeSlotChange('morning')}
-              className="mr-3 text-green-500"
+              checked={selectedTimeSlots.daytime}
+              onChange={() => handleTimeSlotChange('daytime')}
+              className="mr-3 text-blue-500"
             />
             <div className="flex items-center">
-              <div className="w-4 h-4 bg-green-100 border-2 border-green-400 rounded mr-2"></div>
-              <span className="text-gray-900">午前中</span>
+              <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
+              <span className="text-gray-900">昼</span>
             </div>
           </label>
 
           <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
             <input
               type="checkbox"
-              checked={selectedTimeSlots.afternoon}
-              onChange={() => handleTimeSlotChange('afternoon')}
-              className="mr-3 text-green-500"
+              checked={selectedTimeSlots.evening}
+              onChange={() => handleTimeSlotChange('evening')}
+              className="mr-3 text-purple-500"
             />
             <div className="flex items-center">
-              <div className="w-4 h-4 bg-green-100 border-2 border-green-400 rounded mr-2"></div>
-              <span className="text-gray-900">午後</span>
+              <div className="w-4 h-4 bg-purple-100 border-2 border-purple-400 rounded mr-2"></div>
+              <span className="text-gray-900">夜</span>
             </div>
           </label>
 
