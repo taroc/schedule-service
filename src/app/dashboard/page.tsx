@@ -128,10 +128,10 @@ export default function Dashboard() {
                event.requiredParticipants > (event.participants ? event.participants.length : 0); // 必要人数に達していない
       });
 
-      // 期限が来ていない全イベント（自分が作成したもの以外）
+      // 期限が来ていない全イベント（自分が作成したもの以外、成立済み除く）
       const allValidEventsData = allEvents.filter(event => {
         const isExpired = event.deadline && new Date(event.deadline) < new Date();
-        return !isExpired && event.creatorId !== user.id;
+        return !isExpired && event.creatorId !== user.id && event.status !== 'matched';
       });
 
       // 状態を更新
