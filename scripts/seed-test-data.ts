@@ -225,7 +225,95 @@ async function seedTestData() {
       data: { eventId: 'charlie-event-2', userId: 'alice' },
     });
 
-    const allEvents = [aliceEvent1, aliceEvent2, bobEvent1, bobEvent2, charlieEvent1, charlieEvent2, dianaEvent1];
+    // 追加のテスト用イベント（参加可能なイベント）
+    const testEvent1 = await prisma.event.create({
+      data: {
+        id: 'test-event-1',
+        name: '週末ピクニック',
+        description: '公園でゆったりと過ごしませんか？お弁当とレジャーシートを持参してください。',
+        creatorId: 'diana',
+        requiredParticipants: 3,
+        requiredDays: 1,
+        status: 'open',
+        dateMode: 'flexible',
+        deadline: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後
+      },
+    });
+
+    const testEvent2 = await prisma.event.create({
+      data: {
+        id: 'test-event-2',
+        name: '料理教室体験',
+        description: 'プロのシェフから本格的なイタリア料理を学びましょう！初心者歓迎です。',
+        creatorId: 'bob',
+        requiredParticipants: 4,
+        requiredDays: 1,
+        status: 'open',
+        dateMode: 'consecutive',
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後（緊急）
+      },
+    });
+
+    // 料理教室に1人参加者追加
+    await prisma.eventParticipant.create({
+      data: { eventId: 'test-event-2', userId: 'charlie' },
+    });
+
+    const testEvent3 = await prisma.event.create({
+      data: {
+        id: 'test-event-3',
+        name: '美術館巡り',
+        description: '現代美術の展示を見に行きませんか？芸術について語り合いましょう。',
+        creatorId: 'alice',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        status: 'open',
+        dateMode: 'within_period',
+        periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
+        deadline: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25日後
+      },
+    });
+
+    const testEvent4 = await prisma.event.create({
+      data: {
+        id: 'test-event-4',
+        name: 'キャンプ旅行',
+        description: '2泊3日の自然を満喫するキャンプです。テントや寝袋の準備をお忘れなく！',
+        creatorId: 'charlie',
+        requiredParticipants: 5,
+        requiredDays: 3,
+        status: 'open',
+        dateMode: 'consecutive',
+        deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日後
+      },
+    });
+
+    // キャンプに2人参加者追加
+    await Promise.all([
+      prisma.eventParticipant.create({
+        data: { eventId: 'test-event-4', userId: 'alice' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'test-event-4', userId: 'bob' },
+      }),
+    ]);
+
+    const testEvent5 = await prisma.event.create({
+      data: {
+        id: 'test-event-5',
+        name: 'カフェ巡り',
+        description: '話題のカフェを一緒に回りませんか？コーヒーの飲み比べも楽しめます。',
+        creatorId: 'diana',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        status: 'open',
+        dateMode: 'flexible',
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
+      },
+    });
+
+    const allEvents = [aliceEvent1, aliceEvent2, bobEvent1, bobEvent2, charlieEvent1, charlieEvent2, dianaEvent1, testEvent1, testEvent2, testEvent3, testEvent4, testEvent5];
     console.log(`✅ ${allEvents.length}個のイベントを作成しました`);
 
     // スケジュールデータの作成
@@ -368,12 +456,18 @@ async function seedTestData() {
 
     console.log('\n🎯 各ユーザーの状況:');
     console.log('='.repeat(50));
-    console.log('Alice: 主催2, 参加3, 成立済み3');
-    console.log('Bob: 主催2, 参加1, 成立済み3');
-    console.log('Charlie: 主催2, 参加2, 成立済み2');
-    console.log('Diana: 主催1, 参加1, 成立済み2');
+    console.log('Alice: 主催3, 参加4, 成立済み3');
+    console.log('Bob: 主催3, 参加2, 成立済み3');
+    console.log('Charlie: 主催3, 参加3, 成立済み2');
+    console.log('Diana: 主催3, 参加1, 成立済み2');
     console.log('');
-    console.log('💡 「映画鑑賞会」(Charlie主催)はあと1人参加すれば成立します！');
+    console.log('💡 参加可能なテストイベント:');
+    console.log('- 「映画鑑賞会」(Charlie主催) - あと1人参加すれば成立');
+    console.log('- 「週末ピクニック」(Diana主催) - 参加可能');
+    console.log('- 「料理教室体験」(Bob主催) - 3日後締切、緊急');
+    console.log('- 「美術館巡り」(Alice主催) - 期間指定日程');
+    console.log('- 「キャンプ旅行」(Charlie主催) - 3日間、2/5人参加済み');
+    console.log('- 「カフェ巡り」(Diana主催) - 参加可能');
 
     console.log('\n🎉 テストデータの登録が完了しました！');
 

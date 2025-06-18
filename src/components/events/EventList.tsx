@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { EventWithCreator } from '@/types/event';
-import JoinEventModal from './JoinEventModal';
 
 type EventDisplayMode = 'created' | 'participating' | 'completed' | 'available' | 'allEvents' | 'default';
 
@@ -28,16 +27,6 @@ export default function EventList({
   displayMode = 'default'
 }: EventListProps) {
   // const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
-  const [joinModalState, setJoinModalState] = useState<{
-    isOpen: boolean;
-    eventId: string;
-    eventName: string;
-  }>({
-    isOpen: false,
-    eventId: '',
-    eventName: ''
-  });
-  const [isJoining, setIsJoining] = useState(false);
 
   // 将来の詳細表示機能用
   // const toggleExpanded = (eventId: string) => {
@@ -50,34 +39,9 @@ export default function EventList({
   //   setExpandedEvents(newExpanded);
   // };
 
-  const handleJoinButtonClick = (event: EventWithCreator) => {
-    setJoinModalState({
-      isOpen: true,
-      eventId: event.id,
-      eventName: event.name
-    });
-  };
-
-  const handleJoinModalClose = () => {
-    setJoinModalState({
-      isOpen: false,
-      eventId: '',
-      eventName: ''
-    });
-    setIsJoining(false);
-  };
-
-  const handleJoinConfirm = async () => {
-    if (!onJoinEvent || !joinModalState.eventId) return;
-    
-    setIsJoining(true);
-    try {
-      await onJoinEvent(joinModalState.eventId);
-      handleJoinModalClose();
-    } catch {
-      setIsJoining(false);
-      // エラーハンドリングは親コンポーネントで行う
-    }
+  const handleJoinButtonClick = async (event: EventWithCreator) => {
+    if (!onJoinEvent) return;
+    await onJoinEvent(event.id);
   };
   if (isLoading) {
     return (
@@ -306,24 +270,34 @@ export default function EventList({
               {/* 概要（優先度2） */}
               <p className="text-gray-700 text-lg leading-relaxed font-medium">{event.description}</p>
               
-              {/* 締切（優先度3） */}
-              <div className="flex items-center gap-2">
-                <span className="text-base font-semibold text-gray-700">締切:</span>
-                <span className={`text-base font-bold ${urgentDeadline.color}`}>
-                  {urgentDeadline.text}
-                </span>
+              {/* 第1列: 締切、必要日数、参加状況 */}
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-700">締切:</span>
+                  <span className={`text-base font-bold ${urgentDeadline.color}`}>
+                    {urgentDeadline.text}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-700">必要日数:</span>
+                  <span className="text-base font-bold text-blue-600">{event.requiredDays}日</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-700">参加状況:</span>
+                  <span className="text-base font-bold text-green-600">{getParticipantStatusText(event)}</span>
+                </div>
               </div>
-              
-              {/* 必要日数（優先度4） */}
-              <div className="flex items-center gap-2">
-                <span className="text-base font-semibold text-gray-700">必要日数:</span>
-                <span className="text-base font-bold text-blue-600">{event.requiredDays}日</span>
-              </div>
-              
-              {/* 参加状況（優先度5） */}
-              <div className="flex items-center gap-2">
-                <span className="text-base font-semibold text-gray-700">参加状況:</span>
-                <span className="text-base font-bold text-green-600">{getParticipantStatusText(event)}</span>
+
+              {/* 第2列: 日程モード、作成日 */}
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-700">日程モード:</span>
+                  <span className="text-base font-bold text-gray-600">{getDateModeText(event.dateMode)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-700">作成日:</span>
+                  <span className="text-base font-bold text-gray-600">{formatDate(event.createdAt)}</span>
+                </div>
               </div>
 
               {/* 全イベント表示時：自分の参加ステータス */}
@@ -369,12 +343,6 @@ export default function EventList({
               <span>締切: <span className={urgentDeadline.color}>{urgentDeadline.text}</span></span>
             </div>
           )}
-
-          {(displayMode === 'available' || displayMode === 'allEvents') && (
-            <div className="flex items-center gap-4">
-              <span>日程モード: {getDateModeText(event.dateMode)}</span>
-            </div>
-          )}
         </div>
 
         {/* 参加者表示（優先度に応じて詳細度を調整） */}
@@ -414,8 +382,10 @@ export default function EventList({
         {/* 優先度3: 補助情報（デスクトップのみ） */}
         <div className="hidden lg:block text-xs text-gray-500 space-y-1">
           <div className="flex items-center gap-4">
-            <span>作成日: {formatDate(event.createdAt)}</span>
-            {displayMode !== 'available' && (
+            {displayMode !== 'available' && displayMode !== 'allEvents' && (
+              <span>作成日: {formatDate(event.createdAt)}</span>
+            )}
+            {displayMode !== 'available' && displayMode !== 'allEvents' && (
               <span>日程モード: {getDateModeText(event.dateMode)}</span>
             )}
             {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
@@ -467,18 +437,8 @@ export default function EventList({
   };
 
   return (
-    <>
-      <div className="space-y-4">
-        {events.map((event) => renderEventCard(event))}
-      </div>
-      
-      <JoinEventModal
-        isOpen={joinModalState.isOpen}
-        eventName={joinModalState.eventName}
-        onClose={handleJoinModalClose}
-        onJoin={handleJoinConfirm}
-        isLoading={isJoining}
-      />
-    </>
+    <div className="space-y-4">
+      {events.map((event) => renderEventCard(event))}
+    </div>
   );
 }
