@@ -27,6 +27,7 @@ export default function EventList({
   displayMode = 'default'
 }: EventListProps) {
   // const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  const [loadingEventIds, setLoadingEventIds] = useState<Set<string>>(new Set());
 
   // 将来の詳細表示機能用
   // const toggleExpanded = (eventId: string) => {
@@ -41,7 +42,17 @@ export default function EventList({
 
   const handleJoinButtonClick = async (event: EventWithCreator) => {
     if (!onJoinEvent) return;
-    await onJoinEvent(event.id);
+    
+    setLoadingEventIds(prev => new Set(prev).add(event.id));
+    try {
+      await onJoinEvent(event.id);
+    } finally {
+      setLoadingEventIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(event.id);
+        return newSet;
+      });
+    }
   };
   if (isLoading) {
     return (
@@ -399,9 +410,17 @@ export default function EventList({
           <div className="pt-3 border-t border-gray-200">
             <button
               onClick={() => handleJoinButtonClick(event)}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              disabled={loadingEventIds.has(event.id)}
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
             >
-              参加する
+              {loadingEventIds.has(event.id) ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  参加中...
+                </>
+              ) : (
+                '参加する'
+              )}
             </button>
           </div>
         )}
