@@ -101,7 +101,7 @@ export default function MultiSelectCalendar({
   };
 
   const getDayClassName = (day: ScheduleCalendarDay) => {
-    let className = 'w-10 h-10 flex items-center justify-center text-sm cursor-pointer rounded-full transition-colors relative ';
+    let className = 'w-10 h-10 flex items-center justify-center text-sm cursor-pointer rounded-lg transition-colors font-medium border-2 ';
     
     if (!isCurrentMonth(day.date)) {
       className += 'text-gray-400 ';
@@ -110,60 +110,36 @@ export default function MultiSelectCalendar({
     }
     
     if (isToday(day.date)) {
-      className += 'font-bold ';
+      className += 'font-bold ring-2 ring-orange-300 ';
     }
     
     if (day.isSelected) {
-      className += 'bg-blue-500 text-white ring-2 ring-blue-300 ';
+      className += 'bg-blue-600 text-white border-blue-600 shadow-lg ';
     } else if (day.hasSchedule && day.timeSlots) {
-      // 時間帯別の表示
+      // 時間帯別の色分け（より明確に）
       if (day.timeSlots.fullday) {
-        className += 'bg-green-200 border-2 border-green-500 ';
+        // 一日中空き - 緑系
+        className += 'bg-green-500 text-white border-green-500 ';
       } else if (day.timeSlots.daytime && day.timeSlots.evening) {
-        // 昼と夜両方
-        className += 'bg-gradient-to-r from-blue-200 to-purple-200 border-2 border-indigo-400 ';
+        // 昼と夜両方 - オレンジ系
+        className += 'bg-orange-500 text-white border-orange-500 ';
       } else if (day.timeSlots.daytime) {
-        // 昼のみ
-        className += 'bg-blue-200 border-2 border-blue-400 ';
+        // 昼のみ - 青系
+        className += 'bg-blue-400 text-white border-blue-400 ';
       } else if (day.timeSlots.evening) {
-        // 夜のみ
-        className += 'bg-purple-200 border-2 border-purple-400 ';
+        // 夜のみ - 紫系
+        className += 'bg-purple-500 text-white border-purple-500 ';
       } else {
-        className += 'bg-red-100 border-2 border-red-400 ';
+        className += 'bg-red-400 text-white border-red-400 ';
       }
     } else {
       // 未登録の日（デフォルトで忙しい）
-      className += 'bg-gray-50 border border-gray-200 hover:bg-gray-100 ';
+      className += 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200 ';
     }
     
     return className.trim();
   };
 
-  const getTimeSlotIndicators = (day: ScheduleCalendarDay) => {
-    if (!day.hasSchedule || !day.timeSlots) return null;
-    
-    const indicators = [];
-    
-    if (day.timeSlots.daytime) {
-      indicators.push(
-        <div key="daytime" className="absolute top-0 left-0 w-1 h-1 bg-blue-500 rounded-full"></div>
-      );
-    }
-    
-    if (day.timeSlots.evening) {
-      indicators.push(
-        <div key="evening" className="absolute top-0 right-0 w-1 h-1 bg-purple-500 rounded-full"></div>
-      );
-    }
-    
-    if (day.timeSlots.fullday) {
-      indicators.push(
-        <div key="fullday" className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-green-600 rounded-full"></div>
-      );
-    }
-    
-    return indicators;
-  };
 
   const clearSelection = () => {
     onDateSelectionChange([]);
@@ -233,48 +209,41 @@ export default function MultiSelectCalendar({
             onClick={() => handleDateClick(day.date)}
           >
             {day.date.getDate()}
-            {getTimeSlotIndicators(day)}
           </div>
         ))}
       </div>
 
       {/* 凡例 */}
-      <div className="mt-6 space-y-2 text-sm">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="mt-6 space-y-3 text-sm">
+        <h3 className="font-medium text-gray-900">カレンダーの見方</h3>
+        <div className="grid grid-cols-3 gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+            <div className="w-5 h-5 bg-blue-600 text-white border-2 border-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
             <span className="text-gray-700">選択中</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-200 border-2 border-green-500 rounded"></div>
+            <div className="w-5 h-5 bg-green-500 text-white border-2 border-green-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
             <span className="text-gray-700">一日空き</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded relative">
-              <div className="absolute top-0 left-0 w-1 h-1 bg-blue-500 rounded-full"></div>
-            </div>
-            <span className="text-gray-700">昼空き</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-purple-200 border-2 border-purple-400 rounded relative">
-              <div className="absolute top-0 right-0 w-1 h-1 bg-purple-500 rounded-full"></div>
-            </div>
-            <span className="text-gray-700">夜空き</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gradient-to-r from-blue-200 to-purple-200 border-2 border-indigo-400 rounded relative">
-              <div className="absolute top-0 left-0 w-1 h-1 bg-blue-500 rounded-full"></div>
-              <div className="absolute top-0 right-0 w-1 h-1 bg-purple-500 rounded-full"></div>
-            </div>
+            <div className="w-5 h-5 bg-orange-500 text-white border-2 border-orange-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
             <span className="text-gray-700">昼・夜空き</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
-            <span className="text-gray-700">未登録（忙しい扱い）</span>
+            <div className="w-5 h-5 bg-blue-400 text-white border-2 border-blue-400 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
+            <span className="text-gray-700">昼のみ空き</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-purple-500 text-white border-2 border-purple-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
+            <span className="text-gray-700">夜のみ空き</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-gray-100 text-gray-600 border-2 border-gray-200 rounded-lg flex items-center justify-center text-xs font-medium">15</div>
+            <span className="text-gray-700">未登録（忙しい）</span>
           </div>
         </div>
-        <div className="text-xs text-gray-500 mt-2">
-          ※ 左上：昼、右上：夜、下中央：一日中の空き状況を表示
+        <div className="text-xs text-gray-500 mt-2 p-2 bg-yellow-50 rounded-lg">
+          💡 <strong>ヒント:</strong> 色で空き時間の種類が一目で分かります。クリックして複数日を選択できます。
         </div>
       </div>
     </div>
