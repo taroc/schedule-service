@@ -409,10 +409,10 @@ export default function EventList({
         {/* 優先度3: 補助情報（デスクトップのみ） */}
         <div className="hidden lg:block text-xs text-gray-500 space-y-1">
           <div className="flex items-center gap-4">
-            {displayMode !== 'available' && displayMode !== 'allEvents' && (
+            {displayMode !== 'available' && displayMode !== 'allEvents' && displayMode !== 'participating' && (
               <span>作成日: {formatDate(event.createdAt)}</span>
             )}
-            {displayMode !== 'available' && displayMode !== 'allEvents' && (
+            {displayMode !== 'available' && displayMode !== 'allEvents' && displayMode !== 'participating' && (
               <span>実施期間: {formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)}</span>
             )}
           </div>
