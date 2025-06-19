@@ -248,9 +248,7 @@ export default function EventList({
 
           {displayMode === 'participating' && (
             <div className="flex items-center gap-4 text-lg">
-              <span className="font-semibold text-gray-700">
-                参加状況: <span className="text-green-600">{getParticipantStatusText(event, true)}</span>
-              </span>
+              <span className="font-semibold text-green-600">参加済み</span>
             </div>
           )}
 
