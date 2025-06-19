@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 最大日数制限
-    if (body.dates.length > 100) {
+    // 最大日数制限（Prisma Accelerateの制限を考慮）
+    if (body.dates.length > 50) {
       return NextResponse.json({ 
-        error: 'Maximum 100 dates can be processed at once' 
+        error: 'Maximum 50 dates can be processed at once' 
       }, { status: 400 });
     }
 
