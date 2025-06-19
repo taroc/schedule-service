@@ -273,7 +273,7 @@ export default function EventList({
               {/* 概要（優先度2） */}
               <p className="text-gray-700 text-lg leading-relaxed font-medium">{event.description}</p>
               
-              {/* 第1列: 締切、必要日数、参加状況 */}
+              {/* 第1列: 締切、必要日数、参加状況（条件付き表示） */}
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold text-gray-700">締切:</span>
@@ -286,8 +286,8 @@ export default function EventList({
                   <span className="text-base font-bold text-blue-600">{event.requiredDays}日</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">参加状況:</span>
-                  <span className="text-base font-bold text-green-600">{getParticipantStatusText(event)}</span>
+                  <span className="text-base font-semibold text-gray-700">募集人数:</span>
+                  <span className="text-base font-bold text-purple-600">{event.requiredParticipants}人</span>
                 </div>
               </div>
 
@@ -341,17 +341,10 @@ export default function EventList({
               )}
             </div>
           )}
-
-          {displayMode === 'participating' && (
-            <div className="flex items-center gap-4">
-              <span className={successProb.color}>{successProb.text}</span>
-              <span>締切: <span className={urgentDeadline.color}>{urgentDeadline.text}</span></span>
-            </div>
-          )}
         </div>
 
-        {/* 参加者表示（優先度に応じて詳細度を調整） */}
-        {(displayMode === 'completed' || displayMode === 'participating') && (
+        {/* 参加者表示（自分が作成したイベントと完了済みイベントのみ） */}
+        {(displayMode === 'completed' || displayMode === 'created') && (
           <div className="hidden md:block">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-gray-700">参加メンバー:</span>
