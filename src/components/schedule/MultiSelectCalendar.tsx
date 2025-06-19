@@ -103,10 +103,13 @@ export default function MultiSelectCalendar({
   const getDayClassName = (day: ScheduleCalendarDay) => {
     let className = 'w-10 h-10 flex items-center justify-center text-sm cursor-pointer rounded-lg transition-colors font-medium border-2 ';
     
+    // デバッグ用ログ
+    if (day.hasSchedule && day.timeSlots) {
+      console.log(`Day ${day.date.getDate()}: hasSchedule=${day.hasSchedule}, timeSlots=`, day.timeSlots);
+    }
+    
     if (!isCurrentMonth(day.date)) {
       className += 'text-gray-400 ';
-    } else {
-      className += 'text-gray-900 ';
     }
     
     if (isToday(day.date)) {
@@ -116,21 +119,23 @@ export default function MultiSelectCalendar({
     if (day.isSelected) {
       className += 'bg-blue-600 text-white border-blue-600 shadow-lg ';
     } else if (day.hasSchedule && day.timeSlots) {
-      // 時間帯別の色分け（より明確に）
-      if (day.timeSlots.fullday) {
-        // 一日中空き - 緑系
+      // 時間帯別の色分け（最適化版）
+      if (day.timeSlots.fullday || (day.timeSlots.daytime && day.timeSlots.evening)) {
+        // 一日中空き または 昼と夜両方空き - 緑系（同じ扱い）
         className += 'bg-green-500 text-white border-green-500 ';
-      } else if (day.timeSlots.daytime && day.timeSlots.evening) {
-        // 昼と夜両方 - オレンジ系
-        className += 'bg-orange-500 text-white border-orange-500 ';
-      } else if (day.timeSlots.daytime) {
-        // 昼のみ - 青系
+        console.log(`Applying green for day ${day.date.getDate()}`);
+      } else if (day.timeSlots.daytime && !day.timeSlots.evening) {
+        // 昼のみ空き - 青系
         className += 'bg-blue-400 text-white border-blue-400 ';
-      } else if (day.timeSlots.evening) {
-        // 夜のみ - 紫系
+        console.log(`Applying blue for day ${day.date.getDate()}`);
+      } else if (day.timeSlots.evening && !day.timeSlots.daytime) {
+        // 夜のみ空き - 紫系
         className += 'bg-purple-500 text-white border-purple-500 ';
+        console.log(`Applying purple for day ${day.date.getDate()}`);
       } else {
+        // エラー状態
         className += 'bg-red-400 text-white border-red-400 ';
+        console.log(`Applying red for day ${day.date.getDate()}`);
       }
     } else {
       // 未登録の日（デフォルトで忙しい）
@@ -216,18 +221,14 @@ export default function MultiSelectCalendar({
       {/* 凡例 */}
       <div className="mt-6 space-y-3 text-sm">
         <h3 className="font-medium text-gray-900">カレンダーの見方</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-blue-600 text-white border-2 border-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
             <span className="text-gray-700">選択中</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-green-500 text-white border-2 border-green-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">一日空き</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-orange-500 text-white border-2 border-orange-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">昼・夜空き</span>
+            <span className="text-gray-700">一日空き（全体または昼夜）</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-blue-400 text-white border-2 border-blue-400 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
@@ -243,7 +244,7 @@ export default function MultiSelectCalendar({
           </div>
         </div>
         <div className="text-xs text-gray-500 mt-2 p-2 bg-yellow-50 rounded-lg">
-          💡 <strong>ヒント:</strong> 色で空き時間の種類が一目で分かります。クリックして複数日を選択できます。
+          💡 <strong>ヒント:</strong> 色で空き時間の種類が一目で分かります。緑は実質的に一日空いている状態です。
         </div>
       </div>
     </div>
