@@ -124,7 +124,6 @@ export default function AvailabilityManager() {
         console.log('成功レスポンス:', responseData);
         await fetchSchedules();
         setSelectedDates([]);
-        alert(`${selectedDates.length}日の空き時間を登録しました`);
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         console.error('エラーレスポンス:', errorData);
@@ -132,7 +131,6 @@ export default function AvailabilityManager() {
       }
     } catch (error) {
       console.error('Error registering availability:', error);
-      alert(`空き時間の登録に失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }
