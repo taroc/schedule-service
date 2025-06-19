@@ -5,64 +5,101 @@ import { UserSchedule as PrismaUserSchedule } from '@prisma/client';
 class ScheduleStorage {
   async bulkSetAvailability(request: BulkAvailabilityRequest, userId: string): Promise<UserSchedule[]> {
     return await prisma.$transaction(async (tx) => {
-      const processedSchedules: UserSchedule[] = [];
+      // 日付を一括変換
+      const dates = request.dates.map(dateString => new Date(dateString + 'T00:00:00.000Z'));
+      
+      // 既存スケジュールを一括取得
+      const existingSchedules = await tx.userSchedule.findMany({
+        where: {
+          userId: userId,
+          date: { in: dates }
+        }
+      });
 
-      for (const dateString of request.dates) {
-        const date = new Date(dateString + 'T00:00:00.000Z'); // UTC日付として作成
+      // 既存スケジュールをMapで高速検索用に準備
+      const existingMap = new Map(
+        existingSchedules.map(s => [s.date.toISOString(), s])
+      );
 
-        // 既存の予定を検索
-        const existingSchedule = await tx.userSchedule.findUnique({
-          where: {
-            userId_date: {
-              userId: userId,
-              date: date
-            }
-          }
-        });
+      const toUpdate: Array<{ 
+        where: { userId_date: { userId: string; date: Date } }; 
+        data: { 
+          timeSlotsDaytime: boolean; 
+          timeSlotsEvening: boolean; 
+          timeSlotsFullday: boolean; 
+        } 
+      }> = [];
+      const toCreate: Array<{
+        id: string;
+        userId: string;
+        date: Date;
+        timeSlotsDaytime: boolean;
+        timeSlotsEvening: boolean;
+        timeSlotsFullday: boolean;
+      }> = [];
 
-        if (existingSchedule) {
+      for (let i = 0; i < dates.length; i++) {
+        const date = dates[i];
+        const dateKey = date.toISOString();
+        const existing = existingMap.get(dateKey);
+
+        if (existing) {
           // 既存の予定を更新（OR演算で時間帯を追加）
           const newTimeSlots = {
-            daytime: request.timeSlots.daytime || Boolean(existingSchedule.timeSlotsDaytime),
-            evening: request.timeSlots.evening || Boolean(existingSchedule.timeSlotsEvening),
-            fullday: request.timeSlots.fullday || Boolean(existingSchedule.timeSlotsFullday),
+            daytime: request.timeSlots.daytime || Boolean(existing.timeSlotsDaytime),
+            evening: request.timeSlots.evening || Boolean(existing.timeSlotsEvening),
+            fullday: request.timeSlots.fullday || Boolean(existing.timeSlotsFullday),
           };
 
-          const updatedSchedule = await tx.userSchedule.update({
-            where: {
-              userId_date: {
-                userId: userId,
-                date: date
-              }
-            },
+          toUpdate.push({
+            where: { userId_date: { userId: userId, date: date } },
             data: {
               timeSlotsDaytime: newTimeSlots.daytime,
               timeSlotsEvening: newTimeSlots.evening,
               timeSlotsFullday: newTimeSlots.fullday,
             }
           });
-
-          processedSchedules.push(this.mapPrismaToSchedule(updatedSchedule));
         } else {
           // 新しい予定を作成
           const scheduleId = Math.random().toString(36).substring(2, 15);
-
-          const newSchedule = await tx.userSchedule.create({
-            data: {
-              id: scheduleId,
-              userId: userId,
-              date: date,
-              timeSlotsDaytime: request.timeSlots.daytime,
-              timeSlotsEvening: request.timeSlots.evening,
-              timeSlotsFullday: request.timeSlots.fullday,
-            }
+          toCreate.push({
+            id: scheduleId,
+            userId: userId,
+            date: date,
+            timeSlotsDaytime: request.timeSlots.daytime,
+            timeSlotsEvening: request.timeSlots.evening,
+            timeSlotsFullday: request.timeSlots.fullday,
           });
-
-          processedSchedules.push(this.mapPrismaToSchedule(newSchedule));
         }
       }
 
-      return processedSchedules;
+      // 一括作成（高速）
+      if (toCreate.length > 0) {
+        await tx.userSchedule.createMany({
+          data: toCreate,
+          skipDuplicates: true
+        });
+      }
+
+      // 一括更新（個別に実行が必要）
+      if (toUpdate.length > 0) {
+        await Promise.all(
+          toUpdate.map(update => tx.userSchedule.update(update))
+        );
+      }
+
+      // 結果を取得
+      const finalSchedules = await tx.userSchedule.findMany({
+        where: {
+          userId: userId,
+          date: { in: dates }
+        },
+        orderBy: { date: 'asc' }
+      });
+
+      return finalSchedules.map(s => this.mapPrismaToSchedule(s));
+    }, {
+      timeout: 30000 // タイムアウトを30秒に設定
     });
   }
 

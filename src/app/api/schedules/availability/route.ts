@@ -62,8 +62,14 @@ export async function POST(request: NextRequest) {
 
     const schedules = await scheduleStorage.bulkSetAvailability(body, user.id);
     
-    // スケジュール更新後に関連イベントのマッチング実行
-    const matchingResults = await matchingEngine.onScheduleUpdated(user.id);
+    // マッチング処理を非同期で実行（レスポンス速度向上のため）
+    setImmediate(async () => {
+      try {
+        await matchingEngine.onScheduleUpdated(user.id);
+      } catch (error) {
+        console.error('Background matching failed:', error);
+      }
+    });
     
     return NextResponse.json({
       message: `Successfully registered availability for ${schedules.length} dates`,
@@ -71,18 +77,21 @@ export async function POST(request: NextRequest) {
       summary: {
         totalDates: schedules.length,
         timeSlots: body.timeSlots
-      },
-      matching: {
-        eventsChecked: matchingResults.length,
-        newMatches: matchingResults.filter(r => r.isMatched).length
       }
     });
   } catch (error) {
     console.error('Error registering availability:', error);
     
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    // より詳細なエラー情報を提供
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = {
+      error: 'Failed to register availability',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    };
+
+    console.error('Detailed error:', errorDetails);
+    
+    return NextResponse.json(errorDetails, { status: 500 });
   }
 }
