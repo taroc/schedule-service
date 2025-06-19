@@ -247,8 +247,39 @@ export default function EventList({
           )}
 
           {displayMode === 'participating' && (
-            <div className="flex items-center gap-4 text-lg">
-              <span className="font-semibold text-green-600">参加済み</span>
+            <div className="space-y-3">
+              {/* 概要 */}
+              <p className="text-gray-700 text-lg leading-relaxed font-medium">{event.description}</p>
+              
+              {/* 参加済み表示と実施期間（目立たせる） */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-semibold text-green-700">参加済み</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-700">実施期間:</span>
+                  <span className="text-lg font-bold text-blue-600">
+                    {formatDate(event.periodStart)} 〜 {formatDate(event.periodEnd)}
+                  </span>
+                </div>
+              </div>
+              
+              {/* その他の情報 */}
+              <div className="flex items-center gap-6 flex-wrap text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">必要日数:</span>
+                  <span className="font-semibold">{event.requiredDays}日</span>
+                </div>
+                {event.deadline && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">締切:</span>
+                    <span className="font-semibold">{formatDateTime(event.deadline)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
