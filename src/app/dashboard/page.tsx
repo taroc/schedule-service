@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateEventForm from '@/components/events/CreateEventForm';
@@ -8,7 +8,7 @@ import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
 import NotificationToast from '@/components/ui/NotificationToast';
 import { useNotification } from '@/hooks/useNotification';
-import { CreateEventRequest, EventWithCreator } from '@/types/event';
+import { CreateEventRequest, EventWithCreator, EventResponse } from '@/types/event';
 
 type TabType = 'dashboard' | 'createEvent' | 'availability';
 
@@ -20,24 +20,25 @@ interface DashboardStats {
 }
 
 interface DashboardModal {
-  type: 'myEvents' | 'participatingEvents' | 'completedEvents' | 'allEvents' | null;
+  type: 'myEvents' | 'participatingEvents' | 'completedEvents' | null;
   isOpen: boolean;
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { notifications, showSuccess, showError, showInfo, removeNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [modal, setModal] = useState<DashboardModal>({ type: null, isOpen: false });
-  
-  const [myCreatedEvents, setMyCreatedEvents] = useState<EventWithCreator[]>([]);
-  const [myParticipatingEvents, setMyParticipatingEvents] = useState<EventWithCreator[]>([]);
+
   const [availableEvents, setAvailableEvents] = useState<EventWithCreator[]>([]);
-  const [allValidEvents, setAllValidEvents] = useState<EventWithCreator[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+  
+  // モーダル用の個別データと読み込み状態
+  const [modalEvents, setModalEvents] = useState<{ [key: string]: EventWithCreator[] }>({});
+  const [modalLoading, setModalLoading] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -58,7 +59,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      loadAllData();
+      loadInitialData();
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -74,12 +75,12 @@ export default function Dashboard() {
     router.push(newUrl);
   };
 
-  const loadAllData = async () => {
+  const loadInitialData = async () => {
     if (!user) return;
-    
-    setIsLoadingEvents(true);
+
+    setIsLoadingStats(true);
     setError('');
-    
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -88,80 +89,40 @@ export default function Dashboard() {
         return;
       }
 
-      // 全イベントを一度に取得
-      const allEventsRes = await fetch('/api/events', {
+      // 軽量な統計情報と参加可能イベントのみ取得
+      const statsRes = await fetch('/api/events/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (!allEventsRes.ok) {
-        if (allEventsRes.status === 401) {
+      if (!statsRes.ok) {
+        if (statsRes.status === 401) {
           showError('認証エラーが発生しました。再ログインしてください。');
           logout();
           return;
         } else {
-          console.error('Events fetch failed:', allEventsRes.status);
-          throw new Error('イベントの取得に失敗しました');
+          console.error('Stats fetch failed:', statsRes.status);
+          throw new Error('統計データの取得に失敗しました');
         }
       }
 
-      const allEvents: EventWithCreator[] = await allEventsRes.json();
+      const statsData = await statsRes.json();
 
-
-      // イベントを分類
-      const myCreatedEventsData = allEvents.filter(event => {
-        // 自分が作成したイベント（成立済みは期限切れでも表示）
-        if (event.creatorId !== user.id) return false;
-        
-        const isExpired = event.deadline && new Date(event.deadline) < new Date();
-        return !isExpired || event.status === 'matched';
-      });
-      const myParticipatingEventsData = allEvents.filter(event => {
-        // 期限切れチェック（ただし成立済みイベントは期限切れでも表示）
-        const isExpired = event.deadline && new Date(event.deadline) < new Date();
-        
-        return event.participants && Array.isArray(event.participants) && event.participants.includes(user.id) && 
-               event.creatorId !== user.id && 
-               (!isExpired || event.status === 'matched');
-      });
-      const availableEventsData = allEvents.filter(event => {
-        // 期限切れチェック
-        const isExpired = event.deadline && new Date(event.deadline) < new Date();
-        
-        return event.status === 'open' && 
-               !isExpired &&
-               event.creatorId !== user.id && 
-               (!event.participants || !Array.isArray(event.participants) || !event.participants.includes(user.id)) &&
-               event.requiredParticipants > (event.participants ? event.participants.length : 0); // 必要人数に達していない
-      });
-
-      // 期限が来ていない全イベント（自分が作成したもの以外、成立済み除く）
-      const allValidEventsData = allEvents.filter(event => {
-        const isExpired = event.deadline && new Date(event.deadline) < new Date();
-        return !isExpired && event.creatorId !== user.id && event.status !== 'matched';
-      });
+      // EventResponseをEventWithCreatorに変換
+      const convertResponseToEvent = (events: EventResponse[]): EventWithCreator[] => {
+        return events.map(event => ({
+          ...event,
+          createdAt: new Date(event.createdAt),
+          updatedAt: new Date(event.updatedAt),
+          deadline: event.deadline ? new Date(event.deadline) : undefined,
+          periodStart: event.periodStart ? new Date(event.periodStart) : undefined,
+          periodEnd: event.periodEnd ? new Date(event.periodEnd) : undefined,
+          matchedDates: event.matchedDates ? event.matchedDates.map(d => new Date(d)) : undefined
+        }));
+      };
 
       // 状態を更新
-      setMyCreatedEvents(myCreatedEventsData);
-      setMyParticipatingEvents(myParticipatingEventsData);
-      setAvailableEvents(availableEventsData);
-      setAllValidEvents(allValidEventsData);
-
-      // ダッシュボード統計を計算
-      const allMyEvents = [...myCreatedEventsData, ...myParticipatingEventsData];
-      
-      
-      // 成立済みイベントは自分が参加している（作成者または参加者として）成立済みのもののみ
-      const myMatchedEvents = allMyEvents.filter(e => e.status === 'matched').length;
-      
-      const stats = {
-        createdEvents: myCreatedEventsData.length,
-        participatingEvents: myParticipatingEventsData.length,
-        matchedEvents: myMatchedEvents,
-        pendingEvents: allMyEvents.filter(e => e.status === 'open').length,
-      };
-      
-      
-      setDashboardStats(stats);
+      setAvailableEvents(convertResponseToEvent(statsData.availableEvents));
+      setDashboardStats(statsData.stats);
 
     } catch (error) {
       console.error('Data loading error:', error);
@@ -169,7 +130,69 @@ export default function Dashboard() {
       setError(errorMessage);
       showError(errorMessage);
     } finally {
-      setIsLoadingEvents(false);
+      setIsLoadingStats(false);
+    }
+  };
+
+  // モーダル用のデータ読み込み
+  const loadModalData = async (modalType: DashboardModal['type']) => {
+    if (!modalType || !user) return;
+
+    const cacheKey = modalType;
+    
+    // 既にデータがある場合はスキップ
+    if (modalEvents[cacheKey]) {
+      return;
+    }
+
+    setModalLoading(prev => ({ ...prev, [cacheKey]: true }));
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showError('認証トークンがありません。再ログインしてください。');
+        logout();
+        return;
+      }
+
+      const response = await fetch(`/api/events/list?type=${modalType}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          showError('認証エラーが発生しました。再ログインしてください。');
+          logout();
+          return;
+        } else {
+          console.error(`Modal data fetch failed for ${modalType}:`, response.status);
+          throw new Error('リストデータの取得に失敗しました');
+        }
+      }
+
+      const eventsData = await response.json();
+
+      // EventResponseをEventWithCreatorに変換
+      const convertResponseToEvent = (events: EventResponse[]): EventWithCreator[] => {
+        return events.map(event => ({
+          ...event,
+          createdAt: new Date(event.createdAt),
+          updatedAt: new Date(event.updatedAt),
+          deadline: event.deadline ? new Date(event.deadline) : undefined,
+          periodStart: event.periodStart ? new Date(event.periodStart) : undefined,
+          periodEnd: event.periodEnd ? new Date(event.periodEnd) : undefined,
+          matchedDates: event.matchedDates ? event.matchedDates.map(d => new Date(d)) : undefined
+        }));
+      };
+
+      const convertedEvents = convertResponseToEvent(eventsData);
+      setModalEvents(prev => ({ ...prev, [cacheKey]: convertedEvents }));
+
+    } catch (error) {
+      console.error('Modal data loading error:', error);
+      showError('リストデータの読み込みに失敗しました');
+    } finally {
+      setModalLoading(prev => ({ ...prev, [cacheKey]: false }));
     }
   };
 
@@ -193,7 +216,9 @@ export default function Dashboard() {
       }
 
       changeTab('dashboard');
-      await loadAllData();
+      await loadInitialData();
+      // モーダルのキャッシュをクリア
+      setModalEvents({});
       showSuccess('イベントを作成しました！');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'イベントの作成に失敗しました';
@@ -220,7 +245,7 @@ export default function Dashboard() {
       }
 
       const result = await response.json();
-      
+
       // 日程調整結果を表示
       if (result.matching?.isMatched) {
         showSuccess('🎉 おめでとうございます！イベントが成立しました！', 7000);
@@ -228,7 +253,9 @@ export default function Dashboard() {
         showInfo('イベントに参加しました。他の参加者を待っています。');
       }
 
-      await loadAllData();
+      await loadInitialData();
+      // モーダルのキャッシュをクリア
+      setModalEvents({});
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'イベントへの参加に失敗しました';
       setError(errorMessage);
@@ -238,6 +265,8 @@ export default function Dashboard() {
 
   const openModal = (type: DashboardModal['type']) => {
     setModal({ type, isOpen: true });
+    // モーダルを開いたときにデータを読み込み
+    loadModalData(type);
   };
 
   const closeModal = () => {
@@ -268,9 +297,25 @@ export default function Dashboard() {
       </div>
 
       {/* 統計カード */}
-      {dashboardStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div 
+      {isLoadingStats ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="flex items-center">
+                <div className="p-2 rounded-full bg-gray-100 animate-pulse">
+                  <div className="w-6 h-6 bg-gray-300 rounded"></div>
+                </div>
+                <div className="ml-4">
+                  <div className="w-24 h-4 bg-gray-300 rounded animate-pulse mb-2"></div>
+                  <div className="w-8 h-8 bg-gray-300 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : dashboardStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
             className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => openModal('myEvents')}
           >
@@ -287,7 +332,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div 
+          <div
             className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => openModal('participatingEvents')}
           >
@@ -304,7 +349,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div 
+          <div
             className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => openModal('completedEvents')}
           >
@@ -321,22 +366,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div 
-            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => openModal('allEvents')}
-          >
-            <div className="flex items-center">
-              <div className="p-2 rounded-full bg-orange-100">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">期限内の全イベント</p>
-                <p className="text-2xl font-semibold text-gray-900">{allValidEvents.length}</p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -413,28 +442,20 @@ export default function Dashboard() {
   const renderModal = () => {
     if (!modal.isOpen || !modal.type) return null;
 
-    let events: EventWithCreator[] = [];
+    const events = modalEvents[modal.type] || [];
+    const isLoading = modalLoading[modal.type] || false;
     let title = '';
     const showJoinButton = false;
 
     switch (modal.type) {
       case 'myEvents':
-        events = myCreatedEvents;
         title = '作成したイベント';
         break;
       case 'participatingEvents':
-        events = myParticipatingEvents;
         title = '参加表明したイベント';
         break;
       case 'completedEvents':
-        // 自分が関わっている成立済みイベント
-        const allMyEvents = [...myCreatedEvents, ...myParticipatingEvents];
-        events = allMyEvents.filter(event => event.status === 'matched');
         title = '参加が決まったイベント';
-        break;
-      case 'allEvents':
-        events = allValidEvents;
-        title = '期限内の全イベント';
         break;
     }
 
@@ -455,21 +476,19 @@ export default function Dashboard() {
           <div className="p-6 overflow-y-auto max-h-[calc(85vh-100px)]">
             <EventList
               events={events}
-              isLoading={isLoadingEvents}
+              isLoading={isLoading}
               currentUserId={user.id}
               showJoinButton={showJoinButton}
               onJoinEvent={handleJoinEvent}
               displayMode={
                 modal.type === 'myEvents' ? 'created' :
-                modal.type === 'participatingEvents' ? 'participating' :
-                modal.type === 'completedEvents' ? 'completed' :
-                modal.type === 'allEvents' ? 'allEvents' : 'default'
+                  modal.type === 'participatingEvents' ? 'participating' :
+                    modal.type === 'completedEvents' ? 'completed' : 'default'
               }
               emptyMessage={
                 modal.type === 'myEvents' ? 'まだイベントを作成していません' :
-                modal.type === 'participatingEvents' ? '参加表明したイベントがありません' :
-                modal.type === 'completedEvents' ? '参加が決まったイベントがありません' :
-                modal.type === 'allEvents' ? '期限内のイベントがありません' : ''
+                  modal.type === 'participatingEvents' ? '参加表明したイベントがありません' :
+                    modal.type === 'completedEvents' ? '参加が決まったイベントがありません' : ''
               }
             />
           </div>
@@ -573,5 +592,20 @@ export default function Dashboard() {
       {/* モーダル */}
       {renderModal()}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }

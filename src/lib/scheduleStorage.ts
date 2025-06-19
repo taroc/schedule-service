@@ -115,7 +115,7 @@ class ScheduleStorage {
     const schedules = await this.getUserSchedulesByDateRange(userId, startDate, endDate);
     
     return schedules
-      .filter(s => s.timeSlots.morning || s.timeSlots.afternoon || s.timeSlots.fullday)
+      .filter(s => s.timeSlots.daytime || s.timeSlots.evening || s.timeSlots.fullday)
       .map(s => s.date);
   }
 
@@ -169,8 +169,8 @@ class ScheduleStorage {
         }
         
         // いずれかの時間帯が空いていればtrue
-        return daySchedule.timeSlotsMorning || 
-               daySchedule.timeSlotsAfternoon || 
+        return daySchedule.timeSlotsDaytime || 
+               daySchedule.timeSlotsEvening || 
                daySchedule.timeSlotsFullday;
       });
       
@@ -265,8 +265,8 @@ class ScheduleStorage {
         }
         
         // いずれかの時間帯が空いていればtrue
-        return daySchedule.timeSlotsMorning || 
-               daySchedule.timeSlotsAfternoon || 
+        return daySchedule.timeSlotsDaytime || 
+               daySchedule.timeSlotsEvening || 
                daySchedule.timeSlotsFullday;
       });
       

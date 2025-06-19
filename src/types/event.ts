@@ -59,3 +59,23 @@ export interface EventParticipation {
 
 // EventWithCreator is now equivalent to Event since user names are not stored
 export type EventWithCreator = Event;
+
+// API レスポンス用の型（Date型が文字列として返される）
+export interface EventResponse {
+  id: string;
+  name: string;
+  description: string;
+  requiredParticipants: number;
+  requiredDays: number;
+  creatorId: string;
+  createdAt: string;
+  updatedAt: string;
+  status: EventStatus;
+  participants: string[];
+  matchedDates?: string[];
+  deadline?: string | null;
+  dateMode: DateMode;
+  periodStart?: string;
+  periodEnd?: string;
+  reservationStatus: ReservationStatus;
+}

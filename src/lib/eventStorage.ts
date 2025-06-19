@@ -322,6 +322,248 @@ class EventStorageDB {
     return events.map(event => this.mapPrismaToEvent(event));
   }
 
+  // 効率的なダッシュボード用クエリメソッド
+  async getCreatedEventsInRange(creatorId: string): Promise<Event[]> {
+    const now = new Date();
+    const events = await prisma.event.findMany({
+      where: {
+        creatorId,
+        OR: [
+          { deadline: null },
+          { deadline: { gt: now } },
+          { 
+            deadline: { lt: now },
+            status: 'matched'
+          }
+        ]
+      },
+      include: {
+        participants: {
+          select: {
+            userId: true,
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return events.map(event => this.mapPrismaToEvent(event));
+  }
+
+  async getParticipatingEventsInRange(userId: string): Promise<Event[]> {
+    const now = new Date();
+    const events = await prisma.event.findMany({
+      where: {
+        participants: {
+          some: {
+            userId,
+          },
+        },
+        creatorId: {
+          not: userId
+        },
+        OR: [
+          { deadline: null },
+          { deadline: { gt: now } },
+          { 
+            deadline: { lt: now },
+            status: 'matched'
+          }
+        ]
+      },
+      include: {
+        participants: {
+          select: {
+            userId: true,
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return events.map(event => this.mapPrismaToEvent(event));
+  }
+
+  async getMatchedEventsForUser(userId: string): Promise<Event[]> {
+    const events = await prisma.event.findMany({
+      where: {
+        status: 'matched',
+        OR: [
+          { creatorId: userId },
+          {
+            participants: {
+              some: {
+                userId,
+              },
+            },
+          }
+        ]
+      },
+      include: {
+        participants: {
+          select: {
+            userId: true,
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return events.map(event => this.mapPrismaToEvent(event));
+  }
+
+  async getAvailableEventsForUser(userId: string): Promise<Event[]> {
+    const now = new Date();
+    const events = await prisma.event.findMany({
+      where: {
+        status: 'open',
+        creatorId: {
+          not: userId
+        },
+        OR: [
+          { deadline: null },
+          { deadline: { gt: now } }
+        ],
+        NOT: {
+          participants: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
+      include: {
+        participants: {
+          select: {
+            userId: true,
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // 必要人数に達していないイベントのみフィルタ
+    return events
+      .map(event => this.mapPrismaToEvent(event))
+      .filter(event => event.requiredParticipants > event.participants.length);
+  }
+
+
+  // 件数のみ取得する軽量メソッド
+  async getCreatedEventsCount(creatorId: string): Promise<number> {
+    const now = new Date();
+    return await prisma.event.count({
+      where: {
+        creatorId,
+        OR: [
+          { deadline: null },
+          { deadline: { gt: now } },
+          { 
+            deadline: { lt: now },
+            status: 'matched'
+          }
+        ]
+      }
+    });
+  }
+
+  async getParticipatingEventsCount(userId: string): Promise<number> {
+    const now = new Date();
+    return await prisma.event.count({
+      where: {
+        participants: {
+          some: {
+            userId,
+          },
+        },
+        creatorId: {
+          not: userId
+        },
+        OR: [
+          { deadline: null },
+          { deadline: { gt: now } },
+          { 
+            deadline: { lt: now },
+            status: 'matched'
+          }
+        ]
+      }
+    });
+  }
+
+  async getMatchedEventsCount(userId: string): Promise<number> {
+    return await prisma.event.count({
+      where: {
+        status: 'matched',
+        OR: [
+          { creatorId: userId },
+          {
+            participants: {
+              some: {
+                userId,
+              },
+            },
+          }
+        ]
+      }
+    });
+  }
+
+  async getAvailableEventsCount(userId: string): Promise<number> {
+    const now = new Date();
+    const events = await prisma.event.findMany({
+      where: {
+        status: 'open',
+        creatorId: {
+          not: userId
+        },
+        OR: [
+          { deadline: null },
+          { deadline: { gt: now } }
+        ],
+        NOT: {
+          participants: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
+      include: {
+        participants: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    // 必要人数に達していないイベントのみカウント
+    return events.filter(event => 
+      event.requiredParticipants > event.participants.length
+    ).length;
+  }
+
   async updateEventStatus(eventId: string, status: EventStatus, matchedDates?: Date[]): Promise<boolean> {
     try {
       const matchedDatesJson = matchedDates ? JSON.stringify(matchedDates) : null;

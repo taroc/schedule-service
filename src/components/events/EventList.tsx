@@ -317,7 +317,7 @@ export default function EventList({
                   <span className="text-base font-semibold text-gray-700">あなたの状況:</span>
                   {(() => {
                     const status = getParticipationStatus(event);
-                    const statusColors = {
+                    const statusColors: Record<string, string> = {
                       owner: 'text-purple-600',
                       participating: 'text-green-600', 
                       available: 'text-blue-600',
@@ -326,7 +326,7 @@ export default function EventList({
                       unknown: 'text-gray-600'
                     };
                     return (
-                      <span className={`text-base font-bold ${statusColors[status.status]}`}>
+                      <span className={`text-base font-bold ${statusColors[status.status] || 'text-gray-600'}`}>
                         {status.reason}
                       </span>
                     );
