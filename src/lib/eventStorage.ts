@@ -28,6 +28,13 @@ class EventStorageDB {
         periodStart: request.periodStart,
         periodEnd: request.periodEnd,
         reservationStatus: 'open',
+        
+        // 作成者を最初から参加者として追加
+        participants: {
+          create: {
+            userId: creatorId,
+          },
+        },
       },
       include: {
         participants: {
@@ -145,10 +152,6 @@ class EventStorageDB {
         return { success: false, error: 'Event not found' };
       }
 
-      // 作成者は参加できない
-      if (event.creatorId === userId) {
-        return { success: false, error: 'Event creator cannot join their own event' };
-      }
 
       // 既に参加しているかチェック
       const existingParticipant = await prisma.eventParticipant.findUnique({
@@ -784,8 +787,8 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
-      periodStart: Date;
-      periodEnd: Date;
+      periodStart: Date | null;
+      periodEnd: Date | null;
       reservationStatus: string;
       participants?: { userId: string }[];
     }
@@ -807,8 +810,8 @@ class EventStorageDB {
       updatedAt: new Date(prismaEvent.updatedAt),
       
       // 期間指定フィールド（必須）
-      periodStart: new Date(prismaEvent.periodStart),
-      periodEnd: new Date(prismaEvent.periodEnd),
+      periodStart: new Date(prismaEvent.periodStart!),
+      periodEnd: new Date(prismaEvent.periodEnd!),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
     };
   }
@@ -826,8 +829,8 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
-      periodStart: Date;
-      periodEnd: Date;
+      periodStart: Date | null;
+      periodEnd: Date | null;
       reservationStatus: string;
       participants?: { userId: string }[];
       creator?: { id: string; password: string };
@@ -850,8 +853,8 @@ class EventStorageDB {
       updatedAt: new Date(prismaEvent.updatedAt),
       
       // 期間指定フィールド（必須）
-      periodStart: new Date(prismaEvent.periodStart),
-      periodEnd: new Date(prismaEvent.periodEnd),
+      periodStart: new Date(prismaEvent.periodStart!),
+      periodEnd: new Date(prismaEvent.periodEnd!),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
       
       creator: {

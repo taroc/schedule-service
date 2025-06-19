@@ -72,10 +72,9 @@ class MatchingEngine {
       };
     }
 
-    // スケジュールマッチングを実行（作成者も含める）
-    const allParticipants = [event.creatorId, ...event.participants];
+    // スケジュールマッチングを実行
     const matchedDates = await this.findCommonAvailableDates(
-      allParticipants,
+      event.participants,
       event.requiredDays,
       event.periodStart,
       event.periodEnd
@@ -239,9 +238,8 @@ class MatchingEngine {
         // イベントを成立状態に更新
         await eventStorage.updateEventStatus(event.id, 'matched', finalMatchedDates);
         
-        // 占有日程を記録（作成者も含める）
-        const allParticipants = [event.creatorId, ...event.participants];
-        for (const participant of allParticipants) {
+        // 占有日程を記録
+        for (const participant of event.participants) {
           if (!occupiedDates.has(participant)) {
             occupiedDates.set(participant, new Set());
           }
@@ -292,21 +290,20 @@ class MatchingEngine {
     event: Event,
     occupiedDates: Map<string, Set<string>>
   ): Promise<Date[]> {
-    // 通常の空き日程検索（作成者も含める）
-    const allParticipants = [event.creatorId, ...event.participants];
+    // 通常の空き日程検索
     const commonDates = await this.findCommonAvailableDates(
-      allParticipants,
+      event.participants,
       event.requiredDays,
       event.periodStart,
       event.periodEnd
     );
 
-    // ダブルブッキングをチェック（作成者も含める）
+    // ダブルブッキングをチェック
     const availableDates = commonDates.filter(date => {
       const dateStr = date.toISOString().split('T')[0];
       
-      // 全参加者（作成者含む）がその日に他のイベントで占有されていないかチェック
-      return allParticipants.every(participant => {
+      // 全参加者がその日に他のイベントで占有されていないかチェック
+      return event.participants.every(participant => {
         const userOccupiedDates = occupiedDates.get(participant);
         return !userOccupiedDates || !userOccupiedDates.has(dateStr);
       });
