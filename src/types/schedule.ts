@@ -1,11 +1,10 @@
 // 時間帯の種類
-export type TimeSlot = 'daytime' | 'evening' | 'fullday';
+export type TimeSlot = 'daytime' | 'evening';
 
 // 時間帯別の空き状況
 export interface TimeSlotAvailability {
   daytime: boolean;    // 昼の空き状況
   evening: boolean;    // 夜の空き状況
-  fullday: boolean;    // 一日中の空き状況
 }
 
 export interface UserSchedule {
@@ -17,11 +16,7 @@ export interface UserSchedule {
   updatedAt: Date;
 }
 
-// 複数日の空き時間一括登録用
-export interface BulkAvailabilityRequest {
-  dates: string[];  // ISO string format dates
-  timeSlots: TimeSlotAvailability;  // 指定した時間帯を空きとして登録
-}
+// 削除済み - 新しいシンプルな型定義に置き換える予定
 
 export interface ScheduleCalendarDay {
   date: Date;

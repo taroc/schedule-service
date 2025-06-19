@@ -1,97 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
 import { scheduleStorage } from '@/lib/scheduleStorage';
-import { matchingEngine } from '@/lib/matchingEngine';
-import { BulkAvailabilityRequest } from '@/types/schedule';
+import { verifyToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    
     if (!token) {
-      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const user = verifyToken(token);
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json({ error: '無効なトークンです' }, { status: 401 });
     }
 
-    const body: BulkAvailabilityRequest = await request.json();
-    
-    if (!body.dates || !Array.isArray(body.dates) || body.dates.length === 0) {
-      return NextResponse.json({ error: 'Dates array is required' }, { status: 400 });
+    const body = await request.json();
+    const { dates, timeSlots } = body;
+
+    if (!dates || !Array.isArray(dates) || dates.length === 0) {
+      return NextResponse.json({ error: '日付を選択してください' }, { status: 400 });
     }
 
-    if (!body.timeSlots) {
-      return NextResponse.json({ 
-        error: 'TimeSlots are required' 
-      }, { status: 400 });
+    if (!timeSlots || typeof timeSlots !== 'object') {
+      return NextResponse.json({ error: '時間帯を選択してください' }, { status: 400 });
     }
 
-    // 時間帯の検証
-    const { daytime, evening, fullday } = body.timeSlots;
-    if (typeof daytime !== 'boolean' || typeof evening !== 'boolean' || typeof fullday !== 'boolean') {
-      return NextResponse.json({ 
-        error: 'TimeSlots must contain boolean values for daytime, evening, and fullday' 
-      }, { status: 400 });
-    }
+    // 各日付に対して空き時間を登録
+    await scheduleStorage.setAvailability(decoded.id, dates, timeSlots);
 
-    // 少なくとも1つの時間帯が選択されているかチェック
-    if (!daytime && !evening && !fullday) {
-      return NextResponse.json({ 
-        error: 'At least one time slot must be selected' 
-      }, { status: 400 });
-    }
-
-    // 日付の検証
-    for (const dateString of body.dates) {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return NextResponse.json({ 
-          error: `Invalid date: ${dateString}` 
-        }, { status: 400 });
-      }
-    }
-
-    // 最大日数制限（Prisma Accelerateの制限を考慮）
-    if (body.dates.length > 50) {
-      return NextResponse.json({ 
-        error: 'Maximum 50 dates can be processed at once' 
-      }, { status: 400 });
-    }
-
-    const schedules = await scheduleStorage.bulkSetAvailability(body, user.id);
-    
-    // マッチング処理を非同期で実行（レスポンス速度向上のため）
-    setImmediate(async () => {
-      try {
-        await matchingEngine.onScheduleUpdated(user.id);
-      } catch (error) {
-        console.error('Background matching failed:', error);
-      }
+    return NextResponse.json({ 
+      success: true, 
+      message: `${dates.length}日の空き時間を登録しました` 
     });
-    
-    return NextResponse.json({
-      message: `Successfully registered availability for ${schedules.length} dates`,
-      schedules: schedules,
-      summary: {
-        totalDates: schedules.length,
-        timeSlots: body.timeSlots
-      }
-    });
+
   } catch (error) {
-    console.error('Error registering availability:', error);
-    
-    // より詳細なエラー情報を提供
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorDetails = {
-      error: 'Failed to register availability',
-      details: errorMessage,
-      timestamp: new Date().toISOString()
-    };
-
-    console.error('Detailed error:', errorDetails);
-    
-    return NextResponse.json(errorDetails, { status: 500 });
+    console.error('空き時間登録エラー:', error);
+    return NextResponse.json({ 
+      error: '空き時間の登録に失敗しました' 
+    }, { status: 500 });
   }
 }

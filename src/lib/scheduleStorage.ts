@@ -1,116 +1,38 @@
-import { UserSchedule, BulkAvailabilityRequest } from '@/types/schedule';
+import { UserSchedule } from '@/types/schedule';
 import { prisma } from './prisma';
 import { UserSchedule as PrismaUserSchedule } from '@prisma/client';
 
 class ScheduleStorage {
-  async bulkSetAvailability(request: BulkAvailabilityRequest, userId: string): Promise<UserSchedule[]> {
-    // バッチサイズを小さくして複数のトランザクションに分割
-    const BATCH_SIZE = 20;
-    const allResults: UserSchedule[] = [];
-
-    // 日付を一括変換
-    const dates = request.dates.map(dateString => new Date(dateString + 'T00:00:00.000Z'));
-
-    // バッチごとに処理
-    for (let i = 0; i < dates.length; i += BATCH_SIZE) {
-      const batchDates = dates.slice(i, i + BATCH_SIZE);
+  async setAvailability(
+    userId: string,
+    dates: string[],
+    timeSlots: { daytime: boolean; evening: boolean }
+  ): Promise<void> {
+    // 各日付に対して空き時間を設定
+    for (const dateStr of dates) {
+      const date = new Date(dateStr);
       
-      const batchResults = await prisma.$transaction(async (tx) => {
-        // 既存スケジュールを一括取得
-        const existingSchedules = await tx.userSchedule.findMany({
-          where: {
-            userId: userId,
-            date: { in: batchDates }
+      await prisma.userSchedule.upsert({
+        where: {
+          userId_date: {
+            userId,
+            date
           }
-        });
-
-        // 既存スケジュールをMapで高速検索用に準備
-        const existingMap = new Map(
-          existingSchedules.map(s => [s.date.toISOString(), s])
-        );
-
-        const toUpdate: Array<{ 
-          where: { userId_date: { userId: string; date: Date } }; 
-          data: { 
-            timeSlotsDaytime: boolean; 
-            timeSlotsEvening: boolean; 
-            timeSlotsFullday: boolean; 
-          } 
-        }> = [];
-        const toCreate: Array<{
-          id: string;
-          userId: string;
-          date: Date;
-          timeSlotsDaytime: boolean;
-          timeSlotsEvening: boolean;
-          timeSlotsFullday: boolean;
-        }> = [];
-
-        for (const date of batchDates) {
-          const dateKey = date.toISOString();
-          const existing = existingMap.get(dateKey);
-
-          if (existing) {
-            // 既存の予定を更新（OR演算で時間帯を追加）
-            const newTimeSlots = {
-              daytime: request.timeSlots.daytime || Boolean(existing.timeSlotsDaytime),
-              evening: request.timeSlots.evening || Boolean(existing.timeSlotsEvening),
-              fullday: request.timeSlots.fullday || Boolean(existing.timeSlotsFullday),
-            };
-
-            toUpdate.push({
-              where: { userId_date: { userId: userId, date: date } },
-              data: {
-                timeSlotsDaytime: newTimeSlots.daytime,
-                timeSlotsEvening: newTimeSlots.evening,
-                timeSlotsFullday: newTimeSlots.fullday,
-              }
-            });
-          } else {
-            // 新しい予定を作成
-            const scheduleId = Math.random().toString(36).substring(2, 15);
-            toCreate.push({
-              id: scheduleId,
-              userId: userId,
-              date: date,
-              timeSlotsDaytime: request.timeSlots.daytime,
-              timeSlotsEvening: request.timeSlots.evening,
-              timeSlotsFullday: request.timeSlots.fullday,
-            });
-          }
+        },
+        create: {
+          id: `${userId}-${dateStr}`,
+          userId,
+          date,
+          timeSlotsDaytime: timeSlots.daytime,
+          timeSlotsEvening: timeSlots.evening
+        },
+        update: {
+          timeSlotsDaytime: timeSlots.daytime,
+          timeSlotsEvening: timeSlots.evening,
+          updatedAt: new Date()
         }
-
-        // 一括作成（高速）
-        if (toCreate.length > 0) {
-          await tx.userSchedule.createMany({
-            data: toCreate,
-            skipDuplicates: true
-          });
-        }
-
-        // 一括更新（個別に実行が必要）
-        if (toUpdate.length > 0) {
-          await Promise.all(
-            toUpdate.map(update => tx.userSchedule.update(update))
-          );
-        }
-
-        // 結果を取得
-        return await tx.userSchedule.findMany({
-          where: {
-            userId: userId,
-            date: { in: batchDates }
-          },
-          orderBy: { date: 'asc' }
-        });
-      }, {
-        timeout: 10000 // 短いタイムアウトで安全性を確保
       });
-
-      allResults.push(...batchResults.map(s => this.mapPrismaToSchedule(s)));
     }
-
-    return allResults;
   }
 
   async getUserSchedules(userId: string): Promise<UserSchedule[]> {
@@ -162,7 +84,7 @@ class ScheduleStorage {
     const schedules = await this.getUserSchedulesByDateRange(userId, startDate, endDate);
     
     return schedules
-      .filter(s => s.timeSlots.daytime || s.timeSlots.evening || s.timeSlots.fullday)
+      .filter(s => s.timeSlots.daytime || s.timeSlots.evening)
       .map(s => s.date);
   }
 
@@ -198,8 +120,8 @@ class ScheduleStorage {
     const commonDates: Date[] = [];
     
     // 日付ごとにチェック
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const currentDate = new Date(d);
       const dateStr = currentDate.toISOString().split('T')[0];
       
       // 全ユーザーがこの日に空いているかチェック
@@ -217,15 +139,12 @@ class ScheduleStorage {
         
         // いずれかの時間帯が空いていればtrue
         return daySchedule.timeSlotsDaytime || 
-               daySchedule.timeSlotsEvening || 
-               daySchedule.timeSlotsFullday;
+               daySchedule.timeSlotsEvening;
       });
       
       if (allAvailable) {
-        commonDates.push(new Date(currentDate));
+        commonDates.push(currentDate);
       }
-      
-      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     // 連続した日程を見つける
@@ -294,8 +213,8 @@ class ScheduleStorage {
     const commonDates: Date[] = [];
     
     // 日付ごとにチェック
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const currentDate = new Date(d);
       const dateStr = currentDate.toISOString().split('T')[0];
       
       // 全ユーザーがこの日に空いているかチェック
@@ -313,15 +232,12 @@ class ScheduleStorage {
         
         // いずれかの時間帯が空いていればtrue
         return daySchedule.timeSlotsDaytime || 
-               daySchedule.timeSlotsEvening || 
-               daySchedule.timeSlotsFullday;
+               daySchedule.timeSlotsEvening;
       });
       
       if (allAvailable) {
-        commonDates.push(new Date(currentDate));
+        commonDates.push(currentDate);
       }
-      
-      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     return commonDates.sort((a, b) => a.getTime() - b.getTime());
@@ -404,7 +320,6 @@ class ScheduleStorage {
       timeSlots: {
         daytime: Boolean(prismaSchedule.timeSlotsDaytime),
         evening: Boolean(prismaSchedule.timeSlotsEvening),
-        fullday: Boolean(prismaSchedule.timeSlotsFullday),
       },
       createdAt: prismaSchedule.createdAt,
       updatedAt: prismaSchedule.updatedAt

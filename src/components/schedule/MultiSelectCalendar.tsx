@@ -7,12 +7,14 @@ interface MultiSelectCalendarProps {
   schedules: UserSchedule[];
   selectedDates: Date[];
   onDateSelectionChange: (selectedDates: Date[]) => void;
+  recentlyRegistered?: Date[];
 }
 
 export default function MultiSelectCalendar({ 
   schedules, 
   selectedDates, 
-  onDateSelectionChange 
+  onDateSelectionChange,
+  recentlyRegistered = []
 }: MultiSelectCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<ScheduleCalendarDay[]>([]);
@@ -25,8 +27,14 @@ export default function MultiSelectCalendar({
   const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
 
   useEffect(() => {
+    console.log('MultiSelectCalendar useEffect triggered with:', {
+      schedulesCount: schedules.length,
+      selectedDatesCount: selectedDates.length,
+      recentlyRegisteredCount: recentlyRegistered.length,
+      currentMonth: currentDate.getMonth() + 1
+    });
     generateCalendarDays();
-  }, [currentDate, schedules, selectedDates]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentDate, schedules, selectedDates, recentlyRegistered]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
@@ -51,6 +59,15 @@ export default function MultiSelectCalendar({
       const dateStr = current.toDateString();
       const schedule = schedules.find(s => s.date.toDateString() === dateStr);
       const isSelected = selectedDates.some(d => d.toDateString() === dateStr);
+      
+      // 現在月の日付のみログ出力
+      if (current.getMonth() === month && schedule) {
+        console.log(`Calendar day ${current.getDate()}: schedule found`, {
+          hasSchedule: !!schedule,
+          timeSlots: schedule.timeSlots,
+          dateStr: dateStr
+        });
+      }
       
       days.push({
         date: new Date(current),
@@ -103,10 +120,9 @@ export default function MultiSelectCalendar({
   const getDayClassName = (day: ScheduleCalendarDay) => {
     let className = 'w-10 h-10 flex items-center justify-center text-sm cursor-pointer rounded-lg transition-colors font-medium border-2 ';
     
-    // デバッグ用ログ
-    if (day.hasSchedule && day.timeSlots) {
-      console.log(`Day ${day.date.getDate()}: hasSchedule=${day.hasSchedule}, timeSlots=`, day.timeSlots);
-    }
+    // 最近登録された日付かチェック
+    const isRecentlyRegistered = recentlyRegistered.some(d => d.toDateString() === day.date.toDateString());
+    
     
     if (!isCurrentMonth(day.date)) {
       className += 'text-gray-400 ';
@@ -118,24 +134,23 @@ export default function MultiSelectCalendar({
     
     if (day.isSelected) {
       className += 'bg-blue-600 text-white border-blue-600 shadow-lg ';
+    } else if (isRecentlyRegistered) {
+      // 最近登録された日付は黄色でハイライト
+      className += 'bg-yellow-400 text-white border-yellow-400 shadow-lg ring-2 ring-yellow-300 ';
     } else if (day.hasSchedule && day.timeSlots) {
-      // 時間帯別の色分け（最適化版）
-      if (day.timeSlots.fullday || (day.timeSlots.daytime && day.timeSlots.evening)) {
-        // 一日中空き または 昼と夜両方空き - 緑系（同じ扱い）
+      // 時間帯別の色分け（昼・夜ベース）
+      if (day.timeSlots.daytime && day.timeSlots.evening) {
+        // 昼と夜両方空き - 緑系（一日空きと同等）
         className += 'bg-green-500 text-white border-green-500 ';
-        console.log(`Applying green for day ${day.date.getDate()}`);
       } else if (day.timeSlots.daytime && !day.timeSlots.evening) {
         // 昼のみ空き - 青系
         className += 'bg-blue-400 text-white border-blue-400 ';
-        console.log(`Applying blue for day ${day.date.getDate()}`);
       } else if (day.timeSlots.evening && !day.timeSlots.daytime) {
         // 夜のみ空き - 紫系
         className += 'bg-purple-500 text-white border-purple-500 ';
-        console.log(`Applying purple for day ${day.date.getDate()}`);
       } else {
-        // エラー状態
+        // エラー状態（両方false）
         className += 'bg-red-400 text-white border-red-400 ';
-        console.log(`Applying red for day ${day.date.getDate()}`);
       }
     } else {
       // 未登録の日（デフォルトで忙しい）
@@ -225,6 +240,10 @@ export default function MultiSelectCalendar({
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-blue-600 text-white border-2 border-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
             <span className="text-gray-700">選択中</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-yellow-400 text-white border-2 border-yellow-400 rounded-lg flex items-center justify-center text-xs font-bold ring-1 ring-yellow-300">15</div>
+            <span className="text-gray-700">登録完了（3秒間表示）</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-green-500 text-white border-2 border-green-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>

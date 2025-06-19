@@ -738,7 +738,7 @@ class EventStorageDB {
         const schedule = userSchedules.find(s => s.date.toDateString() === dateStr);
         
         // その日にスケジュールが登録されている（= 空いている）場合
-        if (schedule && (schedule.timeSlotsDaytime || schedule.timeSlotsEvening || schedule.timeSlotsFullday)) {
+        if (schedule && (schedule.timeSlotsDaytime || schedule.timeSlotsEvening)) {
           availableDates.push(date);
         }
       }

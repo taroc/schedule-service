@@ -15,7 +15,7 @@ export function isUserAvailableOnDate(
   );
   
   // 未登録の場合はfalse（忙しい）、登録済みの場合は時間帯のいずれかが空いているかを判定
-  return schedule ? (schedule.timeSlots.daytime || schedule.timeSlots.evening || schedule.timeSlots.fullday) : false;
+  return schedule ? (schedule.timeSlots.daytime || schedule.timeSlots.evening) : false;
 }
 
 /**

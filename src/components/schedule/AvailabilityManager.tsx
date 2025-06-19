@@ -11,11 +11,11 @@ export default function AvailabilityManager() {
   const [loading, setLoading] = useState(true);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<TimeSlotAvailability>({
-    daytime: false,
-    evening: false,
-    fullday: true  // デフォルトは一日中
+    daytime: true,  // デフォルトは昼と夜両方
+    evening: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recentlyRegistered, setRecentlyRegistered] = useState<Date[]>([]);
 
   useEffect(() => {
     if (!authLoading && token) {
@@ -42,6 +42,8 @@ export default function AvailabilityManager() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched schedule data:', data);
+        
         // APIから返される日付文字列をDateオブジェクトに変換
         const schedulesWithDates = data.map((schedule: UserSchedule & { date: string; createdAt: string; updatedAt: string }) => ({
           ...schedule,
@@ -51,10 +53,11 @@ export default function AvailabilityManager() {
           // timeSlotsがない場合はデフォルト値を設定
           timeSlots: schedule.timeSlots || {
             daytime: false,
-            evening: false,
-            fullday: false
+            evening: false
           }
         }));
+        
+        console.log('Processed schedules with dates:', schedulesWithDates);
         setSchedules(schedulesWithDates);
       } else {
         console.error('Failed to fetch schedules:', response.status, response.statusText);
@@ -69,44 +72,21 @@ export default function AvailabilityManager() {
   };
 
   const handleTimeSlotChange = (slot: keyof TimeSlotAvailability) => {
-    if (slot === 'fullday') {
-      // 一日中が選択された場合、他を無効にする
-      setSelectedTimeSlots({
-        daytime: false,
-        evening: false,
-        fullday: true
-      });
-    } else {
-      // 昼や夜が選択された場合、一日中を無効にする
-      const newTimeSlots = {
-        ...selectedTimeSlots,
-        fullday: false,
-        [slot]: !selectedTimeSlots[slot]
-      };
-      setSelectedTimeSlots(newTimeSlots);
-    }
+    setSelectedTimeSlots({
+      ...selectedTimeSlots,
+      [slot]: !selectedTimeSlots[slot]
+    });
   };
 
   const handleSubmitAvailability = async () => {
     if (!token || selectedDates.length === 0) {
-      alert('日付を選択してください');
-      return;
-    }
-
-    const hasAnyTimeSlot = selectedTimeSlots.daytime || selectedTimeSlots.evening || selectedTimeSlots.fullday;
-    if (!hasAnyTimeSlot) {
-      alert('時間帯を選択してください');
       return;
     }
 
     setIsSubmitting(true);
+
     try {
-      const requestData = {
-        dates: selectedDates.map(d => d.toISOString().split('T')[0]),
-        timeSlots: selectedTimeSlots,
-      };
-      
-      console.log('空き時間登録リクエスト:', requestData);
+      const dates = selectedDates.map(d => d.toISOString().split('T')[0]);
       
       const response = await fetch('/api/schedules/availability', {
         method: 'POST',
@@ -114,23 +94,30 @@ export default function AvailabilityManager() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify({
+          dates,
+          timeSlots: selectedTimeSlots
+        })
       });
 
-      console.log('レスポンスステータス:', response.status);
-
       if (response.ok) {
-        const responseData = await response.json();
-        console.log('成功レスポンス:', responseData);
-        await fetchSchedules();
+        // 登録成功時の処理
+        setRecentlyRegistered([...selectedDates]);
         setSelectedDates([]);
+        
+        // 3秒後にハイライトを消す
+        setTimeout(() => {
+          setRecentlyRegistered([]);
+        }, 3000);
+
+        // スケジュールを再取得
+        await fetchSchedules();
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('エラーレスポンス:', errorData);
-        throw new Error(errorData.error || 'Failed to register availability');
+        const errorData = await response.json();
+        console.error('空き時間登録エラー:', errorData);
       }
     } catch (error) {
-      console.error('Error registering availability:', error);
+      console.error('空き時間登録エラー:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -195,18 +182,6 @@ export default function AvailabilityManager() {
             </div>
           </label>
 
-          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-            <input
-              type="checkbox"
-              checked={selectedTimeSlots.fullday}
-              onChange={() => handleTimeSlotChange('fullday')}
-              className="mr-3 text-green-500"
-            />
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-green-200 border-2 border-green-500 rounded mr-2"></div>
-              <span className="text-gray-900">一日中</span>
-            </div>
-          </label>
         </div>
       </div>
 
@@ -215,6 +190,7 @@ export default function AvailabilityManager() {
         schedules={schedules}
         selectedDates={selectedDates}
         onDateSelectionChange={setSelectedDates}
+        recentlyRegistered={recentlyRegistered}
       />
 
       {/* 登録ボタン */}
