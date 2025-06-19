@@ -32,10 +32,9 @@ model Event {
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
   
-  // 新機能フィールド
-  dateMode             String             @default("consecutive") @map("date_mode")
-  periodStart          DateTime?          @map("period_start")
-  periodEnd            DateTime?          @map("period_end")
+  // 期間指定フィールド（必須）
+  periodStart          DateTime           @map("period_start")
+  periodEnd            DateTime           @map("period_end")
   reservationStatus    String             @default("open") @map("reservation_status")
   
   participants         EventParticipant[]
@@ -44,6 +43,8 @@ model Event {
   @@index([creatorId])
   @@index([status])
   @@index([reservationStatus])
+  @@index([periodStart])
+  @@index([periodEnd])
   @@map("events")
 }
 

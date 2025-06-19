@@ -1,4 +1,4 @@
-import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, DateMode, ReservationStatus, EventParticipation } from '@/types/event';
+import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, ReservationStatus, EventParticipation } from '@/types/event';
 import { prisma } from './prisma';
 
 class EventStorageDB {
@@ -6,13 +6,11 @@ class EventStorageDB {
     const eventId = Math.random().toString(36).substring(2, 15);
 
     // 入力値の検証
-    if (request.dateMode === 'within_period') {
-      if (!request.periodStart || !request.periodEnd) {
-        throw new Error('Period start and end dates are required for within_period mode');
-      }
-      if (request.periodStart >= request.periodEnd) {
-        throw new Error('Period start must be before period end');
-      }
+    if (!request.periodStart || !request.periodEnd) {
+      throw new Error('Period start and end dates are required');
+    }
+    if (request.periodStart >= request.periodEnd) {
+      throw new Error('Period start must be before period end');
     }
 
     const event = await prisma.event.create({
@@ -26,10 +24,9 @@ class EventStorageDB {
         status: 'open',
         deadline: request.deadline || null,
         
-        // 新機能フィールド
-        dateMode: request.dateMode || 'consecutive',
-        periodStart: request.periodStart || null,
-        periodEnd: request.periodEnd || null,
+        // 期間指定フィールド（必須）
+        periodStart: request.periodStart,
+        periodEnd: request.periodEnd,
         reservationStatus: 'open',
       },
       include: {
@@ -395,6 +392,26 @@ class EventStorageDB {
   }
 
   async getMatchedEventsForUser(userId: string): Promise<Event[]> {
+    console.log(`[DEBUG] getMatchedEventsForUser called with userId: ${userId}`);
+    
+    // まず、すべての成立済みイベントを取得
+    const allMatchedEvents = await prisma.event.findMany({
+      where: { status: 'matched' },
+      include: {
+        participants: {
+          select: {
+            userId: true,
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+      },
+    });
+    
+    console.log(`[DEBUG] All matched events in DB: ${allMatchedEvents.length} events`);
+    
+    // 次に、ユーザー固有の条件で検索
     const events = await prisma.event.findMany({
       where: {
         status: 'matched',
@@ -423,6 +440,8 @@ class EventStorageDB {
         createdAt: 'desc',
       },
     });
+
+    console.log(`[DEBUG] Found ${events.length} matched events for user ${userId}`);
 
     return events.map(event => this.mapPrismaToEvent(event));
   }
@@ -463,9 +482,21 @@ class EventStorageDB {
     });
 
     // 必要人数に達していないイベントのみフィルタ
-    return events
+    const availableEvents = events
       .map(event => this.mapPrismaToEvent(event))
       .filter(event => event.requiredParticipants > event.participants.length);
+
+    // ユーザーの予定と照合して参加可能なイベントのみ返す
+    const eventsWithScheduleMatch = [];
+    
+    for (const event of availableEvents) {
+      const canParticipate = await this.checkUserScheduleCompatibility(userId, event);
+      if (canParticipate) {
+        eventsWithScheduleMatch.push(event);
+      }
+    }
+    
+    return eventsWithScheduleMatch;
   }
 
 
@@ -512,7 +543,9 @@ class EventStorageDB {
   }
 
   async getMatchedEventsCount(userId: string): Promise<number> {
-    return await prisma.event.count({
+    console.log(`[DEBUG] getMatchedEventsCount called with userId: ${userId}`);
+    
+    const count = await prisma.event.count({
       where: {
         status: 'matched',
         OR: [
@@ -527,41 +560,14 @@ class EventStorageDB {
         ]
       }
     });
+
+    console.log(`[DEBUG] Matched events count for user ${userId}: ${count}`);
+    return count;
   }
 
   async getAvailableEventsCount(userId: string): Promise<number> {
-    const now = new Date();
-    const events = await prisma.event.findMany({
-      where: {
-        status: 'open',
-        creatorId: {
-          not: userId
-        },
-        OR: [
-          { deadline: null },
-          { deadline: { gt: now } }
-        ],
-        NOT: {
-          participants: {
-            some: {
-              userId,
-            },
-          },
-        },
-      },
-      include: {
-        participants: {
-          select: {
-            userId: true,
-          },
-        },
-      },
-    });
-
-    // 必要人数に達していないイベントのみカウント
-    return events.filter(event => 
-      event.requiredParticipants > event.participants.length
-    ).length;
+    const availableEvents = await this.getAvailableEventsForUser(userId);
+    return availableEvents.length;
   }
 
   async updateEventStatus(eventId: string, status: EventStatus, matchedDates?: Date[]): Promise<boolean> {
@@ -593,10 +599,7 @@ class EventStorageDB {
       }
 
       // 入力値の検証
-      if (updates.dateMode === 'within_period') {
-        if (!updates.periodStart || !updates.periodEnd) {
-          throw new Error('Period start and end dates are required for within_period mode');
-        }
+      if (updates.periodStart && updates.periodEnd) {
         if (updates.periodStart >= updates.periodEnd) {
           throw new Error('Period start must be before period end');
         }
@@ -609,9 +612,8 @@ class EventStorageDB {
         requiredParticipants?: number;
         requiredDays?: number;
         deadline?: Date | null;
-        dateMode?: string;
-        periodStart?: Date | null;
-        periodEnd?: Date | null;
+        periodStart?: Date;
+        periodEnd?: Date;
       } = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.description !== undefined) updateData.description = updates.description;
@@ -619,10 +621,9 @@ class EventStorageDB {
       if (updates.requiredDays !== undefined) updateData.requiredDays = updates.requiredDays;
       if (updates.deadline !== undefined) updateData.deadline = updates.deadline;
       
-      // 新機能フィールド
-      if (updates.dateMode !== undefined) updateData.dateMode = updates.dateMode;
-      if (updates.periodStart !== undefined) updateData.periodStart = updates.periodStart;
-      if (updates.periodEnd !== undefined) updateData.periodEnd = updates.periodEnd;
+      // 期間指定フィールド
+      if (updates.periodStart !== undefined && updates.periodStart !== null) updateData.periodStart = updates.periodStart;
+      if (updates.periodEnd !== undefined && updates.periodEnd !== null) updateData.periodEnd = updates.periodEnd;
 
       const updatedEvent = await prisma.event.update({
         where: { id: eventId },
@@ -700,6 +701,53 @@ class EventStorageDB {
     return result.count;
   }
 
+  /**
+   * ユーザーの予定とイベントの期間が合致するかチェック
+   */
+  async checkUserScheduleCompatibility(userId: string, event: Event): Promise<boolean> {
+    try {
+      // イベント期間内のユーザーの空き時間を取得
+      const userSchedules = await prisma.userSchedule.findMany({
+        where: {
+          userId,
+          date: {
+            gte: event.periodStart,
+            lte: event.periodEnd,
+          },
+        },
+      });
+
+      // イベント期間内の全日程を生成
+      const eventDates: Date[] = [];
+      const currentDate = new Date(event.periodStart);
+      const endDate = new Date(event.periodEnd);
+      
+      while (currentDate <= endDate) {
+        eventDates.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // 各日付でユーザーが利用可能かチェック
+      const availableDates: Date[] = [];
+      
+      for (const date of eventDates) {
+        const dateStr = date.toDateString();
+        const schedule = userSchedules.find(s => s.date.toDateString() === dateStr);
+        
+        // その日にスケジュールが登録されている（= 空いている）場合
+        if (schedule && (schedule.timeSlotsDaytime || schedule.timeSlotsEvening || schedule.timeSlotsFullday)) {
+          availableDates.push(date);
+        }
+      }
+
+      // 必要日数分の空きがあるかチェック
+      return availableDates.length >= event.requiredDays;
+    } catch (error) {
+      console.error('Schedule compatibility check failed:', error);
+      return false;
+    }
+  }
+
   // Add missing getEventsByStatus method (called getOpenEvents in tests)
   async getOpenEvents(): Promise<Event[]> {
     return this.getEventsByStatus('open');
@@ -736,9 +784,8 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
-      dateMode: string;
-      periodStart: Date | null;
-      periodEnd: Date | null;
+      periodStart: Date;
+      periodEnd: Date;
       reservationStatus: string;
       participants?: { userId: string }[];
     }
@@ -759,10 +806,9 @@ class EventStorageDB {
       createdAt: new Date(prismaEvent.createdAt),
       updatedAt: new Date(prismaEvent.updatedAt),
       
-      // 新機能フィールド
-      dateMode: prismaEvent.dateMode as DateMode,
-      periodStart: prismaEvent.periodStart ? new Date(prismaEvent.periodStart) : undefined,
-      periodEnd: prismaEvent.periodEnd ? new Date(prismaEvent.periodEnd) : undefined,
+      // 期間指定フィールド（必須）
+      periodStart: new Date(prismaEvent.periodStart),
+      periodEnd: new Date(prismaEvent.periodEnd),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
     };
   }
@@ -780,9 +826,8 @@ class EventStorageDB {
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
-      dateMode: string;
-      periodStart: Date | null;
-      periodEnd: Date | null;
+      periodStart: Date;
+      periodEnd: Date;
       reservationStatus: string;
       participants?: { userId: string }[];
       creator?: { id: string; password: string };
@@ -804,10 +849,9 @@ class EventStorageDB {
       createdAt: new Date(prismaEvent.createdAt),
       updatedAt: new Date(prismaEvent.updatedAt),
       
-      // 新機能フィールド
-      dateMode: prismaEvent.dateMode as DateMode,
-      periodStart: prismaEvent.periodStart ? new Date(prismaEvent.periodStart) : undefined,
-      periodEnd: prismaEvent.periodEnd ? new Date(prismaEvent.periodEnd) : undefined,
+      // 期間指定フィールド（必須）
+      periodStart: new Date(prismaEvent.periodStart),
+      periodEnd: new Date(prismaEvent.periodEnd),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
       
       creator: {

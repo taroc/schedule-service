@@ -1,6 +1,6 @@
 import { eventStorage } from './eventStorage';
 import { scheduleStorage } from './scheduleStorage';
-import { Event, DateMode } from '@/types/event';
+import { Event } from '@/types/event';
 
 export interface MatchingResult {
   eventId: string;
@@ -76,7 +76,6 @@ class MatchingEngine {
     const matchedDates = await this.findCommonAvailableDates(
       event.participants,
       event.requiredDays,
-      event.dateMode,
       event.periodStart,
       event.periodEnd
     );
@@ -125,24 +124,12 @@ class MatchingEngine {
   private async findCommonAvailableDates(
     participantIds: string[],
     requiredDays: number,
-    dateMode: DateMode = 'consecutive',
-    periodStart?: Date,
-    periodEnd?: Date
+    periodStart: Date,
+    periodEnd: Date
   ): Promise<Date[]> {
-    let startDate: Date;
-    let endDate: Date;
-
-    if (dateMode === 'within_period' && periodStart && periodEnd) {
-      // 期間指定モードの場合は指定された期間を使用
-      startDate = periodStart;
-      endDate = periodEnd;
-    } else {
-      // デフォルトの検索範囲（過去30日から未来30日間）
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
-      endDate = new Date();
-      endDate.setDate(endDate.getDate() + 30);
-    }
+    // 指定された期間を使用
+    const startDate = periodStart;
+    const endDate = periodEnd;
 
     // 柔軟な日程検索を使用
     const commonDates = await scheduleStorage.getCommonAvailableDatesFlexible(
@@ -150,7 +137,7 @@ class MatchingEngine {
       startDate,
       endDate,
       requiredDays,
-      dateMode
+      'flexible' // 期間内で柔軟にマッチング
     );
 
     return commonDates;
@@ -307,7 +294,6 @@ class MatchingEngine {
     const commonDates = await this.findCommonAvailableDates(
       event.participants,
       event.requiredDays,
-      event.dateMode,
       event.periodStart,
       event.periodEnd
     );

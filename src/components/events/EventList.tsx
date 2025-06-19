@@ -115,14 +115,6 @@ export default function EventList({
     return new Date(date).toLocaleString('ja-JP');
   };
 
-  const getDateModeText = (dateMode: string) => {
-    const dateModeMap = {
-      'consecutive': '連続日程',
-      'flexible': '柔軟日程',
-      'within_period': '期間指定'
-    };
-    return dateModeMap[dateMode as keyof typeof dateModeMap] || dateMode;
-  };
 
   // 将来の機能用（現在はgetDeadlineUrgencyを使用）
   // const getDeadlineStatus = (deadline: Date) => {
@@ -299,11 +291,13 @@ export default function EventList({
                 </div>
               </div>
 
-              {/* 第2列: 日程モード、作成日 */}
+              {/* 第2列: 実施期間、作成日 */}
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">日程モード:</span>
-                  <span className="text-base font-bold text-gray-600">{getDateModeText(event.dateMode)}</span>
+                  <span className="text-base font-semibold text-gray-700">実施期間:</span>
+                  <span className="text-base font-bold text-gray-600">
+                    {formatDate(event.periodStart)} 〜 {formatDate(event.periodEnd)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold text-gray-700">作成日:</span>
@@ -397,10 +391,7 @@ export default function EventList({
               <span>作成日: {formatDate(event.createdAt)}</span>
             )}
             {displayMode !== 'available' && displayMode !== 'allEvents' && (
-              <span>日程モード: {getDateModeText(event.dateMode)}</span>
-            )}
-            {event.dateMode === 'within_period' && event.periodStart && event.periodEnd && (
-              <span>期間: {formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)}</span>
+              <span>実施期間: {formatDate(event.periodStart)} ～ {formatDate(event.periodEnd)}</span>
             )}
           </div>
         </div>

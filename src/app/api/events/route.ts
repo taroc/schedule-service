@@ -28,14 +28,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    // DateオブジェクトとDateModeの変換
+    // Dateオブジェクトの変換
     const eventRequest: CreateEventRequest = {
       ...body,
       deadline: body.deadline ? new Date(body.deadline) : undefined,
-      periodStart: body.periodStart ? new Date(body.periodStart) : undefined,
-      periodEnd: body.periodEnd ? new Date(body.periodEnd) : undefined,
-      priority: body.priority || 'medium',
-      dateMode: body.dateMode || 'consecutive'
+      periodStart: new Date(body.periodStart),
+      periodEnd: new Date(body.periodEnd)
     };
     
     // バリデーション
@@ -54,28 +52,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 期間指定モードの場合の追加バリデーション
-    if (eventRequest.dateMode === 'within_period') {
-      if (!eventRequest.periodStart || !eventRequest.periodEnd) {
-        return NextResponse.json(
-          { error: 'Period start and end dates are required for within_period mode' },
-          { status: 400 }
-        );
-      }
-      
-      if (eventRequest.periodStart >= eventRequest.periodEnd) {
-        return NextResponse.json(
-          { error: 'Period start must be before period end' },
-          { status: 400 }
-        );
-      }
-    }
-
-
-    // 有効なdateMode値のチェック
-    if (eventRequest.dateMode && !['consecutive', 'flexible', 'within_period'].includes(eventRequest.dateMode)) {
+    // 期間のバリデーション
+    if (!eventRequest.periodStart || !eventRequest.periodEnd) {
       return NextResponse.json(
-        { error: 'Date mode must be consecutive, flexible, or within_period' },
+        { error: 'Period start and end dates are required' },
+        { status: 400 }
+      );
+    }
+    
+    if (eventRequest.periodStart >= eventRequest.periodEnd) {
+      return NextResponse.json(
+        { error: 'Period start must be before period end' },
         { status: 400 }
       );
     }
@@ -108,6 +95,8 @@ export async function POST(request: NextRequest) {
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
       deadline: event.deadline ? event.deadline.toISOString() : null,
+      periodStart: event.periodStart.toISOString(),
+      periodEnd: event.periodEnd.toISOString(),
       matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
     };
     
@@ -148,6 +137,8 @@ export async function GET(request: NextRequest) {
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
       deadline: event.deadline ? event.deadline.toISOString() : null,
+      periodStart: event.periodStart.toISOString(),
+      periodEnd: event.periodEnd.toISOString(),
       matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
     }));
     

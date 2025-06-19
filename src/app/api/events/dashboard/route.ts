@@ -71,8 +71,8 @@ export async function GET(request: NextRequest) {
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
         deadline: event.deadline ? event.deadline.toISOString() : null,
-        periodStart: event.periodStart ? event.periodStart.toISOString() : undefined,
-        periodEnd: event.periodEnd ? event.periodEnd.toISOString() : undefined,
+        periodStart: event.periodStart.toISOString(),
+        periodEnd: event.periodEnd.toISOString(),
         matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
       }));
     };

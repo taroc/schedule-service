@@ -114,8 +114,8 @@ function DashboardContent() {
           createdAt: new Date(event.createdAt),
           updatedAt: new Date(event.updatedAt),
           deadline: event.deadline ? new Date(event.deadline) : undefined,
-          periodStart: event.periodStart ? new Date(event.periodStart) : undefined,
-          periodEnd: event.periodEnd ? new Date(event.periodEnd) : undefined,
+          periodStart: new Date(event.periodStart),
+          periodEnd: new Date(event.periodEnd),
           matchedDates: event.matchedDates ? event.matchedDates.map(d => new Date(d)) : undefined
         }));
       };
@@ -179,8 +179,8 @@ function DashboardContent() {
           createdAt: new Date(event.createdAt),
           updatedAt: new Date(event.updatedAt),
           deadline: event.deadline ? new Date(event.deadline) : undefined,
-          periodStart: event.periodStart ? new Date(event.periodStart) : undefined,
-          periodEnd: event.periodEnd ? new Date(event.periodEnd) : undefined,
+          periodStart: new Date(event.periodStart),
+          periodEnd: new Date(event.periodEnd),
           matchedDates: event.matchedDates ? event.matchedDates.map(d => new Date(d)) : undefined
         }));
       };

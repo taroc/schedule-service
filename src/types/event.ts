@@ -12,16 +12,13 @@ export interface Event {
   matchedDates?: Date[];         // 成立した日程
   deadline?: Date;               // 参加締切
   
-  // 新機能フィールド
-  dateMode: DateMode;           // 日程モード
-  periodStart?: Date;           // 期間開始（within_periodモード用）
-  periodEnd?: Date;             // 期間終了（within_periodモード用）
+  // 期間指定フィールド（必須）
+  periodStart: Date;            // 期間開始
+  periodEnd: Date;              // 期間終了
   reservationStatus: ReservationStatus; // 予約ステータス
 }
 
 export type EventStatus = 'open' | 'matched' | 'cancelled' | 'expired';
-
-export type DateMode = 'consecutive' | 'flexible' | 'within_period';
 
 export type ReservationStatus = 'open' | 'tentative' | 'confirmed' | 'expired';
 
@@ -32,10 +29,9 @@ export interface CreateEventRequest {
   requiredDays: number;
   deadline?: Date;
   
-  // 新機能フィールド
-  dateMode?: DateMode;          // デフォルト: 'consecutive'
-  periodStart?: Date;           // dateMode が 'within_period' の場合必須
-  periodEnd?: Date;             // dateMode が 'within_period' の場合必須
+  // 期間指定フィールド（必須）
+  periodStart: Date;           // 期間開始
+  periodEnd: Date;             // 期間終了
 }
 
 export interface UpdateEventRequest {
@@ -45,8 +41,7 @@ export interface UpdateEventRequest {
   requiredDays?: number;
   deadline?: Date;
   
-  // 新機能フィールド
-  dateMode?: DateMode;
+  // 期間指定フィールド
   periodStart?: Date;
   periodEnd?: Date;
 }
@@ -74,8 +69,7 @@ export interface EventResponse {
   participants: string[];
   matchedDates?: string[];
   deadline?: string | null;
-  dateMode: DateMode;
-  periodStart?: string;
-  periodEnd?: string;
+  periodStart: string;
+  periodEnd: string;
   reservationStatus: ReservationStatus;
 }

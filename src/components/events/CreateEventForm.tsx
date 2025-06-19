@@ -16,20 +16,34 @@ export default function CreateEventForm({
   isLoading = false,
   error
 }: CreateEventFormProps) {
-  const [formData, setFormData] = useState<CreateEventRequest>({
-    name: '',
-    description: '',
-    requiredParticipants: 1,
-    requiredDays: 1,
-    deadline: undefined,
-    dateMode: 'consecutive',
-    periodStart: undefined,
-    periodEnd: undefined
+  const [formData, setFormData] = useState<CreateEventRequest>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const twoWeeksLater = new Date();
+    twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
+    
+    return {
+      name: '',
+      description: '',
+      requiredParticipants: 1,
+      requiredDays: 1,
+      deadline: undefined,
+      periodStart: tomorrow,
+      periodEnd: twoWeeksLater
+    };
   });
   
   const [deadlineDate, setDeadlineDate] = useState('');
-  const [periodStartDate, setPeriodStartDate] = useState('');
-  const [periodEndDate, setPeriodEndDate] = useState('');
+  const [periodStartDate, setPeriodStartDate] = useState(() => {
+    const today = new Date();
+    today.setDate(today.getDate() + 1); // 明日から
+    return today.toISOString().split('T')[0];
+  });
+  const [periodEndDate, setPeriodEndDate] = useState(() => {
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 14); // 2週間後まで
+    return endDate.toISOString().split('T')[0];
+  });
 
   // 期限の日付が変更されたときにformDataを更新（23:59に固定）
   useEffect(() => {
@@ -46,8 +60,6 @@ export default function CreateEventForm({
     if (periodStartDate) {
       const periodStart = new Date(`${periodStartDate}T00:00:00`);
       setFormData(prev => ({ ...prev, periodStart }));
-    } else {
-      setFormData(prev => ({ ...prev, periodStart: undefined }));
     }
   }, [periodStartDate]);
 
@@ -56,8 +68,6 @@ export default function CreateEventForm({
     if (periodEndDate) {
       const periodEnd = new Date(`${periodEndDate}T23:59:59`);
       setFormData(prev => ({ ...prev, periodEnd }));
-    } else {
-      setFormData(prev => ({ ...prev, periodEnd: undefined }));
     }
   }, [periodEndDate]);
 
@@ -74,13 +84,6 @@ export default function CreateEventForm({
     }));
   };
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
 
   const handleDeadlineDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDeadlineDate(e.target.value);
@@ -172,61 +175,39 @@ export default function CreateEventForm({
         </div>
 
 
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            日程モード *
-          </label>
-          <select
-            name="dateMode"
-            value={formData.dateMode}
-            onChange={handleSelectChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            required
-          >
-            <option value="consecutive">連続日程（必要日数分の連続した日程）</option>
-            <option value="flexible">柔軟日程（連続でなくても必要日数確保）</option>
-            <option value="within_period">期間指定（指定期間内で必要日数確保）</option>
-          </select>
-          <p className="text-gray-500 text-xs mt-1">
-            日程の確保方法を選択
+        <div className="mb-4 p-4 border border-blue-200 rounded-md bg-blue-50">
+          <h3 className="text-sm font-bold text-blue-800 mb-3">実施期間設定 *</h3>
+          
+          <div className="mb-3">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              開始可能日 *
+            </label>
+            <input
+              type="date"
+              value={periodStartDate}
+              onChange={handlePeriodStartDateChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              required
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              終了可能日 *
+            </label>
+            <input
+              type="date"
+              value={periodEndDate}
+              onChange={handlePeriodEndDateChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              required
+            />
+          </div>
+          
+          <p className="text-blue-600 text-xs">
+            この期間内でユーザーの空き時間と照合して{formData.requiredDays}日間の日程を確保します
           </p>
         </div>
-
-        {formData.dateMode === 'within_period' && (
-          <div className="mb-4 p-4 border border-blue-200 rounded-md bg-blue-50">
-            <h3 className="text-sm font-bold text-blue-800 mb-3">期間指定設定</h3>
-            
-            <div className="mb-3">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                期間開始日 *
-              </label>
-              <input
-                type="date"
-                value={periodStartDate}
-                onChange={handlePeriodStartDateChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                required
-              />
-            </div>
-            
-            <div className="mb-3">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                期間終了日 *
-              </label>
-              <input
-                type="date"
-                value={periodEndDate}
-                onChange={handlePeriodEndDateChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                required
-              />
-            </div>
-            
-            <p className="text-blue-600 text-xs">
-              この期間内で{formData.requiredDays}日間の日程を確保します
-            </p>
-          </div>
-        )}
 
         <div className="mb-6">
           <label className="block text-gray-700 text-sm font-bold mb-2">

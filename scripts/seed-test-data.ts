@@ -90,6 +90,8 @@ async function seedTestData() {
         status: 'matched',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
         matchedDates: JSON.stringify([new Date(2024, 11, 20)]), // 2024年12月20日
+        periodStart: new Date(2024, 11, 15), // 2024年12月15日
+        periodEnd: new Date(2024, 11, 25), // 2024年12月25日
       },
     });
 
@@ -113,6 +115,8 @@ async function seedTestData() {
         requiredDays: 1,
         status: 'open',
         deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14日後
+        periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後から
+        periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日後まで
       },
     });
 
@@ -133,6 +137,8 @@ async function seedTestData() {
         status: 'matched',
         deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後
         matchedDates: JSON.stringify([new Date(2024, 11, 22)]), // 2024年12月22日
+        periodStart: new Date(2024, 11, 20), // 2024年12月20日
+        periodEnd: new Date(2024, 11, 25), // 2024年12月25日
       },
     });
 
@@ -156,6 +162,8 @@ async function seedTestData() {
         requiredDays: 2,
         status: 'open',
         deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後
+        periodStart: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後から
+        periodEnd: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000), // 35日後まで
       },
     });
 
@@ -175,6 +183,8 @@ async function seedTestData() {
         requiredDays: 1,
         status: 'open',
         deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後
+        periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から
+        periodEnd: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後まで
       },
     });
 
@@ -190,6 +200,8 @@ async function seedTestData() {
         status: 'matched',
         deadline: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // 12日後
         matchedDates: JSON.stringify([new Date(2024, 11, 25)]), // 2024年12月25日
+        periodStart: new Date(2024, 11, 20), // 2024年12月20日
+        periodEnd: new Date(2024, 11, 30), // 2024年12月30日
       },
     });
 
@@ -217,6 +229,8 @@ async function seedTestData() {
         requiredDays: 1,
         status: 'open',
         deadline: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 8日後
+        periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
+        periodEnd: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後まで
       },
     });
 
@@ -235,7 +249,8 @@ async function seedTestData() {
         requiredParticipants: 3,
         requiredDays: 1,
         status: 'open',
-        dateMode: 'flexible',
+        periodStart: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後から
+        periodEnd: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後まで
         deadline: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後
       },
     });
@@ -249,8 +264,9 @@ async function seedTestData() {
         requiredParticipants: 4,
         requiredDays: 1,
         status: 'open',
-        dateMode: 'consecutive',
         deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後（緊急）
+        periodStart: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2日後から
+        periodEnd: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後まで
       },
     });
 
@@ -268,7 +284,6 @@ async function seedTestData() {
         requiredParticipants: 2,
         requiredDays: 1,
         status: 'open',
-        dateMode: 'within_period',
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
         periodEnd: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
         deadline: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25日後
@@ -284,8 +299,9 @@ async function seedTestData() {
         requiredParticipants: 5,
         requiredDays: 3,
         status: 'open',
-        dateMode: 'consecutive',
         deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日後
+        periodStart: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // 20日後から
+        periodEnd: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000), // 40日後まで
       },
     });
 
@@ -308,8 +324,9 @@ async function seedTestData() {
         requiredParticipants: 2,
         requiredDays: 1,
         status: 'open',
-        dateMode: 'flexible',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
+        periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14日後まで
       },
     });
 
