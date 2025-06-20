@@ -23,6 +23,32 @@ export interface ScheduleCalendarDay {
   timeSlots: TimeSlotAvailability | null;  // null means not set (defaults to all busy)
   hasSchedule: boolean;
   isSelected?: boolean;  // 複数選択用
+  matchedEvents?: MatchedEventInfo[];  // 成立したイベント情報
+}
+
+export interface MatchedEventInfo {
+  id: string;
+  name: string;
+  participantCount: number;
+  isCreator: boolean;
+}
+
+export interface MatchedEvent {
+  id: string;
+  name: string;
+  description: string;
+  status: 'matched';
+  participants: string[];
+  matchedDates?: Date[];
+  creatorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  deadline?: Date | null;
+  periodStart: Date;
+  periodEnd: Date;
+  requiredParticipants: number;
+  requiredDays: number;
+  reservationStatus: string;
 }
 
 export interface ScheduleCalendarMonth {

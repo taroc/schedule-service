@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { UserSchedule, ScheduleCalendarDay } from '@/types/schedule';
+import { UserSchedule, ScheduleCalendarDay, MatchedEvent } from '@/types/schedule';
 
 interface MultiSelectCalendarProps {
   schedules: UserSchedule[];
@@ -10,6 +10,7 @@ interface MultiSelectCalendarProps {
   selectedSchedulesToDelete?: Date[];
   onScheduleDeleteSelectionChange?: (selectedDates: Date[]) => void;
   operationMode?: 'add' | 'delete';
+  matchedEvents?: MatchedEvent[];
 }
 
 export default function MultiSelectCalendar({
@@ -18,7 +19,8 @@ export default function MultiSelectCalendar({
   onDateSelectionChange,
   selectedSchedulesToDelete = [],
   onScheduleDeleteSelectionChange,
-  operationMode = 'add'
+  operationMode = 'add',
+  matchedEvents = []
 }: MultiSelectCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<ScheduleCalendarDay[]>([]);
@@ -34,10 +36,11 @@ export default function MultiSelectCalendar({
     console.log('MultiSelectCalendar useEffect triggered with:', {
       schedulesCount: schedules.length,
       selectedDatesCount: selectedDates.length,
+      matchedEventsCount: matchedEvents.length,
       currentMonth: currentDate.getMonth() + 1
     });
     generateCalendarDays();
-  }, [currentDate, schedules, selectedDates]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentDate, schedules, selectedDates, matchedEvents]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
@@ -62,12 +65,25 @@ export default function MultiSelectCalendar({
       const dateStr = current.toDateString();
       const schedule = schedules.find(s => s.date.toDateString() === dateStr);
       const isSelected = selectedDates.some(d => d.toDateString() === dateStr);
+      
+      // この日付に成立したイベントがあるかチェック
+      const eventsOnThisDate = matchedEvents.filter(event => 
+        event.matchedDates?.some((eventDate: Date) => 
+          eventDate.toDateString() === dateStr
+        )
+      ).map(event => ({
+        id: event.id,
+        name: event.name,
+        participantCount: event.participants.length,
+        isCreator: false // TODO: 現在のユーザーIDと比較する必要がある
+      }));
 
       // 現在月の日付のみログ出力
-      if (current.getMonth() === month && schedule) {
-        console.log(`Calendar day ${current.getDate()}: schedule found`, {
+      if (current.getMonth() === month && (schedule || eventsOnThisDate.length > 0)) {
+        console.log(`Calendar day ${current.getDate()}:`, {
           hasSchedule: !!schedule,
-          timeSlots: schedule.timeSlots,
+          timeSlots: schedule?.timeSlots,
+          matchedEvents: eventsOnThisDate,
           dateStr: dateStr
         });
       }
@@ -76,7 +92,8 @@ export default function MultiSelectCalendar({
         date: new Date(current),
         hasSchedule: !!schedule,
         timeSlots: schedule?.timeSlots || null,
-        isSelected
+        isSelected,
+        matchedEvents: eventsOnThisDate
       });
 
       current.setDate(current.getDate() + 1);
@@ -144,9 +161,10 @@ export default function MultiSelectCalendar({
   };
 
   const getDayClassName = (day: ScheduleCalendarDay) => {
-    let className = 'w-10 h-10 flex items-center justify-center text-sm rounded-lg transition-colors font-medium border-2 ';
+    let className = 'w-10 h-10 flex items-center justify-center text-sm rounded-lg transition-colors font-medium border-2 relative ';
     const isSelectedForDelete = selectedSchedulesToDelete.some(d => d.toDateString() === day.date.toDateString());
     const hasSchedule = day.hasSchedule && day.timeSlots;
+    const hasMatchedEvents = day.matchedEvents && day.matchedEvents.length > 0;
 
     // 削除モードで登録済みでない日付はクリック不可
     if (operationMode === 'delete' && !hasSchedule) {
@@ -168,6 +186,9 @@ export default function MultiSelectCalendar({
       className += 'bg-red-100 text-red-700 border-red-500 ring-2 ring-red-300 ';
     } else if (day.isSelected) {
       className += 'bg-blue-600 text-white border-blue-600 shadow-lg ';
+    } else if (hasMatchedEvents) {
+      // 成立したイベントがある日はオレンジ系
+      className += 'bg-orange-500 text-white border-orange-500 shadow-md ';
     } else if (hasSchedule) {
       // 時間帯別の色分け（昼・夜ベース）
       if (day.timeSlots!.daytime && day.timeSlots!.evening) {
@@ -285,8 +306,16 @@ export default function MultiSelectCalendar({
             key={index}
             className={getDayClassName(day)}
             onClick={() => handleDateClick(day.date)}
+            title={day.matchedEvents && day.matchedEvents.length > 0 
+              ? `成立イベント: ${day.matchedEvents.map(e => e.name).join(', ')}` 
+              : undefined}
           >
             {day.date.getDate()}
+            {day.matchedEvents && day.matchedEvents.length > 0 && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white text-xs flex items-center justify-center">
+                {day.matchedEvents.length}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -302,6 +331,13 @@ export default function MultiSelectCalendar({
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-red-100 text-red-700 border-2 border-red-500 rounded-lg flex items-center justify-center text-xs font-bold ring-1 ring-red-300">15</div>
             <span className="text-gray-700">選択中（削除対象）</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-orange-500 text-white border-2 border-orange-500 rounded-lg flex items-center justify-center text-xs font-bold relative">
+              15
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></div>
+            </div>
+            <span className="text-gray-700">成立イベントあり</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-green-500 text-white border-2 border-green-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>

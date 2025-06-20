@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserSchedule } from '@/types/schedule';
+import { UserSchedule, MatchedEvent } from '@/types/schedule';
 import MultiSelectCalendar from './MultiSelectCalendar';
 
 export default function AvailabilityManager() {
   const { token, isLoading: authLoading } = useAuth();
   const [schedules, setSchedules] = useState<UserSchedule[]>([]);
+  const [matchedEvents, setMatchedEvents] = useState<MatchedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<'both' | 'daytime' | 'evening'>('both');
@@ -19,6 +20,7 @@ export default function AvailabilityManager() {
   useEffect(() => {
     if (!authLoading && token) {
       fetchSchedules();
+      fetchMatchedEvents();
     } else if (!authLoading && !token) {
       setLoading(false);
     }
@@ -70,6 +72,47 @@ export default function AvailabilityManager() {
     }
   };
 
+  const fetchMatchedEvents = async () => {
+    if (!token) {
+      console.log('No token available for fetching matched events');
+      return;
+    }
+
+    try {
+      console.log('Fetching matched events with token:', token.substring(0, 10) + '...');
+      const response = await fetch('/api/events/list?type=completedEvents', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched matched events data:', data);
+
+        // APIから返される日付文字列をDateオブジェクトに変換
+        const eventsWithDates = data.map((event: MatchedEvent & { matchedDates?: string[]; createdAt: string; updatedAt: string; deadline?: string | null; periodStart: string; periodEnd: string; }) => ({
+          ...event,
+          matchedDates: event.matchedDates?.map((d: string) => new Date(d)) || [],
+          createdAt: new Date(event.createdAt),
+          updatedAt: new Date(event.updatedAt),
+          deadline: event.deadline ? new Date(event.deadline) : null,
+          periodStart: new Date(event.periodStart),
+          periodEnd: new Date(event.periodEnd)
+        }));
+
+        console.log('Processed matched events with dates:', eventsWithDates);
+        setMatchedEvents(eventsWithDates);
+      } else {
+        console.error('Failed to fetch matched events:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
+      }
+    } catch (error) {
+      console.error('Error fetching matched events:', error);
+    }
+  };
+
   const handleTimeSlotChange = (value: 'both' | 'daytime' | 'evening') => {
     setSelectedTimeSlots(value);
   };
@@ -115,8 +158,9 @@ export default function AvailabilityManager() {
         // 登録成功時の処理
         setSelectedDates([]);
 
-        // スケジュールを再取得
+        // スケジュールとイベントを再取得
         await fetchSchedules();
+        await fetchMatchedEvents();
       } else {
         const errorData = await response.json();
         console.error('空き時間登録エラー:', errorData);
@@ -157,8 +201,9 @@ export default function AvailabilityManager() {
         setSelectedSchedulesToDelete([]);
         setSelectedDates([]);
 
-        // スケジュールを再取得
+        // スケジュールとイベントを再取得
         await fetchSchedules();
+        await fetchMatchedEvents();
       } else {
         const errorData = await response.json();
         console.error('スケジュール削除エラー:', errorData);
@@ -196,8 +241,9 @@ export default function AvailabilityManager() {
         setSelectedSchedulesToDelete([]);
         setSelectedDates([]);
 
-        // スケジュールを再取得
+        // スケジュールとイベントを再取得
         await fetchSchedules();
+        await fetchMatchedEvents();
       } else {
         const errorData = await response.json();
         console.error('全スケジュール削除エラー:', errorData);
@@ -328,6 +374,7 @@ export default function AvailabilityManager() {
         selectedSchedulesToDelete={selectedSchedulesToDelete}
         onScheduleDeleteSelectionChange={setSelectedSchedulesToDelete}
         operationMode={operationMode}
+        matchedEvents={matchedEvents}
       />
 
       {/* 登録ボタン */}
