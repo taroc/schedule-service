@@ -1,4 +1,4 @@
-import { UserSchedule } from '@/types/schedule';
+import { UserSchedule, TimeSlot } from '@/types/schedule';
 import { prisma } from './prisma';
 import { UserSchedule as PrismaUserSchedule } from '@prisma/client';
 
@@ -338,6 +338,51 @@ class ScheduleStorage {
     await prisma.userSchedule.deleteMany({
       where: { userId }
     });
+  }
+
+  /**
+   * 特定のユーザーが特定の日付・時間帯で空いているかチェック
+   */
+  async isUserAvailableAtTimeSlot(
+    userId: string,
+    date: Date,
+    timeSlot: TimeSlot
+  ): Promise<boolean> {
+    const schedule = await this.getScheduleByUserAndDate(userId, date);
+    
+    // スケジュールが登録されていない場合は忙しい扱い
+    if (!schedule) {
+      return false;
+    }
+    
+    // 指定された時間帯が空いているかチェック
+    switch (timeSlot) {
+      case 'daytime':
+        return schedule.timeSlots.daytime;
+      case 'evening':
+        return schedule.timeSlots.evening;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * 特定のユーザーが特定の日付で何かの時間帯で空いているかチェック
+   */
+  async isUserAvailableOnDate(
+    userId: string,
+    date: Date
+  ): Promise<{ daytime: boolean; evening: boolean }> {
+    const schedule = await this.getScheduleByUserAndDate(userId, date);
+    
+    if (!schedule) {
+      return { daytime: false, evening: false };
+    }
+    
+    return {
+      daytime: schedule.timeSlots.daytime,
+      evening: schedule.timeSlots.evening
+    };
   }
 
   private mapPrismaToSchedule(prismaSchedule: PrismaUserSchedule): UserSchedule {

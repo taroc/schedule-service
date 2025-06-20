@@ -85,25 +85,27 @@ Uses Prisma Accelerate for high-performance database access:
 
 ## Implementation Status
 - ✅ Phase 1: User authentication and event management
-- ✅ Phase 2: User schedule management with time slots (morning, afternoon, full day)
-- ✅ Phase 3: Automatic matching engine for event scheduling
+- ✅ Phase 2: User schedule management with time slots (daytime, evening)
+- ✅ Phase 3: Time-slot based matching engine (NOT date-based)
 - ✅ Event deadline functionality
 - ✅ Automatic matching triggers (on participant join and schedule update)
 - ✅ UI improvements with visual event status distinction
-- ✅ Comprehensive test coverage (unit + integration tests)
+- ✅ Time-slot unit specification for events (requiredTimeSlots)
 - ✅ Database persistence with Prisma Accelerate
-- ⚠️ Test stability improvements needed (85/159 tests currently failing)
+- 🚧 Test coverage updates needed for time-slot matching
+- 🚧 Cleanup of deprecated backward compatibility code needed
 
-## Automatic Matching System
+## Time-Slot Based Matching System
 The system supports real-time schedule coordination where:
-- Users create events requiring specific numbers of participants and days
-- Participants register their availability in time slots (morning, afternoon, full day)
+- Users create events requiring specific numbers of participants and **time-slot units** (NOT days)
+- Participants register their availability in time slots (daytime, evening)
+- **Time-slot matching** ensures daytime-available and evening-available users don't incorrectly match
 - **Automatic matching triggers** when:
   1. A user joins an event (`POST /api/events/[id]/join`)
   2. A user updates their schedule (`POST /api/schedules/availability`)
-- Matching engine finds common available dates and automatically updates event status
+- Matching engine finds common available time-slots and automatically updates event status
 - Events are visually distinguished by status (open vs matched) with color coding
-- Matched events display detailed information including final dates
+- Matched events display detailed information including final time-slots (date + time-slot pairs)
 
 ## Testing Strategy
 - **Unit tests**: `src/lib/__tests__/matchingEngine.test.ts` (16 tests) - Core matching logic
@@ -138,3 +140,43 @@ The system supports real-time schedule coordination where:
 - **README.md**: Main project documentation with setup instructions and feature overview
 - **prisma/schema.prisma**: Database schema definitions
 - **src/types/**: TypeScript type definitions for the application
+
+## CRITICAL DEVELOPMENT RULES
+
+### Code Quality Standards
+1. **NO BACKWARD COMPATIBILITY**: Do not maintain backward compatibility. Remove deprecated fields and old code paths cleanly.
+2. **NO ANY/AS TYPES**: Never use `any` or `as` type assertions in TypeScript. Always use proper typing.
+   - If absolutely unavoidable, add detailed comment explaining why it's required
+   - Prefer type guards, proper interfaces, and generic constraints
+3. **TEST-DRIVEN DEVELOPMENT**: Always start with tests when adding/modifying features
+   - Write/update test cases first
+   - Ensure tests pass before considering implementation complete
+   - Maintain high test coverage
+
+### Type Safety Guidelines
+```typescript
+// ❌ BAD: Using any/as
+const data = response as any;
+const result = JSON.parse(jsonString) as SomeType;
+
+// ✅ GOOD: Proper typing
+interface ApiResponse {
+  data: SomeType;
+}
+const response: ApiResponse = await fetch(...);
+
+// ✅ GOOD: Type guards
+function isSomeType(obj: unknown): obj is SomeType {
+  return typeof obj === 'object' && obj !== null && 'expectedField' in obj;
+}
+```
+
+### Development Workflow
+1. Identify feature/bug requirements
+2. **Write/update tests first**
+3. Run tests to confirm they fail appropriately
+4. Implement minimal code to make tests pass
+5. Refactor while maintaining test coverage
+6. Clean up any deprecated code paths
+
+These rules are MANDATORY and must be followed for all code changes.

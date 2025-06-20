@@ -26,7 +26,8 @@ export default function CreateEventForm({
       name: '',
       description: '',
       requiredParticipants: 1,
-      requiredDays: 1,
+      requiredDays: 1, // 後方互換性のため保持
+      requiredTimeSlots: 1, // 新しい時間帯単位数
       deadline: undefined,
       periodStart: tomorrow,
       periodEnd: twoWeeksLater
@@ -158,19 +159,19 @@ export default function CreateEventForm({
 
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">
-            必要日数 *
+            必要時間帯単位数 *
           </label>
           <input
             type="number"
-            name="requiredDays"
-            value={formData.requiredDays}
+            name="requiredTimeSlots"
+            value={formData.requiredTimeSlots}
             onChange={handleChange}
             min="1"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             required
           />
           <p className="text-gray-500 text-xs mt-1">
-            確保したい日数
+            確保したい時間帯単位数（例：2日間の昼間 = 2単位、半日+夜 = 2単位）
           </p>
         </div>
 
@@ -205,7 +206,7 @@ export default function CreateEventForm({
           </div>
           
           <p className="text-blue-600 text-xs">
-            この期間内でユーザーの空き時間と照合して{formData.requiredDays}日間の日程を確保します
+            この期間内でユーザーの空き時間と照合して{formData.requiredTimeSlots}単位の時間帯を確保します
           </p>
         </div>
 

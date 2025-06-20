@@ -1,13 +1,14 @@
 import { eventStorage } from './eventStorage';
 import { scheduleStorage } from './scheduleStorage';
 import { Event } from '@/types/event';
+import { TimeSlot, MatchingTimeSlot } from '@/types/schedule';
 
 export interface MatchingResult {
   eventId: string;
   isMatched: boolean;
-  matchedDates: Date[];
+  matchedTimeSlots: MatchingTimeSlot[];
   participants: string[];
-  requiredDays: number;
+  requiredTimeSlots: number;
   reason?: string;
 }
 
@@ -28,9 +29,9 @@ class MatchingEngine {
       return {
         eventId,
         isMatched: false,
-        matchedDates: [],
+        matchedTimeSlots: [],
         participants: [],
-        requiredDays: 0,
+        requiredTimeSlots: 0,
         reason: 'Event not found'
       };
     }
@@ -40,9 +41,9 @@ class MatchingEngine {
       return {
         eventId,
         isMatched: event.status === 'matched',
-        matchedDates: event.matchedDates || [],
+        matchedTimeSlots: event.matchedTimeSlots || [],
         participants: event.participants,
-        requiredDays: event.requiredDays,
+        requiredTimeSlots: event.requiredTimeSlots || 0,
         reason: `Event status is ${event.status}`
       };
     }
@@ -53,9 +54,9 @@ class MatchingEngine {
       return {
         eventId,
         isMatched: false,
-        matchedDates: [],
+        matchedTimeSlots: [],
         participants: event.participants,
-        requiredDays: event.requiredDays,
+        requiredTimeSlots: event.requiredTimeSlots || 0,
         reason: 'Event deadline has passed'
       };
     }
@@ -65,36 +66,37 @@ class MatchingEngine {
       return {
         eventId,
         isMatched: false,
-        matchedDates: [],
+        matchedTimeSlots: [],
         participants: event.participants,
-        requiredDays: event.requiredDays,
+        requiredTimeSlots: event.requiredTimeSlots || 0,
         reason: `Insufficient participants: ${event.participants.length}/${event.requiredParticipants}`
       };
     }
 
     // スケジュールマッチングを実行
-    const matchedDates = await this.findCommonAvailableDates(
+    const requiredTimeSlots = event.requiredTimeSlots || 1;
+    const matchedTimeSlots = await this.findCommonAvailableTimeSlots(
       event.participants,
-      event.requiredDays,
+      requiredTimeSlots,
       event.periodStart,
       event.periodEnd
     );
 
-    const isMatched = matchedDates.length >= event.requiredDays;
-    const finalMatchedDates = isMatched ? matchedDates.slice(0, event.requiredDays) : [];
+    const isMatched = matchedTimeSlots.length >= requiredTimeSlots;
+    const finalMatchedTimeSlots = isMatched ? matchedTimeSlots.slice(0, requiredTimeSlots) : [];
 
     // マッチした場合は自動的にイベントステータスを更新
     if (isMatched) {
-      await eventStorage.updateEventStatus(eventId, 'matched', finalMatchedDates);
+      await eventStorage.updateEventStatus(eventId, 'matched', finalMatchedTimeSlots);
     }
 
     return {
       eventId,
       isMatched,
-      matchedDates: finalMatchedDates,
+      matchedTimeSlots: finalMatchedTimeSlots,
       participants: event.participants,
-      requiredDays: event.requiredDays,
-      reason: isMatched ? 'Successfully matched' : 'No common available dates found'
+      requiredTimeSlots,
+      reason: isMatched ? 'Successfully matched' : 'No common available time slots found'
     };
   }
 
@@ -119,29 +121,70 @@ class MatchingEngine {
   }
 
   /**
-   * 参加者全員の共通空き日程を検索（柔軟な日程モード対応）
+   * 参加者全員の共通空き時間帯を検索（新しい時間帯対応）
    */
-  private async findCommonAvailableDates(
+  private async findCommonAvailableTimeSlots(
     participantIds: string[],
-    requiredDays: number,
+    requiredTimeSlots: number,
     periodStart: Date,
     periodEnd: Date
-  ): Promise<Date[]> {
-    // 指定された期間を使用
-    const startDate = periodStart;
-    const endDate = periodEnd;
-
-    // 柔軟な日程検索を使用
-    const commonDates = await scheduleStorage.getCommonAvailableDatesFlexible(
-      participantIds,
-      startDate,
-      endDate,
-      requiredDays,
-      'flexible' // 期間内で柔軟にマッチング
-    );
-
-    return commonDates;
+  ): Promise<MatchingTimeSlot[]> {
+    const availableTimeSlots: MatchingTimeSlot[] = [];
+    
+    // 期間内の各日でループ
+    const currentDate = new Date(periodStart);
+    while (currentDate <= periodEnd) {
+      // 各時間帯（昼、夜）でチェック
+      const timeSlots: TimeSlot[] = ['daytime', 'evening'];
+      for (const timeSlot of timeSlots) {
+        const isAvailable = await this.checkTimeSlotAvailability(
+          participantIds,
+          new Date(currentDate),
+          timeSlot
+        );
+        
+        if (isAvailable) {
+          availableTimeSlots.push({
+            date: new Date(currentDate),
+            timeSlot
+          });
+        }
+      }
+      
+      // 必要数に達したら早期終了
+      if (availableTimeSlots.length >= requiredTimeSlots) {
+        break;
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return availableTimeSlots;
   }
+
+  /**
+   * 特定の日付・時間帯で全参加者が空いているかチェック
+   */
+  private async checkTimeSlotAvailability(
+    participantIds: string[],
+    date: Date,
+    timeSlot: TimeSlot
+  ): Promise<boolean> {
+    for (const participantId of participantIds) {
+      const isAvailable = await scheduleStorage.isUserAvailableAtTimeSlot(
+        participantId,
+        date,
+        timeSlot
+      );
+      
+      if (!isAvailable) {
+        return false; // 一人でも空いていなければfalse
+      }
+    }
+    
+    return true; // 全員が空いている
+  }
+
 
   /**
    * 参加者が追加された時の自動マッチング実行
@@ -217,34 +260,36 @@ class MatchingEngine {
         results.push({
           eventId: event.id,
           isMatched: false,
-          matchedDates: [],
+          matchedTimeSlots: [],
           participants: event.participants,
-          requiredDays: event.requiredDays,
+          requiredTimeSlots: event.requiredTimeSlots || 0,
           reason: `Insufficient participants: ${event.participants.length}/${event.requiredParticipants}`
         });
         continue;
       }
 
-      // 各参加者の空き日程を取得（ダブルブッキングを考慮）
-      const availableDates = await this.findAvailableDatesWithoutConflicts(
+      // 各参加者の空き時間帯を取得（ダブルブッキングを考慮）
+      const requiredTimeSlots = event.requiredTimeSlots || 1;
+      const availableTimeSlots = await this.findAvailableTimeSlotsWithoutConflicts(
         event,
         occupiedDates
       );
 
-      const isMatched = availableDates.length >= event.requiredDays;
-      const finalMatchedDates = isMatched ? availableDates.slice(0, event.requiredDays) : [];
+      const isMatched = availableTimeSlots.length >= requiredTimeSlots;
+      const finalMatchedTimeSlots = isMatched ? availableTimeSlots.slice(0, requiredTimeSlots) : [];
 
       if (isMatched) {
         // イベントを成立状態に更新
-        await eventStorage.updateEventStatus(event.id, 'matched', finalMatchedDates);
+        await eventStorage.updateEventStatus(event.id, 'matched', finalMatchedTimeSlots);
         
-        // 占有日程を記録
+        // 占有時間帯を記録
         for (const participant of event.participants) {
           if (!occupiedDates.has(participant)) {
             occupiedDates.set(participant, new Set());
           }
-          for (const date of finalMatchedDates) {
-            occupiedDates.get(participant)!.add(date.toISOString().split('T')[0]);
+          for (const timeSlot of finalMatchedTimeSlots) {
+            const timeSlotKey = `${timeSlot.date.toISOString().split('T')[0]}_${timeSlot.timeSlot}`;
+            occupiedDates.get(participant)!.add(timeSlotKey);
           }
         }
       }
@@ -252,10 +297,10 @@ class MatchingEngine {
       results.push({
         eventId: event.id,
         isMatched,
-        matchedDates: finalMatchedDates,
+        matchedTimeSlots: finalMatchedTimeSlots,
         participants: event.participants,
-        requiredDays: event.requiredDays,
-        reason: isMatched ? 'Successfully matched' : 'No available dates without conflicts'
+        requiredTimeSlots,
+        reason: isMatched ? 'Successfully matched' : 'No available time slots without conflicts'
       });
     }
     
@@ -284,33 +329,35 @@ class MatchingEngine {
   }
 
   /**
-   * ダブルブッキングを考慮した空き日程検索
+   * ダブルブッキングを考慮した空き時間帯検索
    */
-  private async findAvailableDatesWithoutConflicts(
+  private async findAvailableTimeSlotsWithoutConflicts(
     event: Event,
     occupiedDates: Map<string, Set<string>>
-  ): Promise<Date[]> {
-    // 通常の空き日程検索
-    const commonDates = await this.findCommonAvailableDates(
+  ): Promise<MatchingTimeSlot[]> {
+    // 通常の空き時間帯検索
+    const requiredTimeSlots = event.requiredTimeSlots || 1;
+    const commonTimeSlots = await this.findCommonAvailableTimeSlots(
       event.participants,
-      event.requiredDays,
+      requiredTimeSlots,
       event.periodStart,
       event.periodEnd
     );
 
     // ダブルブッキングをチェック
-    const availableDates = commonDates.filter(date => {
-      const dateStr = date.toISOString().split('T')[0];
+    const availableTimeSlots = commonTimeSlots.filter(timeSlot => {
+      const timeSlotKey = `${timeSlot.date.toISOString().split('T')[0]}_${timeSlot.timeSlot}`;
       
-      // 全参加者がその日に他のイベントで占有されていないかチェック
+      // 全参加者がその時間帯に他のイベントで占有されていないかチェック
       return event.participants.every(participant => {
         const userOccupiedDates = occupiedDates.get(participant);
-        return !userOccupiedDates || !userOccupiedDates.has(dateStr);
+        return !userOccupiedDates || !userOccupiedDates.has(timeSlotKey);
       });
     });
 
-    return availableDates;
+    return availableTimeSlots;
   }
+
 }
 
 export const matchingEngine = new MatchingEngine();

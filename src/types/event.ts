@@ -3,13 +3,13 @@ export interface Event {
   name: string;
   description: string;
   requiredParticipants: number;  // 必要人数
-  requiredDays: number;          // 必要日数
+  requiredTimeSlots: number;     // 必要時間帯単位数
   creatorId: string;
   createdAt: Date;
   updatedAt: Date;
   status: EventStatus;
   participants: string[];        // 参加者ID配列
-  matchedDates?: Date[];         // 成立した日程
+  matchedTimeSlots?: { date: Date; timeSlot: 'daytime' | 'evening' }[]; // 成立した時間帯
   deadline?: Date;               // 参加締切
   
   // 期間指定フィールド（必須）
@@ -26,7 +26,7 @@ export interface CreateEventRequest {
   name: string;
   description: string;
   requiredParticipants: number;
-  requiredDays: number;
+  requiredTimeSlots: number;     // 必要時間帯単位数
   deadline?: Date;
   
   // 期間指定フィールド（必須）
@@ -38,7 +38,7 @@ export interface UpdateEventRequest {
   name?: string;
   description?: string;
   requiredParticipants?: number;
-  requiredDays?: number;
+  requiredTimeSlots?: number;    // 必要時間帯単位数
   deadline?: Date;
   
   // 期間指定フィールド
@@ -61,13 +61,13 @@ export interface EventResponse {
   name: string;
   description: string;
   requiredParticipants: number;
-  requiredDays: number;
+  requiredTimeSlots: number;     // 必要時間帯単位数
   creatorId: string;
   createdAt: string;
   updatedAt: string;
   status: EventStatus;
   participants: string[];
-  matchedDates?: string[];
+  matchedTimeSlots?: { date: string; timeSlot: 'daytime' | 'evening' }[]; // 成立した時間帯
   deadline?: string | null;
   periodStart: string;
   periodEnd: string;

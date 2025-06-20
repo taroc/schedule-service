@@ -1,4 +1,5 @@
 import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, ReservationStatus, EventParticipation } from '@/types/event';
+import { MatchingTimeSlot } from '@/types/schedule';
 import { prisma } from './prisma';
 
 class EventStorageDB {
@@ -19,7 +20,8 @@ class EventStorageDB {
         name: request.name,
         description: request.description,
         requiredParticipants: request.requiredParticipants,
-        requiredDays: request.requiredDays,
+        requiredDays: request.requiredDays || 0,
+        requiredTimeSlots: request.requiredTimeSlots,
         creatorId,
         status: 'open',
         deadline: request.deadline || null,
@@ -235,7 +237,7 @@ class EventStorageDB {
         where: { id: eventId },
         select: { 
           name: true,
-          matchedDates: true,
+          matchedTimeSlots: true,
           status: true
         }
       });
@@ -245,18 +247,18 @@ class EventStorageDB {
       }
 
       // まだ成立していないイベントは競合チェック不要
-      if (targetEvent.status !== 'matched' || !targetEvent.matchedDates) {
+      if (targetEvent.status !== 'matched' || !targetEvent.matchedTimeSlots) {
         return { canJoin: true, conflictingEvents: [] };
       }
 
-      // 成立済みイベントの日程を取得
-      const targetDates = JSON.parse(targetEvent.matchedDates) as string[];
+      // 成立済みイベントの時間帯を取得
+      const targetTimeSlots = JSON.parse(targetEvent.matchedTimeSlots) as { date: string; timeSlot: string }[];
 
       // ユーザーが参加している他の成立済みイベントを取得
       const userEvents = await prisma.event.findMany({
         where: {
           status: 'matched',
-          matchedDates: { not: null },
+          matchedTimeSlots: { not: null },
           participants: {
             some: {
               userId: userId
@@ -266,19 +268,25 @@ class EventStorageDB {
         select: {
           id: true,
           name: true,
-          matchedDates: true
+          matchedTimeSlots: true
         }
       });
 
       const conflictingEvents: string[] = [];
 
-      // 日程の重複をチェック
+      // 時間帯の重複をチェック
       for (const userEvent of userEvents) {
-        if (userEvent.matchedDates) {
-          const userEventDates = JSON.parse(userEvent.matchedDates) as string[];
+        if (userEvent.matchedTimeSlots) {
+          const userEventTimeSlots = JSON.parse(userEvent.matchedTimeSlots) as { date: string; timeSlot: string }[];
           
-          // 日程が重複している場合
-          const hasOverlap = targetDates.some(date => userEventDates.includes(date));
+          // 時間帯が重複している場合
+          const hasOverlap = targetTimeSlots.some(targetTs => 
+            userEventTimeSlots.some(userTs => 
+              targetTs.date.split('T')[0] === userTs.date.split('T')[0] &&
+              targetTs.timeSlot === userTs.timeSlot
+            )
+          );
+          
           if (hasOverlap) {
             conflictingEvents.push(userEvent.name);
           }
@@ -573,15 +581,22 @@ class EventStorageDB {
     return availableEvents.length;
   }
 
-  async updateEventStatus(eventId: string, status: EventStatus, matchedDates?: Date[]): Promise<boolean> {
+  async updateEventStatus(
+    eventId: string, 
+    status: EventStatus, 
+    matchedDates?: Date[], 
+    matchedTimeSlots?: MatchingTimeSlot[]
+  ): Promise<boolean> {
     try {
       const matchedDatesJson = matchedDates ? JSON.stringify(matchedDates) : null;
+      const matchedTimeSlotsJson = matchedTimeSlots ? JSON.stringify(matchedTimeSlots) : null;
       
       await prisma.event.update({
         where: { id: eventId },
         data: {
           status,
           matchedDates: matchedDatesJson,
+          matchedTimeSlots: matchedTimeSlotsJson,
         },
       });
 
@@ -781,9 +796,11 @@ class EventStorageDB {
       description: string;
       requiredParticipants: number;
       requiredDays: number;
+      requiredTimeSlots?: number | null;
       creatorId: string;
       status: string;
       matchedDates: string | null;
+      matchedTimeSlots?: string | null;
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
@@ -799,11 +816,18 @@ class EventStorageDB {
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
       requiredDays: prismaEvent.requiredDays,
+      requiredTimeSlots: prismaEvent.requiredTimeSlots ?? prismaEvent.requiredDays,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
       matchedDates: prismaEvent.matchedDates ? 
         JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
+        undefined,
+      matchedTimeSlots: prismaEvent.matchedTimeSlots ? 
+        JSON.parse(prismaEvent.matchedTimeSlots).map((ts: { date: string; timeSlot: string }) => ({
+          date: new Date(ts.date),
+          timeSlot: ts.timeSlot as 'daytime' | 'evening'
+        })) : 
         undefined,
       deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
       createdAt: new Date(prismaEvent.createdAt),
@@ -823,9 +847,11 @@ class EventStorageDB {
       description: string;
       requiredParticipants: number;
       requiredDays: number;
+      requiredTimeSlots?: number | null;
       creatorId: string;
       status: string;
       matchedDates: string | null;
+      matchedTimeSlots?: string | null;
       deadline: Date | null;
       createdAt: Date;
       updatedAt: Date;
@@ -842,11 +868,18 @@ class EventStorageDB {
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
       requiredDays: prismaEvent.requiredDays,
+      requiredTimeSlots: prismaEvent.requiredTimeSlots ?? prismaEvent.requiredDays,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
       matchedDates: prismaEvent.matchedDates ? 
         JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
+        undefined,
+      matchedTimeSlots: prismaEvent.matchedTimeSlots ? 
+        JSON.parse(prismaEvent.matchedTimeSlots).map((ts: { date: string; timeSlot: string }) => ({
+          date: new Date(ts.date),
+          timeSlot: ts.timeSlot as 'daytime' | 'evening'
+        })) : 
         undefined,
       deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
       createdAt: new Date(prismaEvent.createdAt),
