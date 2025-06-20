@@ -4,18 +4,85 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserSchedule, MatchedEvent } from '@/types/schedule';
 import MultiSelectCalendar from './MultiSelectCalendar';
+import WeekdaySelector from './WeekdaySelector';
+import { getDatesByWeekdays } from '@/lib/weekdayUtils';
 
 export default function AvailabilityManager() {
   const { token, isLoading: authLoading } = useAuth();
   const [schedules, setSchedules] = useState<UserSchedule[]>([]);
   const [matchedEvents, setMatchedEvents] = useState<MatchedEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<'both' | 'daytime' | 'evening'>('both');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSchedulesToDelete, setSelectedSchedulesToDelete] = useState<Date[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [operationMode, setOperationMode] = useState<'add' | 'delete'>('add');
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
+  const [individualSelectedDates, setIndividualSelectedDates] = useState<Date[]>([]); // 個別選択の日付
+  const [weekdaySelectedDates, setWeekdaySelectedDates] = useState<Date[]>([]); // 曜日選択の日付
+  const [calendarDisplayRange, setCalendarDisplayRange] = useState<{ startDate: Date; endDate: Date }>(() => {
+    // 初期表示範囲を計算
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
+    return { startDate, endDate };
+  });
+
+  // 個別選択と曜日選択を統合した選択日付
+  const selectedDates = React.useMemo(() => {
+    const allDates = [...individualSelectedDates, ...weekdaySelectedDates];
+    // 重複を除去（日付文字列で比較）
+    const uniqueDates = allDates.filter((date, index, self) => 
+      self.findIndex(d => d.toDateString() === date.toDateString()) === index
+    );
+    return uniqueDates;
+  }, [individualSelectedDates, weekdaySelectedDates]);
+
+  // 個別選択で日付をクリックした時の処理（曜日選択の日付も考慮）
+  const handleIndividualDateSelection = (dates: Date[]) => {
+    setIndividualSelectedDates(dates);
+    
+    // 曜日選択の日付と重複しているものがあれば、曜日選択から除外
+    const clickedDateStrings = dates.map(d => d.toDateString());
+    
+    // クリックされた日付が曜日選択に含まれている場合、該当する曜日を除外
+    const updatedWeekdays = selectedWeekdays.filter(weekday => {
+      const weekdayDatesForThisWeekday = getDatesByWeekdays(
+        calendarDisplayRange.startDate,
+        calendarDisplayRange.endDate,
+        [weekday]
+      );
+      const weekdayDateStringsForThisWeekday = weekdayDatesForThisWeekday.map(d => d.toDateString());
+      
+      // この曜日の日付のうち、個別選択でクリックされたものがあるかチェック
+      const hasClickedDate = weekdayDateStringsForThisWeekday.some(dateStr => 
+        clickedDateStrings.includes(dateStr)
+      );
+      
+      return !hasClickedDate;
+    });
+    
+    if (updatedWeekdays.length !== selectedWeekdays.length) {
+      setSelectedWeekdays(updatedWeekdays);
+      // 曜日選択の日付も更新
+      if (updatedWeekdays.length > 0) {
+        const newWeekdayDates = getDatesByWeekdays(
+          calendarDisplayRange.startDate,
+          calendarDisplayRange.endDate,
+          updatedWeekdays
+        );
+        setWeekdaySelectedDates(newWeekdayDates);
+      } else {
+        setWeekdaySelectedDates([]);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && token) {
@@ -120,8 +187,32 @@ export default function AvailabilityManager() {
   const handleModeChange = (mode: 'add' | 'delete') => {
     setOperationMode(mode);
     // モード切り替え時に選択をクリア
-    setSelectedDates([]);
+    setIndividualSelectedDates([]);
+    setWeekdaySelectedDates([]);
     setSelectedSchedulesToDelete([]);
+    setSelectedWeekdays([]);
+  };
+
+  const handleWeekdaysChange = (weekdays: number[]) => {
+    setSelectedWeekdays(weekdays);
+    
+    // 選択された曜日に対応する日付を更新（カレンダー表示範囲内のみ）
+    if (weekdays.length > 0) {
+      const dates = getDatesByWeekdays(calendarDisplayRange.startDate, calendarDisplayRange.endDate, weekdays);
+      setWeekdaySelectedDates(dates);
+    } else {
+      setWeekdaySelectedDates([]);
+    }
+  };
+
+  const handleCalendarRangeChange = (startDate: Date, endDate: Date) => {
+    setCalendarDisplayRange({ startDate, endDate });
+    
+    // カレンダー表示範囲が変更された時、選択中の曜日があれば再計算
+    if (selectedWeekdays.length > 0) {
+      const dates = getDatesByWeekdays(startDate, endDate, selectedWeekdays);
+      setWeekdaySelectedDates(dates);
+    }
   };
 
   const handleSubmitAvailability = async () => {
@@ -132,7 +223,7 @@ export default function AvailabilityManager() {
     setIsSubmitting(true);
 
     try {
-      const dates = selectedDates.map(d => {
+      const dateStrings = selectedDates.map(d => {
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
@@ -146,7 +237,7 @@ export default function AvailabilityManager() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          dates,
+          dates: dateStrings,
           timeSlots: {
             daytime: selectedTimeSlots === 'both' || selectedTimeSlots === 'daytime',
             evening: selectedTimeSlots === 'both' || selectedTimeSlots === 'evening'
@@ -155,8 +246,10 @@ export default function AvailabilityManager() {
       });
 
       if (response.ok) {
-        // 登録成功時の処理
-        setSelectedDates([]);
+        // 登録成功時の処理 - 全ての選択を解除
+        setIndividualSelectedDates([]);
+        setWeekdaySelectedDates([]);
+        setSelectedWeekdays([]);
 
         // スケジュールとイベントを再取得
         await fetchSchedules();
@@ -171,6 +264,7 @@ export default function AvailabilityManager() {
       setIsSubmitting(false);
     }
   };
+
 
   const handleDeleteSchedules = async () => {
     if (!token || selectedSchedulesToDelete.length === 0) {
@@ -199,7 +293,8 @@ export default function AvailabilityManager() {
       if (response.ok) {
         // 削除成功時の処理
         setSelectedSchedulesToDelete([]);
-        setSelectedDates([]);
+        setIndividualSelectedDates([]);
+        setWeekdaySelectedDates([]);
 
         // スケジュールとイベントを再取得
         await fetchSchedules();
@@ -239,7 +334,8 @@ export default function AvailabilityManager() {
       if (response.ok) {
         // 削除成功時の処理
         setSelectedSchedulesToDelete([]);
-        setSelectedDates([]);
+        setIndividualSelectedDates([]);
+        setWeekdaySelectedDates([]);
 
         // スケジュールとイベントを再取得
         await fetchSchedules();
@@ -280,7 +376,10 @@ export default function AvailabilityManager() {
           予定管理
         </h2>
         <div className="text-sm text-gray-600">
-          {operationMode === 'add' ? '空いている日を選択して一括登録' : '削除したい日を選択'}
+          {operationMode === 'add' 
+            ? '曜日と日付を個別に選択して一括登録'
+            : '削除したい日を選択'
+          }
         </div>
       </div>
 
@@ -311,6 +410,7 @@ export default function AvailabilityManager() {
             <span className="text-gray-900">予定を削除</span>
           </label>
         </div>
+
       </div>
 
       {/* 時間帯選択（追加モード時のみ表示） */}
@@ -366,18 +466,30 @@ export default function AvailabilityManager() {
         </div>
       )}
 
-      {/* カレンダー */}
-      <MultiSelectCalendar
-        schedules={schedules}
-        selectedDates={selectedDates}
-        onDateSelectionChange={setSelectedDates}
-        selectedSchedulesToDelete={selectedSchedulesToDelete}
-        onScheduleDeleteSelectionChange={setSelectedSchedulesToDelete}
-        operationMode={operationMode}
-        matchedEvents={matchedEvents}
-      />
+      {/* 曜日選択（追加モード時のみ表示） */}
+      {operationMode === 'add' && (
+        <WeekdaySelector
+          selectedWeekdays={selectedWeekdays}
+          onWeekdaysChange={handleWeekdaysChange}
+        />
+      )}
 
-      {/* 登録ボタン */}
+      {/* カレンダー（削除モードまたは追加モード時に表示） */}
+      {(operationMode === 'delete' || operationMode === 'add') && (
+        <MultiSelectCalendar
+          schedules={schedules}
+          selectedDates={selectedDates}
+          onDateSelectionChange={operationMode === 'add' ? handleIndividualDateSelection : () => {}}
+          selectedSchedulesToDelete={selectedSchedulesToDelete}
+          onScheduleDeleteSelectionChange={setSelectedSchedulesToDelete}
+          operationMode={operationMode}
+          matchedEvents={matchedEvents}
+          readOnly={false}
+          onCalendarRangeChange={handleCalendarRangeChange}
+        />
+      )}
+
+      {/* 統合登録ボタン */}
       {operationMode === 'add' && selectedDates.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">

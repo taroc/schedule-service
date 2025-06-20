@@ -6,11 +6,14 @@ import { UserSchedule, ScheduleCalendarDay, MatchedEvent } from '@/types/schedul
 interface MultiSelectCalendarProps {
   schedules: UserSchedule[];
   selectedDates: Date[];
-  onDateSelectionChange: (selectedDates: Date[]) => void;
+  onDateSelectionChange?: (selectedDates: Date[]) => void;
   selectedSchedulesToDelete?: Date[];
   onScheduleDeleteSelectionChange?: (selectedDates: Date[]) => void;
   operationMode?: 'add' | 'delete';
   matchedEvents?: MatchedEvent[];
+  readOnly?: boolean;
+  onCurrentDateChange?: (currentDate: Date) => void;
+  onCalendarRangeChange?: (startDate: Date, endDate: Date) => void;
 }
 
 export default function MultiSelectCalendar({
@@ -20,7 +23,10 @@ export default function MultiSelectCalendar({
   selectedSchedulesToDelete = [],
   onScheduleDeleteSelectionChange,
   operationMode = 'add',
-  matchedEvents = []
+  matchedEvents = [],
+  readOnly = false,
+  onCurrentDateChange,
+  onCalendarRangeChange
 }: MultiSelectCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<ScheduleCalendarDay[]>([]);
@@ -41,6 +47,13 @@ export default function MultiSelectCalendar({
     });
     generateCalendarDays();
   }, [currentDate, schedules, selectedDates, matchedEvents]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 初期表示時とcurrentDate変更時にコールバックを呼ぶ
+  useEffect(() => {
+    if (onCurrentDateChange) {
+      onCurrentDateChange(currentDate);
+    }
+  }, [currentDate, onCurrentDateChange]);
 
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
@@ -100,6 +113,11 @@ export default function MultiSelectCalendar({
     }
 
     setCalendarDays(days);
+    
+    // カレンダー範囲を通知
+    if (onCalendarRangeChange) {
+      onCalendarRangeChange(startDate, endDate);
+    }
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -110,9 +128,17 @@ export default function MultiSelectCalendar({
       newDate.setMonth(newDate.getMonth() + 1);
     }
     setCurrentDate(newDate);
+    if (onCurrentDateChange) {
+      onCurrentDateChange(newDate);
+    }
   };
 
   const handleDateClick = (date: Date) => {
+    // readOnlyモードの場合はクリック不可
+    if (readOnly) {
+      return;
+    }
+
     const dateStr = date.toDateString();
     const schedule = schedules.find(s => s.date.toDateString() === dateStr);
 
@@ -136,6 +162,10 @@ export default function MultiSelectCalendar({
       onScheduleDeleteSelectionChange(newSelectedDates);
     } else {
       // 追加モード：すべての日付を選択可能（登録済みは上書き）
+      if (!onDateSelectionChange) {
+        return;
+      }
+
       const isCurrentlySelected = selectedDates.some(d => d.toDateString() === dateStr);
       
       let newSelectedDates: Date[];
@@ -166,8 +196,12 @@ export default function MultiSelectCalendar({
     const hasSchedule = day.hasSchedule && day.timeSlots;
     const hasMatchedEvents = day.matchedEvents && day.matchedEvents.length > 0;
 
+    // readOnlyモードの場合
+    if (readOnly) {
+      className += 'cursor-default ';
+    }
     // 削除モードで登録済みでない日付はクリック不可
-    if (operationMode === 'delete' && !hasSchedule) {
+    else if (operationMode === 'delete' && !hasSchedule) {
       className += 'cursor-not-allowed opacity-50 ';
     } else {
       className += 'cursor-pointer ';
@@ -185,7 +219,8 @@ export default function MultiSelectCalendar({
       // 削除選択中の日は赤いボーダー
       className += 'bg-red-100 text-red-700 border-red-500 ring-2 ring-red-300 ';
     } else if (day.isSelected) {
-      className += 'bg-blue-600 text-white border-blue-600 shadow-lg ';
+      // 新規登録選択中は青い枠のみ（背景は透明）
+      className += 'bg-transparent text-blue-600 border-blue-600 ring-2 ring-blue-300 shadow-lg ';
     } else if (hasMatchedEvents) {
       // 成立したイベントがある日はオレンジ系
       className += 'bg-orange-500 text-white border-orange-500 shadow-md ';
@@ -218,7 +253,9 @@ export default function MultiSelectCalendar({
 
 
   const clearSelection = () => {
-    onDateSelectionChange([]);
+    if (onDateSelectionChange) {
+      onDateSelectionChange([]);
+    }
   };
 
   const clearDeleteSelection = () => {
@@ -325,7 +362,7 @@ export default function MultiSelectCalendar({
         <h3 className="font-medium text-gray-900">カレンダーの見方</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-600 text-white border-2 border-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
+            <div className="w-5 h-5 bg-transparent text-blue-600 border-2 border-blue-600 rounded-lg flex items-center justify-center text-xs font-bold ring-1 ring-blue-300">15</div>
             <span className="text-gray-700">選択中（新規登録）</span>
           </div>
           <div className="flex items-center gap-2">
