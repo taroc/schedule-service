@@ -53,7 +53,7 @@ export default function MultiSelectCalendar({
     if (onCurrentDateChange) {
       onCurrentDateChange(currentDate);
     }
-  }, [currentDate, onCurrentDateChange]);
+  }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();

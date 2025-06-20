@@ -20,19 +20,7 @@ export default function AvailabilityManager() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [individualSelectedDates, setIndividualSelectedDates] = useState<Date[]>([]); // 個別選択の日付
   const [weekdaySelectedDates, setWeekdaySelectedDates] = useState<Date[]>([]); // 曜日選択の日付
-  const [calendarDisplayRange, setCalendarDisplayRange] = useState<{ startDate: Date; endDate: Date }>(() => {
-    // 初期表示範囲を計算
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-    const endDate = new Date(lastDay);
-    endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
-    return { startDate, endDate };
-  });
+  const calendarDisplayRangeRef = React.useRef({ startDate: new Date(), endDate: new Date() });
 
   // 個別選択と曜日選択を統合した選択日付
   const selectedDates = React.useMemo(() => {
@@ -45,44 +33,34 @@ export default function AvailabilityManager() {
   }, [individualSelectedDates, weekdaySelectedDates]);
 
   // 個別選択で日付をクリックした時の処理（曜日選択の日付も考慮）
-  const handleIndividualDateSelection = (dates: Date[]) => {
+  const handleIndividualDateSelection = React.useCallback((dates: Date[]) => {
     setIndividualSelectedDates(dates);
     
     // 曜日選択の日付と重複しているものがあれば、曜日選択から除外
     const clickedDateStrings = dates.map(d => d.toDateString());
     
-    // クリックされた日付が曜日選択に含まれている場合、該当する曜日を除外
-    const updatedWeekdays = selectedWeekdays.filter(weekday => {
-      const weekdayDatesForThisWeekday = getDatesByWeekdays(
-        calendarDisplayRange.startDate,
-        calendarDisplayRange.endDate,
-        [weekday]
-      );
-      const weekdayDateStringsForThisWeekday = weekdayDatesForThisWeekday.map(d => d.toDateString());
-      
-      // この曜日の日付のうち、個別選択でクリックされたものがあるかチェック
-      const hasClickedDate = weekdayDateStringsForThisWeekday.some(dateStr => 
-        clickedDateStrings.includes(dateStr)
-      );
-      
-      return !hasClickedDate;
-    });
-    
-    if (updatedWeekdays.length !== selectedWeekdays.length) {
-      setSelectedWeekdays(updatedWeekdays);
-      // 曜日選択の日付も更新
-      if (updatedWeekdays.length > 0) {
-        const newWeekdayDates = getDatesByWeekdays(
-          calendarDisplayRange.startDate,
-          calendarDisplayRange.endDate,
-          updatedWeekdays
+    setSelectedWeekdays(prevWeekdays => {
+      // クリックされた日付が曜日選択に含まれている場合、該当する曜日を除外
+      const updatedWeekdays = prevWeekdays.filter(weekday => {
+        const currentRange = calendarDisplayRangeRef.current;
+        const weekdayDatesForThisWeekday = getDatesByWeekdays(
+          currentRange.startDate,
+          currentRange.endDate,
+          [weekday]
         );
-        setWeekdaySelectedDates(newWeekdayDates);
-      } else {
-        setWeekdaySelectedDates([]);
-      }
-    }
-  };
+        const weekdayDateStringsForThisWeekday = weekdayDatesForThisWeekday.map(d => d.toDateString());
+        
+        // この曜日の日付のうち、個別選択でクリックされたものがあるかチェック
+        const hasClickedDate = weekdayDateStringsForThisWeekday.some(dateStr => 
+          clickedDateStrings.includes(dateStr)
+        );
+        
+        return !hasClickedDate;
+      });
+      
+      return updatedWeekdays;
+    });
+  }, []);
 
   useEffect(() => {
     if (!authLoading && token) {
@@ -193,27 +171,31 @@ export default function AvailabilityManager() {
     setSelectedWeekdays([]);
   };
 
-  const handleWeekdaysChange = (weekdays: number[]) => {
+  const handleWeekdaysChange = React.useCallback((weekdays: number[]) => {
     setSelectedWeekdays(weekdays);
-    
-    // 選択された曜日に対応する日付を更新（カレンダー表示範囲内のみ）
-    if (weekdays.length > 0) {
-      const dates = getDatesByWeekdays(calendarDisplayRange.startDate, calendarDisplayRange.endDate, weekdays);
-      setWeekdaySelectedDates(dates);
-    } else {
-      setWeekdaySelectedDates([]);
-    }
-  };
+  }, []);
 
-  const handleCalendarRangeChange = (startDate: Date, endDate: Date) => {
-    setCalendarDisplayRange({ startDate, endDate });
+  const handleCalendarRangeChange = React.useCallback((startDate: Date, endDate: Date) => {
+    const newRange = { startDate, endDate };
+    calendarDisplayRangeRef.current = newRange;
     
-    // カレンダー表示範囲が変更された時、選択中の曜日があれば再計算
+    // カレンダー範囲が変更された時、選択中の曜日があれば再計算
     if (selectedWeekdays.length > 0) {
       const dates = getDatesByWeekdays(startDate, endDate, selectedWeekdays);
       setWeekdaySelectedDates(dates);
     }
-  };
+  }, [selectedWeekdays]);
+
+  // 曜日選択が変更された時に日付を更新
+  React.useEffect(() => {
+    if (selectedWeekdays.length > 0) {
+      const currentRange = calendarDisplayRangeRef.current;
+      const dates = getDatesByWeekdays(currentRange.startDate, currentRange.endDate, selectedWeekdays);
+      setWeekdaySelectedDates(dates);
+    } else {
+      setWeekdaySelectedDates([]);
+    }
+  }, [selectedWeekdays]);
 
   const handleSubmitAvailability = async () => {
     if (!token || selectedDates.length === 0) {
