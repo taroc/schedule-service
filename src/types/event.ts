@@ -3,7 +3,7 @@ export interface Event {
   name: string;
   description: string;
   requiredParticipants: number;  // 必要人数
-  requiredTimeSlots: number;     // 必要時間帯単位数
+  requiredTimeSlots: number;     // 必要コマ数
   creatorId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -26,7 +26,7 @@ export interface CreateEventRequest {
   name: string;
   description: string;
   requiredParticipants: number;
-  requiredTimeSlots: number;     // 必要時間帯単位数
+  requiredTimeSlots: number;     // 必要コマ数
   deadline?: Date;
   
   // 期間指定フィールド（必須）
@@ -38,7 +38,7 @@ export interface UpdateEventRequest {
   name?: string;
   description?: string;
   requiredParticipants?: number;
-  requiredTimeSlots?: number;    // 必要時間帯単位数
+  requiredTimeSlots?: number;    // 必要コマ数
   deadline?: Date;
   
   // 期間指定フィールド
@@ -61,7 +61,7 @@ export interface EventResponse {
   name: string;
   description: string;
   requiredParticipants: number;
-  requiredTimeSlots: number;     // 必要時間帯単位数
+  requiredTimeSlots: number;     // 必要コマ数
   creatorId: string;
   createdAt: string;
   updatedAt: string;

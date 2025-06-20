@@ -159,7 +159,7 @@ export default function CreateEventForm({
 
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">
-            必要時間帯単位数 *
+            必要コマ数 *
           </label>
           <input
             type="number"
@@ -171,7 +171,7 @@ export default function CreateEventForm({
             required
           />
           <p className="text-gray-500 text-xs mt-1">
-            確保したい時間帯単位数（例：2日間の昼間 = 2単位、半日+夜 = 2単位）
+            確保したいコマ数（例：2日間の昼間 = 2コマ、半日+夜 = 2コマ）
           </p>
         </div>
 
