@@ -7,12 +7,18 @@ interface MultiSelectCalendarProps {
   schedules: UserSchedule[];
   selectedDates: Date[];
   onDateSelectionChange: (selectedDates: Date[]) => void;
+  selectedSchedulesToDelete?: Date[];
+  onScheduleDeleteSelectionChange?: (selectedDates: Date[]) => void;
+  operationMode?: 'add' | 'delete';
 }
 
 export default function MultiSelectCalendar({
   schedules,
   selectedDates,
-  onDateSelectionChange
+  onDateSelectionChange,
+  selectedSchedulesToDelete = [],
+  onScheduleDeleteSelectionChange,
+  operationMode = 'add'
 }: MultiSelectCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<ScheduleCalendarDay[]>([]);
@@ -91,19 +97,41 @@ export default function MultiSelectCalendar({
 
   const handleDateClick = (date: Date) => {
     const dateStr = date.toDateString();
-    const isCurrentlySelected = selectedDates.some(d => d.toDateString() === dateStr);
+    const schedule = schedules.find(s => s.date.toDateString() === dateStr);
 
-    let newSelectedDates: Date[];
-    if (isCurrentlySelected) {
-      // 選択解除
-      newSelectedDates = selectedDates.filter(d => d.toDateString() !== dateStr);
+    if (operationMode === 'delete') {
+      // 削除モード：登録済みの日付のみ選択可能
+      if (!schedule || !onScheduleDeleteSelectionChange) {
+        return; // 登録済みでない日付は選択不可
+      }
+      
+      const isCurrentlySelectedForDelete = selectedSchedulesToDelete.some(d => d.toDateString() === dateStr);
+      
+      let newSelectedDates: Date[];
+      if (isCurrentlySelectedForDelete) {
+        // 削除選択解除
+        newSelectedDates = selectedSchedulesToDelete.filter(d => d.toDateString() !== dateStr);
+      } else {
+        // 削除選択追加
+        newSelectedDates = [...selectedSchedulesToDelete, date];
+      }
+      
+      onScheduleDeleteSelectionChange(newSelectedDates);
     } else {
-      // 選択追加
-      newSelectedDates = [...selectedDates, date];
+      // 追加モード：すべての日付を選択可能（登録済みは上書き）
+      const isCurrentlySelected = selectedDates.some(d => d.toDateString() === dateStr);
+      
+      let newSelectedDates: Date[];
+      if (isCurrentlySelected) {
+        // 選択解除
+        newSelectedDates = selectedDates.filter(d => d.toDateString() !== dateStr);
+      } else {
+        // 選択追加
+        newSelectedDates = [...selectedDates, date];
+      }
+      
+      onDateSelectionChange(newSelectedDates);
     }
-
-    console.log("aaaa", newSelectedDates)
-    onDateSelectionChange(newSelectedDates);
   };
 
   const isToday = (date: Date) => {
@@ -116,7 +144,16 @@ export default function MultiSelectCalendar({
   };
 
   const getDayClassName = (day: ScheduleCalendarDay) => {
-    let className = 'w-10 h-10 flex items-center justify-center text-sm cursor-pointer rounded-lg transition-colors font-medium border-2 ';
+    let className = 'w-10 h-10 flex items-center justify-center text-sm rounded-lg transition-colors font-medium border-2 ';
+    const isSelectedForDelete = selectedSchedulesToDelete.some(d => d.toDateString() === day.date.toDateString());
+    const hasSchedule = day.hasSchedule && day.timeSlots;
+
+    // 削除モードで登録済みでない日付はクリック不可
+    if (operationMode === 'delete' && !hasSchedule) {
+      className += 'cursor-not-allowed opacity-50 ';
+    } else {
+      className += 'cursor-pointer ';
+    }
 
     if (!isCurrentMonth(day.date)) {
       className += 'text-gray-400 ';
@@ -126,17 +163,20 @@ export default function MultiSelectCalendar({
       className += 'font-bold ring-2 ring-orange-300 ';
     }
 
-    if (day.isSelected) {
+    if (isSelectedForDelete) {
+      // 削除選択中の日は赤いボーダー
+      className += 'bg-red-100 text-red-700 border-red-500 ring-2 ring-red-300 ';
+    } else if (day.isSelected) {
       className += 'bg-blue-600 text-white border-blue-600 shadow-lg ';
-    } else if (day.hasSchedule && day.timeSlots) {
+    } else if (hasSchedule) {
       // 時間帯別の色分け（昼・夜ベース）
-      if (day.timeSlots.daytime && day.timeSlots.evening) {
+      if (day.timeSlots!.daytime && day.timeSlots!.evening) {
         // 昼と夜両方空き - 緑系（一日空きと同等）
         className += 'bg-green-500 text-white border-green-500 ';
-      } else if (day.timeSlots.daytime && !day.timeSlots.evening) {
+      } else if (day.timeSlots!.daytime && !day.timeSlots!.evening) {
         // 昼のみ空き - 青系
         className += 'bg-blue-400 text-white border-blue-400 ';
-      } else if (day.timeSlots.evening && !day.timeSlots.daytime) {
+      } else if (day.timeSlots!.evening && !day.timeSlots!.daytime) {
         // 夜のみ空き - 紫系
         className += 'bg-purple-500 text-white border-purple-500 ';
       } else {
@@ -145,7 +185,11 @@ export default function MultiSelectCalendar({
       }
     } else {
       // 未登録の日（デフォルトで忙しい）
-      className += 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200 ';
+      if (operationMode === 'add') {
+        className += 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200 ';
+      } else {
+        className += 'bg-gray-100 text-gray-400 border-gray-200 ';
+      }
     }
 
     return className.trim();
@@ -154,6 +198,12 @@ export default function MultiSelectCalendar({
 
   const clearSelection = () => {
     onDateSelectionChange([]);
+  };
+
+  const clearDeleteSelection = () => {
+    if (onScheduleDeleteSelectionChange) {
+      onScheduleDeleteSelectionChange([]);
+    }
   };
 
   return (
@@ -188,11 +238,28 @@ export default function MultiSelectCalendar({
         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-700">
-              {selectedDates.length}日選択中
+              {selectedDates.length}日選択中（新規登録）
             </span>
             <button
               onClick={clearSelection}
               className="text-xs text-blue-600 hover:text-blue-800 underline hover:cursor-pointer"
+            >
+              選択解除
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 削除選択状況 */}
+      {selectedSchedulesToDelete.length > 0 && (
+        <div className="mb-4 p-3 bg-red-50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-red-700">
+              {selectedSchedulesToDelete.length}日選択中（削除対象）
+            </span>
+            <button
+              onClick={clearDeleteSelection}
+              className="text-xs text-red-600 hover:text-red-800 underline hover:cursor-pointer"
             >
               選択解除
             </button>
@@ -230,7 +297,11 @@ export default function MultiSelectCalendar({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-blue-600 text-white border-2 border-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">選択中</span>
+            <span className="text-gray-700">選択中（新規登録）</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-red-100 text-red-700 border-2 border-red-500 rounded-lg flex items-center justify-center text-xs font-bold ring-1 ring-red-300">15</div>
+            <span className="text-gray-700">選択中（削除対象）</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-green-500 text-white border-2 border-green-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
@@ -250,7 +321,7 @@ export default function MultiSelectCalendar({
           </div>
         </div>
         <div className="text-xs text-gray-500 mt-2 p-2 bg-yellow-50 rounded-lg">
-          💡 <strong>ヒント:</strong> 色で空き時間の種類が一目で分かります。緑は実質的に一日空いている状態です。
+          💡 <strong>ヒント:</strong> {operationMode === 'add' ? '空き時間の登録・更新ができます。既存の予定は上書きされます。' : '登録済みの予定のみ削除できます。未登録の日付は選択できません。'}
         </div>
       </div>
     </div>

@@ -312,6 +312,34 @@ class ScheduleStorage {
     return datesInPeriod.slice(0, requiredDays);
   }
 
+  async deleteSchedule(userId: string, date: Date): Promise<void> {
+    await prisma.userSchedule.delete({
+      where: {
+        userId_date: {
+          userId,
+          date
+        }
+      }
+    });
+  }
+
+  async deleteSchedules(userId: string, dates: Date[]): Promise<void> {
+    await prisma.userSchedule.deleteMany({
+      where: {
+        userId,
+        date: {
+          in: dates
+        }
+      }
+    });
+  }
+
+  async deleteAllUserSchedules(userId: string): Promise<void> {
+    await prisma.userSchedule.deleteMany({
+      where: { userId }
+    });
+  }
+
   private mapPrismaToSchedule(prismaSchedule: PrismaUserSchedule): UserSchedule {
     return {
       id: prismaSchedule.id,

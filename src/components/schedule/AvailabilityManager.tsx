@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserSchedule, TimeSlotAvailability } from '@/types/schedule';
+import { UserSchedule } from '@/types/schedule';
 import MultiSelectCalendar from './MultiSelectCalendar';
 
 export default function AvailabilityManager() {
@@ -10,11 +10,11 @@ export default function AvailabilityManager() {
   const [schedules, setSchedules] = useState<UserSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState<TimeSlotAvailability>({
-    daytime: true,  // デフォルトは昼と夜両方
-    evening: true
-  });
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<'both' | 'daytime' | 'evening'>('both');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSchedulesToDelete, setSelectedSchedulesToDelete] = useState<Date[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [operationMode, setOperationMode] = useState<'add' | 'delete'>('add');
 
   useEffect(() => {
     if (!authLoading && token) {
@@ -70,11 +70,15 @@ export default function AvailabilityManager() {
     }
   };
 
-  const handleTimeSlotChange = (slot: keyof TimeSlotAvailability) => {
-    setSelectedTimeSlots({
-      ...selectedTimeSlots,
-      [slot]: !selectedTimeSlots[slot]
-    });
+  const handleTimeSlotChange = (value: 'both' | 'daytime' | 'evening') => {
+    setSelectedTimeSlots(value);
+  };
+
+  const handleModeChange = (mode: 'add' | 'delete') => {
+    setOperationMode(mode);
+    // モード切り替え時に選択をクリア
+    setSelectedDates([]);
+    setSelectedSchedulesToDelete([]);
   };
 
   const handleSubmitAvailability = async () => {
@@ -100,7 +104,10 @@ export default function AvailabilityManager() {
         },
         body: JSON.stringify({
           dates,
-          timeSlots: selectedTimeSlots
+          timeSlots: {
+            daytime: selectedTimeSlots === 'both' || selectedTimeSlots === 'daytime',
+            evening: selectedTimeSlots === 'both' || selectedTimeSlots === 'evening'
+          }
         })
       });
 
@@ -118,6 +125,87 @@ export default function AvailabilityManager() {
       console.error('空き時間登録エラー:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSchedules = async () => {
+    if (!token || selectedSchedulesToDelete.length === 0) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const dates = selectedSchedulesToDelete.map(d => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      });
+
+      const response = await fetch('/api/schedules/availability', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dates })
+      });
+
+      if (response.ok) {
+        // 削除成功時の処理
+        setSelectedSchedulesToDelete([]);
+        setSelectedDates([]);
+
+        // スケジュールを再取得
+        await fetchSchedules();
+      } else {
+        const errorData = await response.json();
+        console.error('スケジュール削除エラー:', errorData);
+      }
+    } catch (error) {
+      console.error('スケジュール削除エラー:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAllSchedules = async () => {
+    if (!token) {
+      return;
+    }
+
+    if (!confirm('全ての予定を未登録に戻しますか？この操作は取り消せません。')) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch('/api/schedules/availability', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dates: [] }) // 空配列で全削除
+      });
+
+      if (response.ok) {
+        // 削除成功時の処理
+        setSelectedSchedulesToDelete([]);
+        setSelectedDates([]);
+
+        // スケジュールを再取得
+        await fetchSchedules();
+      } else {
+        const errorData = await response.json();
+        console.error('全スケジュール削除エラー:', errorData);
+      }
+    } catch (error) {
+      console.error('全スケジュール削除エラー:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -143,63 +231,115 @@ export default function AvailabilityManager() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
-          空き時間登録
+          予定管理
         </h2>
         <div className="text-sm text-gray-600">
-          空いている日を選択して一括登録
+          {operationMode === 'add' ? '空いている日を選択して一括登録' : '削除したい日を選択'}
         </div>
       </div>
 
-      {/* 時間帯選択 */}
+      {/* モード切り替え */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">時間帯を選択</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">操作モード</h3>
+        <div className="flex gap-4">
+          <label className="flex items-center cursor-pointer">
             <input
-              type="checkbox"
-              checked={selectedTimeSlots.daytime}
-              onChange={() => handleTimeSlotChange('daytime')}
-              className="mr-3 text-blue-500"
+              type="radio"
+              name="operationMode"
+              value="add"
+              checked={operationMode === 'add'}
+              onChange={(e) => handleModeChange(e.target.value as 'add' | 'delete')}
+              className="mr-2 text-blue-500"
             />
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
-              <span className="text-gray-900">昼</span>
-            </div>
+            <span className="text-gray-900">予定を追加・更新</span>
           </label>
-
-          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+          <label className="flex items-center cursor-pointer">
             <input
-              type="checkbox"
-              checked={selectedTimeSlots.evening}
-              onChange={() => handleTimeSlotChange('evening')}
-              className="mr-3 text-purple-500"
+              type="radio"
+              name="operationMode"
+              value="delete"
+              checked={operationMode === 'delete'}
+              onChange={(e) => handleModeChange(e.target.value as 'add' | 'delete')}
+              className="mr-2 text-red-500"
             />
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-purple-100 border-2 border-purple-400 rounded mr-2"></div>
-              <span className="text-gray-900">夜</span>
-            </div>
+            <span className="text-gray-900">予定を削除</span>
           </label>
-
         </div>
       </div>
+
+      {/* 時間帯選択（追加モード時のみ表示） */}
+      {operationMode === 'add' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">時間帯を選択</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="radio"
+                name="timeSlot"
+                value="both"
+                checked={selectedTimeSlots === 'both'}
+                onChange={(e) => handleTimeSlotChange(e.target.value as 'both' | 'daytime' | 'evening')}
+                className="mr-3 text-green-500"
+              />
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-green-100 border-2 border-green-500 rounded mr-2"></div>
+                <span className="text-gray-900">一日空き</span>
+              </div>
+            </label>
+
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="radio"
+                name="timeSlot"
+                value="daytime"
+                checked={selectedTimeSlots === 'daytime'}
+                onChange={(e) => handleTimeSlotChange(e.target.value as 'both' | 'daytime' | 'evening')}
+                className="mr-3 text-blue-500"
+              />
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
+                <span className="text-gray-900">昼のみ</span>
+              </div>
+            </label>
+
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="radio"
+                name="timeSlot"
+                value="evening"
+                checked={selectedTimeSlots === 'evening'}
+                onChange={(e) => handleTimeSlotChange(e.target.value as 'both' | 'daytime' | 'evening')}
+                className="mr-3 text-purple-500"
+              />
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-purple-100 border-2 border-purple-400 rounded mr-2"></div>
+                <span className="text-gray-900">夜のみ</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      )}
 
       {/* カレンダー */}
       <MultiSelectCalendar
         schedules={schedules}
         selectedDates={selectedDates}
         onDateSelectionChange={setSelectedDates}
+        selectedSchedulesToDelete={selectedSchedulesToDelete}
+        onScheduleDeleteSelectionChange={setSelectedSchedulesToDelete}
+        operationMode={operationMode}
       />
 
       {/* 登録ボタン */}
-      {selectedDates.length > 0 && (
+      {operationMode === 'add' && selectedDates.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-medium text-gray-900">
-                空き時間を登録
+                空き時間を登録・更新
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                選択した{selectedDates.length}日に空き時間を設定します
+                選択した{selectedDates.length}日に空き時間を設定します（既存の予定は上書きされます）
               </p>
             </div>
             <button
@@ -208,6 +348,52 @@ export default function AvailabilityManager() {
               className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
             >
               {isSubmitting ? '登録中...' : '空き時間登録'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 削除ボタン */}
+      {operationMode === 'delete' && selectedSchedulesToDelete.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">
+                予定を未登録に戻す
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                選択した{selectedSchedulesToDelete.length}日の予定を削除します
+              </p>
+            </div>
+            <button
+              onClick={handleDeleteSchedules}
+              disabled={isDeleting || selectedSchedulesToDelete.length === 0}
+              className="bg-red-500 text-white px-6 py-3 rounded-md hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
+            >
+              {isDeleting ? '削除中...' : '予定を削除'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 全削除ボタン */}
+      {operationMode === 'delete' && schedules.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">
+                全ての予定をリセット
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                登録済みの全ての予定を未登録状態に戻します
+              </p>
+            </div>
+            <button
+              onClick={handleDeleteAllSchedules}
+              disabled={isDeleting}
+              className="bg-red-600 text-white px-6 py-3 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
+            >
+              {isDeleting ? '削除中...' : '全ての予定を削除'}
             </button>
           </div>
         </div>
