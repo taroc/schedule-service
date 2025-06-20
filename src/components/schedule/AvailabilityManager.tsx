@@ -15,7 +15,6 @@ export default function AvailabilityManager() {
     evening: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [recentlyRegistered, setRecentlyRegistered] = useState<Date[]>([]);
 
   useEffect(() => {
     if (!authLoading && token) {
@@ -43,7 +42,7 @@ export default function AvailabilityManager() {
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched schedule data:', data);
-        
+
         // APIから返される日付文字列をDateオブジェクトに変換
         const schedulesWithDates = data.map((schedule: UserSchedule & { date: string; createdAt: string; updatedAt: string }) => ({
           ...schedule,
@@ -56,7 +55,7 @@ export default function AvailabilityManager() {
             evening: false
           }
         }));
-        
+
         console.log('Processed schedules with dates:', schedulesWithDates);
         setSchedules(schedulesWithDates);
       } else {
@@ -87,7 +86,7 @@ export default function AvailabilityManager() {
 
     try {
       const dates = selectedDates.map(d => d.toISOString().split('T')[0]);
-      
+
       const response = await fetch('/api/schedules/availability', {
         method: 'POST',
         headers: {
@@ -102,13 +101,7 @@ export default function AvailabilityManager() {
 
       if (response.ok) {
         // 登録成功時の処理
-        setRecentlyRegistered([...selectedDates]);
         setSelectedDates([]);
-        
-        // 3秒後にハイライトを消す
-        setTimeout(() => {
-          setRecentlyRegistered([]);
-        }, 3000);
 
         // スケジュールを再取得
         await fetchSchedules();
@@ -190,7 +183,6 @@ export default function AvailabilityManager() {
         schedules={schedules}
         selectedDates={selectedDates}
         onDateSelectionChange={setSelectedDates}
-        recentlyRegistered={recentlyRegistered}
       />
 
       {/* 登録ボタン */}
