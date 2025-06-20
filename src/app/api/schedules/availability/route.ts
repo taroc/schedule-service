@@ -29,10 +29,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '時間帯の指定が必要です' }, { status: 400 });
     }
 
-    await scheduleStorage.setAvailability(userId, dates, timeSlots);
-
-    // 自動マッチング実行
-    await matchingEngine.onScheduleUpdated(userId);
+    // バッチ処理でスケジュール登録と自動マッチングを並列実行
+    const [, matchingResults] = await Promise.all([
+      scheduleStorage.setAvailability(userId, dates, timeSlots),
+      matchingEngine.onScheduleUpdated(userId)
+    ]);
 
     return NextResponse.json({ success: true });
 
@@ -65,16 +66,13 @@ export async function DELETE(request: NextRequest) {
     // 日付文字列をDateオブジェクトに変換
     const datesToDelete = dates.map(dateStr => new Date(dateStr));
 
-    if (dates.length === 0) {
-      // 全てのスケジュールを削除
-      await scheduleStorage.deleteAllUserSchedules(userId);
-    } else {
-      // 指定した日付のスケジュールを削除
-      await scheduleStorage.deleteSchedules(userId, datesToDelete);
-    }
-
-    // 自動マッチング実行
-    await matchingEngine.onScheduleUpdated(userId);
+    // バッチ処理でスケジュール削除と自動マッチングを並列実行
+    const [, matchingResults] = await Promise.all([
+      dates.length === 0 
+        ? scheduleStorage.deleteAllUserSchedules(userId)
+        : scheduleStorage.deleteSchedules(userId, datesToDelete),
+      matchingEngine.onScheduleUpdated(userId)
+    ]);
 
     return NextResponse.json({ success: true });
 

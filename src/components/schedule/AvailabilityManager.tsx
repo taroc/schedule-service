@@ -20,7 +20,7 @@ export default function AvailabilityManager() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [individualSelectedDates, setIndividualSelectedDates] = useState<Date[]>([]); // 個別選択の日付
   const [weekdaySelectedDates, setWeekdaySelectedDates] = useState<Date[]>([]); // 曜日選択の日付
-  const calendarDisplayRangeRef = React.useRef({ startDate: new Date(), endDate: new Date() });
+  const [calendarRange, setCalendarRange] = useState({ startDate: new Date(), endDate: new Date() });
 
   // 個別選択と曜日選択を統合した選択日付
   const selectedDates = React.useMemo(() => {
@@ -42,10 +42,9 @@ export default function AvailabilityManager() {
     setSelectedWeekdays(prevWeekdays => {
       // クリックされた日付が曜日選択に含まれている場合、該当する曜日を除外
       const updatedWeekdays = prevWeekdays.filter(weekday => {
-        const currentRange = calendarDisplayRangeRef.current;
         const weekdayDatesForThisWeekday = getDatesByWeekdays(
-          currentRange.startDate,
-          currentRange.endDate,
+          calendarRange.startDate,
+          calendarRange.endDate,
           [weekday]
         );
         const weekdayDateStringsForThisWeekday = weekdayDatesForThisWeekday.map(d => d.toDateString());
@@ -60,7 +59,7 @@ export default function AvailabilityManager() {
       
       return updatedWeekdays;
     });
-  }, []);
+  }, [calendarRange]);
 
   useEffect(() => {
     if (!authLoading && token) {
@@ -73,12 +72,10 @@ export default function AvailabilityManager() {
 
   const fetchSchedules = async () => {
     if (!token) {
-      console.log('No token available for fetching schedules');
       return;
     }
 
     try {
-      console.log('Fetching schedules with token:', token.substring(0, 10) + '...');
       setLoading(true);
       const response = await fetch('/api/schedules', {
         headers: {
@@ -88,7 +85,6 @@ export default function AvailabilityManager() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched schedule data:', data);
 
         // APIから返される日付文字列をDateオブジェクトに変換
         const schedulesWithDates = data.map((schedule: UserSchedule & { date: string; createdAt: string; updatedAt: string }) => ({
@@ -103,15 +99,10 @@ export default function AvailabilityManager() {
           }
         }));
 
-        console.log('Processed schedules with dates:', schedulesWithDates);
         setSchedules(schedulesWithDates);
-      } else {
-        console.error('Failed to fetch schedules:', response.status, response.statusText);
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error details:', errorData);
       }
-    } catch (error) {
-      console.error('Error fetching schedules:', error);
+    } catch {
+      // エラーは無視（ユーザーには表示しない）
     } finally {
       setLoading(false);
     }
@@ -119,12 +110,10 @@ export default function AvailabilityManager() {
 
   const fetchMatchedEvents = async () => {
     if (!token) {
-      console.log('No token available for fetching matched events');
       return;
     }
 
     try {
-      console.log('Fetching matched events with token:', token.substring(0, 10) + '...');
       const response = await fetch('/api/events/list?type=completedEvents', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -133,7 +122,6 @@ export default function AvailabilityManager() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched matched events data:', data);
 
         // APIから返される日付文字列をDateオブジェクトに変換
         const eventsWithDates = data.map((event: MatchedEvent & { matchedDates?: string[]; createdAt: string; updatedAt: string; deadline?: string | null; periodStart: string; periodEnd: string; }) => ({
@@ -146,15 +134,10 @@ export default function AvailabilityManager() {
           periodEnd: new Date(event.periodEnd)
         }));
 
-        console.log('Processed matched events with dates:', eventsWithDates);
         setMatchedEvents(eventsWithDates);
-      } else {
-        console.error('Failed to fetch matched events:', response.status, response.statusText);
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error details:', errorData);
       }
-    } catch (error) {
-      console.error('Error fetching matched events:', error);
+    } catch {
+      // エラーは無視（ユーザーには表示しない）
     }
   };
 
@@ -176,26 +159,18 @@ export default function AvailabilityManager() {
   }, []);
 
   const handleCalendarRangeChange = React.useCallback((startDate: Date, endDate: Date) => {
-    const newRange = { startDate, endDate };
-    calendarDisplayRangeRef.current = newRange;
-    
-    // カレンダー範囲が変更された時、選択中の曜日があれば再計算
-    if (selectedWeekdays.length > 0) {
-      const dates = getDatesByWeekdays(startDate, endDate, selectedWeekdays);
-      setWeekdaySelectedDates(dates);
-    }
-  }, [selectedWeekdays]);
+    setCalendarRange({ startDate, endDate });
+  }, []);
 
-  // 曜日選択が変更された時に日付を更新
+  // 曜日選択やカレンダー範囲が変更された時に日付を更新
   React.useEffect(() => {
     if (selectedWeekdays.length > 0) {
-      const currentRange = calendarDisplayRangeRef.current;
-      const dates = getDatesByWeekdays(currentRange.startDate, currentRange.endDate, selectedWeekdays);
+      const dates = getDatesByWeekdays(calendarRange.startDate, calendarRange.endDate, selectedWeekdays);
       setWeekdaySelectedDates(dates);
     } else {
       setWeekdaySelectedDates([]);
     }
-  }, [selectedWeekdays]);
+  }, [selectedWeekdays, calendarRange]);
 
   const handleSubmitAvailability = async () => {
     if (!token || selectedDates.length === 0) {
@@ -233,15 +208,10 @@ export default function AvailabilityManager() {
         setWeekdaySelectedDates([]);
         setSelectedWeekdays([]);
 
-        // スケジュールとイベントを再取得
+        // スケジュールのみ再取得（イベント情報は自動マッチングで更新される）
         await fetchSchedules();
-        await fetchMatchedEvents();
-      } else {
-        const errorData = await response.json();
-        console.error('空き時間登録エラー:', errorData);
       }
-    } catch (error) {
-      console.error('空き時間登録エラー:', error);
+    } catch {
     } finally {
       setIsSubmitting(false);
     }
@@ -278,15 +248,10 @@ export default function AvailabilityManager() {
         setIndividualSelectedDates([]);
         setWeekdaySelectedDates([]);
 
-        // スケジュールとイベントを再取得
+        // スケジュールのみ再取得
         await fetchSchedules();
-        await fetchMatchedEvents();
-      } else {
-        const errorData = await response.json();
-        console.error('スケジュール削除エラー:', errorData);
       }
-    } catch (error) {
-      console.error('スケジュール削除エラー:', error);
+    } catch {
     } finally {
       setIsDeleting(false);
     }
@@ -319,15 +284,10 @@ export default function AvailabilityManager() {
         setIndividualSelectedDates([]);
         setWeekdaySelectedDates([]);
 
-        // スケジュールとイベントを再取得
+        // スケジュールのみ再取得
         await fetchSchedules();
-        await fetchMatchedEvents();
-      } else {
-        const errorData = await response.json();
-        console.error('全スケジュール削除エラー:', errorData);
       }
-    } catch (error) {
-      console.error('全スケジュール削除エラー:', error);
+    } catch {
     } finally {
       setIsDeleting(false);
     }
