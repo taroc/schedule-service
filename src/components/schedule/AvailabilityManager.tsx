@@ -20,7 +20,8 @@ export default function AvailabilityManager() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [individualSelectedDates, setIndividualSelectedDates] = useState<Date[]>([]); // 個別選択の日付
   const [weekdaySelectedDates, setWeekdaySelectedDates] = useState<Date[]>([]); // 曜日選択の日付
-  const [calendarRange, setCalendarRange] = useState({ startDate: new Date(), endDate: new Date() });
+  const [calendarStartDate, setCalendarStartDate] = useState(new Date());
+  const [calendarEndDate, setCalendarEndDate] = useState(new Date());
 
   // 個別選択と曜日選択を統合した選択日付
   const selectedDates = React.useMemo(() => {
@@ -43,8 +44,8 @@ export default function AvailabilityManager() {
       // クリックされた日付が曜日選択に含まれている場合、該当する曜日を除外
       const updatedWeekdays = prevWeekdays.filter(weekday => {
         const weekdayDatesForThisWeekday = getDatesByWeekdays(
-          calendarRange.startDate,
-          calendarRange.endDate,
+          calendarStartDate,
+          calendarEndDate,
           [weekday]
         );
         const weekdayDateStringsForThisWeekday = weekdayDatesForThisWeekday.map(d => d.toDateString());
@@ -59,7 +60,7 @@ export default function AvailabilityManager() {
       
       return updatedWeekdays;
     });
-  }, [calendarRange]);
+  }, [calendarStartDate, calendarEndDate]);
 
   useEffect(() => {
     if (!authLoading && token) {
@@ -159,18 +160,19 @@ export default function AvailabilityManager() {
   }, []);
 
   const handleCalendarRangeChange = React.useCallback((startDate: Date, endDate: Date) => {
-    setCalendarRange({ startDate, endDate });
+    setCalendarStartDate(startDate);
+    setCalendarEndDate(endDate);
   }, []);
 
   // 曜日選択やカレンダー範囲が変更された時に日付を更新
   React.useEffect(() => {
     if (selectedWeekdays.length > 0) {
-      const dates = getDatesByWeekdays(calendarRange.startDate, calendarRange.endDate, selectedWeekdays);
+      const dates = getDatesByWeekdays(calendarStartDate, calendarEndDate, selectedWeekdays);
       setWeekdaySelectedDates(dates);
     } else {
       setWeekdaySelectedDates([]);
     }
-  }, [selectedWeekdays, calendarRange]);
+  }, [selectedWeekdays, calendarStartDate, calendarEndDate]);
 
   const handleSubmitAvailability = async () => {
     if (!token || selectedDates.length === 0) {
