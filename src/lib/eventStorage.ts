@@ -297,8 +297,7 @@ class EventStorageDB {
         canJoin: conflictingEvents.length === 0,
         conflictingEvents
       };
-    } catch (error) {
-      console.error('Schedule conflict check failed:', error);
+    } catch {
       return { canJoin: false, conflictingEvents: ['Error checking schedule conflicts'] };
     }
   }
@@ -403,26 +402,6 @@ class EventStorageDB {
   }
 
   async getMatchedEventsForUser(userId: string): Promise<Event[]> {
-    console.log(`[DEBUG] getMatchedEventsForUser called with userId: ${userId}`);
-    
-    // まず、すべての成立済みイベントを取得
-    const allMatchedEvents = await prisma.event.findMany({
-      where: { status: 'matched' },
-      include: {
-        participants: {
-          select: {
-            userId: true,
-          },
-          orderBy: {
-            joinedAt: 'asc',
-          },
-        },
-      },
-    });
-    
-    console.log(`[DEBUG] All matched events in DB: ${allMatchedEvents.length} events`);
-    
-    // 次に、ユーザー固有の条件で検索
     const events = await prisma.event.findMany({
       where: {
         status: 'matched',
@@ -451,8 +430,6 @@ class EventStorageDB {
         createdAt: 'desc',
       },
     });
-
-    console.log(`[DEBUG] Found ${events.length} matched events for user ${userId}`);
 
     return events.map(event => this.mapPrismaToEvent(event));
   }
@@ -554,8 +531,6 @@ class EventStorageDB {
   }
 
   async getMatchedEventsCount(userId: string): Promise<number> {
-    console.log(`[DEBUG] getMatchedEventsCount called with userId: ${userId}`);
-    
     const count = await prisma.event.count({
       where: {
         status: 'matched',
@@ -572,7 +547,6 @@ class EventStorageDB {
       }
     });
 
-    console.log(`[DEBUG] Matched events count for user ${userId}: ${count}`);
     return count;
   }
 
@@ -760,8 +734,7 @@ class EventStorageDB {
 
       // 必要日数分の空きがあるかチェック
       return availableDates.length >= event.requiredDays;
-    } catch (error) {
-      console.error('Schedule compatibility check failed:', error);
+    } catch {
       return false;
     }
   }

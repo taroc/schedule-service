@@ -32,9 +32,7 @@ export async function POST(request: NextRequest) {
     await scheduleStorage.setAvailability(userId, dates, timeSlots);
 
     // 自動マッチング実行
-    console.log('スケジュール更新後の自動マッチング実行開始');
     await matchingEngine.onScheduleUpdated(userId);
-    console.log('スケジュール更新後の自動マッチング実行完了');
 
     return NextResponse.json({ success: true });
 
@@ -76,9 +74,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 自動マッチング実行
-    console.log('スケジュール削除後の自動マッチング実行開始');
     await matchingEngine.onScheduleUpdated(userId);
-    console.log('スケジュール削除後の自動マッチング実行完了');
 
     return NextResponse.json({ success: true });
 
