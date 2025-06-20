@@ -15,22 +15,22 @@ async function seedTestData() {
     await prisma.userSchedule.deleteMany({
       where: {
         userId: {
-          in: ['alice', 'bob', 'charlie', 'diana']
+          in: ['alice', 'bob', 'charlie', 'diana', 'taro']
         }
       }
     });
     await prisma.eventParticipant.deleteMany({
       where: {
         OR: [
-          { userId: { in: ['alice', 'bob', 'charlie', 'diana'] } },
-          { event: { creatorId: { in: ['alice', 'bob', 'charlie', 'diana'] } } }
+          { userId: { in: ['alice', 'bob', 'charlie', 'diana', 'taro'] } },
+          { event: { creatorId: { in: ['alice', 'bob', 'charlie', 'diana', 'taro'] } } }
         ]
       }
     });
     await prisma.event.deleteMany({
       where: {
         creatorId: {
-          in: ['alice', 'bob', 'charlie', 'diana']
+          in: ['alice', 'bob', 'charlie', 'diana', 'taro']
         }
       }
     });
@@ -39,7 +39,7 @@ async function seedTestData() {
     await prisma.user.deleteMany({
       where: {
         id: {
-          in: ['alice', 'bob', 'charlie', 'diana']
+          in: ['alice', 'bob', 'charlie', 'diana', 'taro']
         }
       }
     });
@@ -69,6 +69,12 @@ async function seedTestData() {
         data: {
           id: 'diana',
           password: await bcrypt.hash('password123', 10),
+        },
+      }),
+      prisma.user.create({
+        data: {
+          id: 'taro',
+          password: await bcrypt.hash('aaa', 10),
         },
       }),
     ]);
@@ -218,6 +224,63 @@ async function seedTestData() {
       }),
     ]);
 
+    // Taro主催の成立済みイベント
+    const taroEvent1 = await prisma.event.create({
+      data: {
+        id: 'taro-event-1',
+        name: 'カラオケ大会',
+        description: 'みんなで楽しくカラオケしましょう！',
+        creatorId: 'taro',
+        requiredParticipants: 2,
+        requiredDays: 1,
+        status: 'matched',
+        deadline: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // 6日後
+        matchedDates: JSON.stringify([new Date(2024, 11, 23)]), // 2024年12月23日
+        periodStart: new Date(2024, 11, 20), // 2024年12月20日
+        periodEnd: new Date(2024, 11, 25), // 2024年12月25日
+      },
+    });
+
+    // Taro イベント1の参加者を追加
+    await Promise.all([
+      prisma.eventParticipant.create({
+        data: { eventId: 'taro-event-1', userId: 'alice' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'taro-event-1', userId: 'bob' },
+      }),
+    ]);
+
+    // Taroが参加する他の成立済みイベント
+    const taroEvent2 = await prisma.event.create({
+      data: {
+        id: 'taro-event-2',
+        name: 'スポーツ観戦',
+        description: 'サッカーの試合を一緒に見に行きませんか？',
+        creatorId: 'alice',
+        requiredParticipants: 3,
+        requiredDays: 1,
+        status: 'matched',
+        deadline: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), // 9日後
+        matchedDates: JSON.stringify([new Date(2024, 11, 28)]), // 2024年12月28日
+        periodStart: new Date(2024, 11, 25), // 2024年12月25日
+        periodEnd: new Date(2024, 11, 30), // 2024年12月30日
+      },
+    });
+
+    // Taro イベント2の参加者を追加
+    await Promise.all([
+      prisma.eventParticipant.create({
+        data: { eventId: 'taro-event-2', userId: 'taro' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'taro-event-2', userId: 'bob' },
+      }),
+      prisma.eventParticipant.create({
+        data: { eventId: 'taro-event-2', userId: 'charlie' },
+      }),
+    ]);
+
     // あと一人で成立するイベント（Charlie主催、あと1人必要）
     const charlieEvent2 = await prisma.event.create({
       data: {
@@ -330,7 +393,7 @@ async function seedTestData() {
       },
     });
 
-    const allEvents = [aliceEvent1, aliceEvent2, bobEvent1, bobEvent2, charlieEvent1, charlieEvent2, dianaEvent1, testEvent1, testEvent2, testEvent3, testEvent4, testEvent5];
+    const allEvents = [aliceEvent1, aliceEvent2, bobEvent1, bobEvent2, charlieEvent1, charlieEvent2, dianaEvent1, taroEvent1, taroEvent2, testEvent1, testEvent2, testEvent3, testEvent4, testEvent5];
     console.log(`✅ ${allEvents.length}個のイベントを作成しました`);
 
     // スケジュールデータの作成
@@ -434,6 +497,26 @@ async function seedTestData() {
           timeSlotsEvening: true,
         },
       }),
+
+      // Taro のスケジュール
+      prisma.userSchedule.create({
+        data: {
+          id: 'taro-schedule-1',
+          userId: 'taro',
+          date: new Date(2024, 11, 23),
+          timeSlotsDaytime: true,
+          timeSlotsEvening: true,
+        },
+      }),
+      prisma.userSchedule.create({
+        data: {
+          id: 'taro-schedule-2',
+          userId: 'taro',
+          date: new Date(2024, 11, 28),
+          timeSlotsDaytime: true,
+          timeSlotsEvening: true,
+        },
+      }),
     ]);
 
     console.log(`✅ ${schedules.length}個のスケジュールを作成しました`);
@@ -460,13 +543,15 @@ async function seedTestData() {
     console.log('ユーザーID: bob, パスワード: password123');
     console.log('ユーザーID: charlie, パスワード: password123');
     console.log('ユーザーID: diana, パスワード: password123');
+    console.log('ユーザーID: taro, パスワード: aaa');
 
     console.log('\n🎯 各ユーザーの状況:');
     console.log('='.repeat(50));
-    console.log('Alice: 主催3, 参加4, 成立済み3');
-    console.log('Bob: 主催3, 参加2, 成立済み3');
-    console.log('Charlie: 主催3, 参加3, 成立済み2');
+    console.log('Alice: 主催4, 参加4, 成立済み4');
+    console.log('Bob: 主催3, 参加3, 成立済み4');
+    console.log('Charlie: 主催3, 参加3, 成立済み3');
     console.log('Diana: 主催3, 参加1, 成立済み2');
+    console.log('Taro: 主催1, 参加1, 成立済み2');
     console.log('');
     console.log('💡 参加可能なテストイベント:');
     console.log('- 「映画鑑賞会」(Charlie主催) - あと1人参加すれば成立');
