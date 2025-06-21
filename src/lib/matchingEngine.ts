@@ -61,7 +61,7 @@ class MatchingEngine {
       };
     }
 
-    // 参加者数チェック
+    // 参加者数チェック（作成者は既にparticipants配列に含まれている）
     if (event.participants.length < event.requiredParticipants) {
       return {
         eventId,

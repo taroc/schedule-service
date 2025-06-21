@@ -56,7 +56,8 @@ describe('matchingEngine', () => {
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
       await eventStorage.addParticipant(event.id, mockUser1);
-      // 参加者が1人のみ（必要人数3人に満たない）
+      // 参加者が2人のみ（必要人数3人に満たない）
+      // スケジュールは設定しない（参加者数チェックが先に行われることを確認）
 
       // Act
       const result = await matchingEngine.checkEventMatching(event.id);
@@ -64,7 +65,7 @@ describe('matchingEngine', () => {
       // Assert
       expect(result.isMatched).toBe(false);
       expect(result.reason).toContain('Insufficient participants');
-      expect(result.participants).toHaveLength(2); // Creator + 1 participant
+      expect(result.participants).toHaveLength(2); // Creator + 1 participant (creator is in participants array)
     });
 
     it('should return false when no common available dates', async () => {
@@ -88,6 +89,15 @@ describe('matchingEngine', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const dayAfterTomorrow = new Date();
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+      const thirdDay = new Date();
+      thirdDay.setDate(thirdDay.getDate() + 3);
+
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [thirdDay.toISOString().split('T')[0]],
+        { daytime: true, evening: false }
+      );
 
       await scheduleStorage.setAvailability(
         mockUser1,
@@ -131,18 +141,25 @@ describe('matchingEngine', () => {
       const dayAfterTomorrow = new Date();
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
-      const dates = [tomorrow.toISOString().split('T')[0].split('T')[0], dayAfterTomorrow.toISOString().split('T')[0]];
+      const dates = [tomorrow.toISOString().split('T')[0], dayAfterTomorrow.toISOString().split('T')[0]];
+
+      // 作成者も共通日程に設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        dates,
+        { daytime: true, evening: true }
+      );
 
       await scheduleStorage.setAvailability(
         mockUser1,
         dates,
-        { daytime: true, evening: false }
+        { daytime: true, evening: true }
       );
 
       await scheduleStorage.setAvailability(
         mockUser2,
         dates,
-        { daytime: false, evening: true }
+        { daytime: true, evening: true }
       );
 
       // Act
@@ -161,7 +178,7 @@ describe('matchingEngine', () => {
       const eventRequest: CreateEventRequest = {
         name: 'Test Event',
         description: 'Test Description',
-        requiredParticipants: 2,
+        requiredParticipants: 3,
         requiredTimeSlots: 1,
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
@@ -174,6 +191,13 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
+
       await scheduleStorage.setAvailability(
         mockUser1,
         [tomorrow.toISOString().split('T')[0]],
@@ -195,7 +219,7 @@ describe('matchingEngine', () => {
 
       // Assert
       expect(result.isMatched).toBe(true);
-      expect(result.participants).toHaveLength(2);
+      expect(result.participants).toHaveLength(3); // Creator + 2 participants
     });
 
     it('should automatically update event status when participant join triggers matching', async () => {
@@ -216,6 +240,13 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
+
       await scheduleStorage.setAvailability(
         mockUser1,
         [tomorrow.toISOString().split('T')[0]],
@@ -239,7 +270,7 @@ describe('matchingEngine', () => {
 
       // Assert
       expect(result.isMatched).toBe(true);
-      expect(result.participants).toHaveLength(2);
+      expect(result.participants).toHaveLength(3); // Creator + 2 participants
       
       // イベントステータスが自動更新されていることを確認
       currentEvent = await eventStorage.getEventById(event.id);
@@ -308,6 +339,13 @@ describe('matchingEngine', () => {
 
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       await scheduleStorage.setAvailability(
         mockUser1,
@@ -395,6 +433,13 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
+
       // user2のスケジュールも設定
       await scheduleStorage.setAvailability(
         mockUser2,
@@ -460,6 +505,13 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
+
       await scheduleStorage.setAvailability(
         mockUser2,
         [tomorrow.toISOString().split('T')[0]],
@@ -516,6 +568,13 @@ describe('matchingEngine', () => {
 
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       await scheduleStorage.setAvailability(
         mockUser1,
@@ -626,6 +685,13 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
+
       await scheduleStorage.setAvailability(
         mockUser1,
         [tomorrow.toISOString().split('T')[0]],
@@ -718,6 +784,13 @@ describe('matchingEngine', () => {
         // dayAfterは設定しない（連続でない日程も存在）
       ];
 
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        dates,
+        { daytime: true, evening: true }
+      );
+
       for (const userId of [mockUser1, mockUser2]) {
         await scheduleStorage.setAvailability(
           userId,
@@ -759,6 +832,13 @@ describe('matchingEngine', () => {
         today.toISOString().split('T')[0],
         dayAfterTomorrow.toISOString().split('T')[0],
       ];
+
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        dates,
+        { daytime: true, evening: true }
+      );
 
       for (const userId of [mockUser1, mockUser2]) {
         await scheduleStorage.setAvailability(
@@ -807,6 +887,13 @@ describe('matchingEngine', () => {
         tomorrow.toISOString().split('T')[0],
         dayAfter.toISOString().split('T')[0],
       ];
+
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        dates,
+        { daytime: true, evening: true }
+      );
 
       for (const userId of [mockUser1, mockUser2]) {
         await scheduleStorage.setAvailability(
@@ -894,6 +981,13 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
+
       for (const userId of [mockUser1, mockUser2]) {
         await scheduleStorage.setAvailability(
           userId,
@@ -957,6 +1051,13 @@ describe('matchingEngine', () => {
       // 共通の日程を設定
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // 作成者のスケジュールも設定
+      await scheduleStorage.setAvailability(
+        mockCreator,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       for (const userId of [mockUser1, mockUser2, mockUser3]) {
         await scheduleStorage.setAvailability(
