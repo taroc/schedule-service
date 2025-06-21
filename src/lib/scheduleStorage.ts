@@ -119,8 +119,9 @@ class ScheduleStorage {
 
     const commonDates: Date[] = [];
     
-    // 日付ごとにチェック
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    // 日付ごとにチェック（最大100日間に制限）
+    let dayCount = 0;
+    for (let d = new Date(startDate); d <= endDate && dayCount < 100; d = new Date(d.getTime() + 24 * 60 * 60 * 1000), dayCount++) {
       const currentDate = new Date(d);
       const dateStr = currentDate.toISOString().split('T')[0];
       
@@ -212,8 +213,9 @@ class ScheduleStorage {
 
     const commonDates: Date[] = [];
     
-    // 日付ごとにチェック
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    // 日付ごとにチェック（最大100日間に制限）
+    let dayCount = 0;
+    for (let d = new Date(startDate); d <= endDate && dayCount < 100; d = new Date(d.getTime() + 24 * 60 * 60 * 1000), dayCount++) {
       const currentDate = new Date(d);
       const dateStr = currentDate.toISOString().split('T')[0];
       

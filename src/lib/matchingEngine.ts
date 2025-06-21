@@ -1,7 +1,7 @@
 import { eventStorage } from './eventStorage';
 import { scheduleStorage } from './scheduleStorage';
 import { Event } from '@/types/event';
-import { TimeSlot, MatchingTimeSlot } from '@/types/schedule';
+import { TimeSlot, MatchingTimeSlot, UserSchedule } from '@/types/schedule';
 
 export interface MatchingResult {
   eventId: string;
@@ -131,21 +131,42 @@ class MatchingEngine {
   ): Promise<MatchingTimeSlot[]> {
     const availableTimeSlots: MatchingTimeSlot[] = [];
     
-    // 期間内の各日でループ
-    const currentDate = new Date(periodStart);
-    while (currentDate <= periodEnd) {
+    // 全参加者の指定期間内のスケジュールを一度に取得
+    const allSchedules = new Map<string, UserSchedule[]>();
+    for (const participantId of participantIds) {
+      const schedules = await scheduleStorage.getUserSchedulesByDateRange(
+        participantId,
+        periodStart,
+        periodEnd
+      );
+      allSchedules.set(participantId, schedules);
+    }
+    
+    // 期間内の各日でループ（最大100日間に制限）
+    let dayCount = 0;
+    for (let d = new Date(periodStart); d <= periodEnd && dayCount < 100; d = new Date(d.getTime() + 24 * 60 * 60 * 1000), dayCount++) {
+      const dateStr = d.toISOString().split('T')[0];
+      
       // 各時間帯（昼、夜）でチェック
       const timeSlots: TimeSlot[] = ['daytime', 'evening'];
       for (const timeSlot of timeSlots) {
-        const isAvailable = await this.checkTimeSlotAvailability(
-          participantIds,
-          new Date(currentDate),
-          timeSlot
-        );
+        // 全参加者がこの日時に空いているかチェック
+        const isAvailable = participantIds.every(participantId => {
+          const userSchedules = allSchedules.get(participantId) || [];
+          const daySchedule = userSchedules.find(s => 
+            s.date.toISOString().split('T')[0] === dateStr
+          );
+          
+          if (!daySchedule) {
+            return false; // スケジュール未登録は忙しい扱い
+          }
+          
+          return timeSlot === 'daytime' ? daySchedule.timeSlots.daytime : daySchedule.timeSlots.evening;
+        });
         
         if (isAvailable) {
           availableTimeSlots.push({
-            date: new Date(currentDate),
+            date: new Date(d),
             timeSlot
           });
         }
@@ -155,8 +176,6 @@ class MatchingEngine {
       if (availableTimeSlots.length >= requiredTimeSlots) {
         break;
       }
-      
-      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     return availableTimeSlots;
