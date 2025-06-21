@@ -10,6 +10,7 @@ describe('eventStorage', () => {
     description: 'Test Description',
     requiredParticipants: 3,
     requiredTimeSlots: 2,
+    deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後
     periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 明日から
     periodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 1週間後まで
   }
@@ -74,7 +75,7 @@ describe('eventStorage', () => {
       expect(event.participants).toEqual([mockCreatorId])
       expect(event.createdAt).toBeInstanceOf(Date)
       expect(event.updatedAt).toBeInstanceOf(Date)
-      expect(event.deadline).toBeUndefined()
+      expect(event.deadline).toBeInstanceOf(Date)
     })
 
     it('should create event with deadline', async () => {

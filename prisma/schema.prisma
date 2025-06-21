@@ -28,7 +28,7 @@ model Event {
   creatorId            String             @map("creator_id")
   status               String             @default("open")
   matchedTimeSlots     String?            @map("matched_time_slots")
-  deadline             DateTime?
+  deadline             DateTime
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
   

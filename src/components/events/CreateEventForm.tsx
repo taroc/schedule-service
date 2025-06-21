@@ -28,13 +28,17 @@ export default function CreateEventForm({
       requiredParticipants: 1,
       requiredDays: 1, // 後方互換性のため保持
       requiredTimeSlots: 1, // 新しい時間帯単位数
-      deadline: undefined,
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1週間後,
       periodStart: tomorrow,
       periodEnd: twoWeeksLater
     };
   });
   
-  const [deadlineDate, setDeadlineDate] = useState('');
+  const [deadlineDate, setDeadlineDate] = useState(() => {
+    const oneWeekLater = new Date();
+    oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+    return oneWeekLater.toISOString().split('T')[0];
+  });
   const [periodStartDate, setPeriodStartDate] = useState(() => {
     const today = new Date();
     today.setDate(today.getDate() + 1); // 明日から
@@ -212,17 +216,17 @@ export default function CreateEventForm({
 
         <div className="mb-6">
           <label className="block text-gray-700 text-sm font-bold mb-2">
-            参加締切日
+            参加締切日 *
           </label>
           <input
             type="date"
             value={deadlineDate}
             onChange={handleDeadlineDateChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            placeholder="日付を選択"
+            required
           />
           <p className="text-gray-500 text-xs mt-1">
-            参加者の募集を締切る日（その日の23:59まで有効、設定しない場合は無期限）
+            参加者の募集を締切る日（その日の23:59まで有効）
           </p>
         </div>
 

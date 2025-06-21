@@ -10,7 +10,7 @@ export interface Event {
   status: EventStatus;
   participants: string[];        // 参加者ID配列
   matchedTimeSlots?: { date: Date; timeSlot: 'daytime' | 'evening' }[]; // 成立した時間帯
-  deadline?: Date;               // 参加締切
+  deadline: Date;                // 参加締切
   
   // 期間指定フィールド（必須）
   periodStart: Date;            // 期間開始
@@ -27,7 +27,7 @@ export interface CreateEventRequest {
   description: string;
   requiredParticipants: number;
   requiredTimeSlots: number;     // 必要コマ数
-  deadline?: Date;
+  deadline: Date;
   
   // 期間指定フィールド（必須）
   periodStart: Date;           // 期間開始
@@ -68,7 +68,7 @@ export interface EventResponse {
   status: EventStatus;
   participants: string[];
   matchedTimeSlots?: { date: string; timeSlot: 'daytime' | 'evening' }[]; // 成立した時間帯
-  deadline?: string | null;
+  deadline: string;
   periodStart: string;
   periodEnd: string;
   reservationStatus: ReservationStatus;

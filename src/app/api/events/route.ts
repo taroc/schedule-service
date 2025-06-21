@@ -38,16 +38,16 @@ export async function POST(request: NextRequest) {
     
     // バリデーション
     if (!eventRequest.name || !eventRequest.description || 
-        !eventRequest.requiredParticipants || !eventRequest.requiredDays) {
+        !eventRequest.requiredParticipants || !eventRequest.requiredTimeSlots || !eventRequest.deadline) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
       );
     }
 
-    if (eventRequest.requiredParticipants < 1 || eventRequest.requiredDays < 1) {
+    if (eventRequest.requiredParticipants < 1 || eventRequest.requiredTimeSlots < 1) {
       return NextResponse.json(
-        { error: 'Required participants and days must be greater than 0' },
+        { error: 'Required participants and time slots must be greater than 0' },
         { status: 400 }
       );
     }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       ...event,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
-      deadline: event.deadline ? event.deadline.toISOString() : null,
+      deadline: event.deadline.toISOString(),
       periodStart: event.periodStart.toISOString(),
       periodEnd: event.periodEnd.toISOString(),
       matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
       ...event,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
-      deadline: event.deadline ? event.deadline.toISOString() : null,
+      deadline: event.deadline.toISOString(),
       periodStart: event.periodStart.toISOString(),
       periodEnd: event.periodEnd.toISOString(),
       matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({

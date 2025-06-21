@@ -334,14 +334,7 @@ class EventStorageDB {
     const events = await prisma.event.findMany({
       where: {
         creatorId,
-        OR: [
-          { deadline: null },
-          { deadline: { gt: now } },
-          { 
-            deadline: { lt: now },
-            status: 'matched'
-          }
-        ]
+        deadline: { gt: now } // 締め切りが過ぎていないもののみ
       },
       include: {
         participants: {
@@ -376,10 +369,7 @@ class EventStorageDB {
         status: {
           not: 'matched'
         },
-        OR: [
-          { deadline: null },
-          { deadline: { gt: now } }
-        ]
+        deadline: { gt: now } // 締め切りが過ぎていないもののみ
       },
       include: {
         participants: {
@@ -429,7 +419,25 @@ class EventStorageDB {
       },
     });
 
-    return events.map(event => this.mapPrismaToEvent(event));
+    const now = new Date();
+    const filteredEvents = events
+      .map(event => this.mapPrismaToEvent(event))
+      .filter(event => {
+        // matchedTimeSlotsがない場合は除外
+        if (!event.matchedTimeSlots || event.matchedTimeSlots.length === 0) {
+          return false;
+        }
+        
+        // 確定日程の最後の日をチェック
+        const lastEventDate = event.matchedTimeSlots
+          .map(ts => new Date(ts.date))
+          .sort((a, b) => b.getTime() - a.getTime())[0];
+        
+        // 最後の日が過ぎていない場合のみ表示
+        return lastEventDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      });
+
+    return filteredEvents;
   }
 
   async getAvailableEventsForUser(userId: string): Promise<Event[]> {
@@ -440,10 +448,7 @@ class EventStorageDB {
         creatorId: {
           not: userId
         },
-        OR: [
-          { deadline: null },
-          { deadline: { gt: now } }
-        ],
+        deadline: { gt: now }, // 締め切りが過ぎていないもののみ
         NOT: {
           participants: {
             some: {
@@ -492,14 +497,7 @@ class EventStorageDB {
     return await prisma.event.count({
       where: {
         creatorId,
-        OR: [
-          { deadline: null },
-          { deadline: { gt: now } },
-          { 
-            deadline: { lt: now },
-            status: 'matched'
-          }
-        ]
+        deadline: { gt: now } // 締め切りが過ぎていないもののみ
       }
     });
   }
@@ -519,32 +517,15 @@ class EventStorageDB {
         status: {
           not: 'matched'
         },
-        OR: [
-          { deadline: null },
-          { deadline: { gt: now } }
-        ]
+        deadline: { gt: now } // 締め切りが過ぎていないもののみ
       }
     });
   }
 
   async getMatchedEventsCount(userId: string): Promise<number> {
-    const count = await prisma.event.count({
-      where: {
-        status: 'matched',
-        OR: [
-          { creatorId: userId },
-          {
-            participants: {
-              some: {
-                userId,
-              },
-            },
-          }
-        ]
-      }
-    });
-
-    return count;
+    // 実際のフィルタリングロジックを使用
+    const matchedEvents = await this.getMatchedEventsForUser(userId);
+    return matchedEvents.length;
   }
 
   async getAvailableEventsCount(userId: string): Promise<number> {
@@ -765,7 +746,7 @@ class EventStorageDB {
       creatorId: string;
       status: string;
       matchedTimeSlots?: string | null;
-      deadline: Date | null;
+      deadline: Date;
       createdAt: Date;
       updatedAt: Date;
       periodStart: Date | null;
@@ -789,7 +770,7 @@ class EventStorageDB {
           timeSlot: ts.timeSlot as 'daytime' | 'evening'
         })) : 
         undefined,
-      deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
+      deadline: new Date(prismaEvent.deadline),
       createdAt: new Date(prismaEvent.createdAt),
       updatedAt: new Date(prismaEvent.updatedAt),
       
@@ -810,7 +791,7 @@ class EventStorageDB {
       creatorId: string;
       status: string;
       matchedTimeSlots?: string | null;
-      deadline: Date | null;
+      deadline: Date;
       createdAt: Date;
       updatedAt: Date;
       periodStart: Date | null;
@@ -835,7 +816,7 @@ class EventStorageDB {
           timeSlot: ts.timeSlot as 'daytime' | 'evening'
         })) : 
         undefined,
-      deadline: prismaEvent.deadline ? new Date(prismaEvent.deadline) : undefined,
+      deadline: new Date(prismaEvent.deadline),
       createdAt: new Date(prismaEvent.createdAt),
       updatedAt: new Date(prismaEvent.updatedAt),
       

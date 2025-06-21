@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         ...event,
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
-        deadline: event.deadline ? event.deadline.toISOString() : null,
+        deadline: event.deadline.toISOString(),
         periodStart: event.periodStart.toISOString(),
         periodEnd: event.periodEnd.toISOString(),
         matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
