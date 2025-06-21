@@ -72,18 +72,9 @@ export default function MultiSelectCalendar({
         id: event.id,
         name: event.name,
         participantCount: event.participants.length,
-        isCreator: false // TODO: 現在のユーザーIDと比較する必要がある
+        isCreator: false
       }));
 
-      // 現在月の日付のみログ出力
-      if (current.getMonth() === month && (schedule || eventsOnThisDate.length > 0)) {
-        console.log(`Calendar day ${current.getDate()}:`, {
-          hasSchedule: !!schedule,
-          timeSlots: schedule?.timeSlots,
-          matchedEvents: eventsOnThisDate,
-          dateStr: dateStr
-        });
-      }
 
       days.push({
         date: new Date(current),
@@ -110,12 +101,6 @@ export default function MultiSelectCalendar({
   }, [currentDate, schedules, selectedDates, matchedEvents, onCalendarRangeChange]);
 
   useEffect(() => {
-    console.log('MultiSelectCalendar useEffect triggered with:', {
-      schedulesCount: schedules.length,
-      selectedDatesCount: selectedDates.length,
-      matchedEventsCount: matchedEvents.length,
-      currentMonth: currentDate.getMonth() + 1
-    });
     generateCalendarDays();
   }, [generateCalendarDays]);
 
