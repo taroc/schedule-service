@@ -351,7 +351,30 @@ class EventStorageDB {
       },
     });
 
-    return events.map(event => this.mapPrismaToEvent(event));
+    // 確定済みイベントは確定日程の最後の日もチェック
+    const filteredEvents = events
+      .map(event => this.mapPrismaToEvent(event))
+      .filter(event => {
+        // 確定済みイベントの場合は確定日程の最後の日をチェック
+        if (event.status === 'matched') {
+          if (!event.matchedTimeSlots || event.matchedTimeSlots.length === 0) {
+            return false;
+          }
+          
+          // 確定日程の最後の日をチェック
+          const lastEventDate = event.matchedTimeSlots
+            .map(ts => new Date(ts.date))
+            .sort((a, b) => b.getTime() - a.getTime())[0];
+          
+          // 最後の日が過ぎていない場合のみ表示
+          return lastEventDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        }
+        
+        // 確定前のイベントはすべて表示（締め切りチェックは既にクエリで実行済み）
+        return true;
+      });
+
+    return filteredEvents;
   }
 
   async getParticipatingEventsInRange(userId: string): Promise<Event[]> {
@@ -493,13 +516,9 @@ class EventStorageDB {
 
   // 件数のみ取得する軽量メソッド
   async getCreatedEventsCount(creatorId: string): Promise<number> {
-    const now = new Date();
-    return await prisma.event.count({
-      where: {
-        creatorId,
-        deadline: { gt: now } // 締め切りが過ぎていないもののみ
-      }
-    });
+    // 複雑なフィルタリングロジックがあるため、実際のイベントリストから件数を取得
+    const events = await this.getCreatedEventsInRange(creatorId);
+    return events.length;
   }
 
   async getParticipatingEventsCount(userId: string): Promise<number> {
