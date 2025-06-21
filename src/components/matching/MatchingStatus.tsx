@@ -106,7 +106,7 @@ export default function MatchingStatus() {
                     </svg>
                     <span className="font-semibold">参加者:</span>
                     <span className="font-medium">
-                      {event.creatorId} (主催者){event.participants.length > 0 && ', '}{event.participants.join(', ')}
+                      {event.creatorId} (主催者){event.participants.filter(p => p !== event.creatorId).length > 0 && ', '}{event.participants.filter(p => p !== event.creatorId).join(', ')}
                     </span>
                   </div>
                 </div>

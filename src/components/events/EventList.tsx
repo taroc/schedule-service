@@ -386,21 +386,23 @@ export default function EventList({
                 {event.creatorId === currentUserId && ' (あなた)'}
               </span>
               
-              {/* 参加者表示 */}
+              {/* 参加者表示（作成者を除く） */}
               {event.participants && event.participants.length > 0 && 
-                event.participants.map((participantId) => (
-                  <span 
-                    key={participantId}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      participantId === currentUserId 
-                        ? 'bg-green-200 text-green-800 font-semibold border-2 border-green-400' 
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {participantId}
-                    {participantId === currentUserId && ' (あなた)'}
-                  </span>
-                ))
+                event.participants
+                  .filter(participantId => participantId !== event.creatorId)
+                  .map((participantId) => (
+                    <span 
+                      key={participantId}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        participantId === currentUserId 
+                          ? 'bg-green-200 text-green-800 font-semibold border-2 border-green-400' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {participantId}
+                      {participantId === currentUserId && ' (あなた)'}
+                    </span>
+                  ))
               }
             </div>
           </div>
