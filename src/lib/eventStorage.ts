@@ -20,7 +20,6 @@ class EventStorageDB {
         name: request.name,
         description: request.description,
         requiredParticipants: request.requiredParticipants,
-        requiredDays: request.requiredDays || 0,
         requiredTimeSlots: request.requiredTimeSlots,
         creatorId,
         status: 'open',
@@ -558,24 +557,22 @@ class EventStorageDB {
   async updateEventStatus(
     eventId: string, 
     status: EventStatus, 
-    matchedDates?: Date[], 
     matchedTimeSlots?: MatchingTimeSlot[]
   ): Promise<boolean> {
     try {
-      const matchedDatesJson = matchedDates ? JSON.stringify(matchedDates) : null;
       const matchedTimeSlotsJson = matchedTimeSlots ? JSON.stringify(matchedTimeSlots) : null;
       
       await prisma.event.update({
         where: { id: eventId },
         data: {
           status,
-          matchedDates: matchedDatesJson,
           matchedTimeSlots: matchedTimeSlotsJson,
         },
       });
 
       return true;
-    } catch {
+    } catch (error) {
+      console.error(`Failed to update event ${eventId}:`, error);
       return false;
     }
   }
@@ -602,7 +599,6 @@ class EventStorageDB {
         name?: string;
         description?: string;
         requiredParticipants?: number;
-        requiredDays?: number;
         deadline?: Date | null;
         periodStart?: Date;
         periodEnd?: Date;
@@ -610,7 +606,6 @@ class EventStorageDB {
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.requiredParticipants !== undefined) updateData.requiredParticipants = updates.requiredParticipants;
-      if (updates.requiredDays !== undefined) updateData.requiredDays = updates.requiredDays;
       if (updates.deadline !== undefined) updateData.deadline = updates.deadline;
       
       // 期間指定フィールド
@@ -686,7 +681,7 @@ class EventStorageDB {
       },
       data: {
         status: 'expired',
-        matchedDates: null,
+        matchedTimeSlots: null,
       },
     });
 
@@ -733,7 +728,7 @@ class EventStorageDB {
       }
 
       // 必要日数分の空きがあるかチェック
-      return availableDates.length >= event.requiredDays;
+      return availableDates.length >= event.requiredTimeSlots;
     } catch {
       return false;
     }
@@ -768,11 +763,9 @@ class EventStorageDB {
       name: string;
       description: string;
       requiredParticipants: number;
-      requiredDays: number;
       requiredTimeSlots?: number | null;
       creatorId: string;
       status: string;
-      matchedDates: string | null;
       matchedTimeSlots?: string | null;
       deadline: Date | null;
       createdAt: Date;
@@ -788,14 +781,10 @@ class EventStorageDB {
       name: prismaEvent.name,
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
-      requiredDays: prismaEvent.requiredDays,
-      requiredTimeSlots: prismaEvent.requiredTimeSlots ?? prismaEvent.requiredDays,
+      requiredTimeSlots: prismaEvent.requiredTimeSlots,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
-      matchedDates: prismaEvent.matchedDates ? 
-        JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
-        undefined,
       matchedTimeSlots: prismaEvent.matchedTimeSlots ? 
         JSON.parse(prismaEvent.matchedTimeSlots).map((ts: { date: string; timeSlot: string }) => ({
           date: new Date(ts.date),
@@ -819,11 +808,9 @@ class EventStorageDB {
       name: string;
       description: string;
       requiredParticipants: number;
-      requiredDays: number;
       requiredTimeSlots?: number | null;
       creatorId: string;
       status: string;
-      matchedDates: string | null;
       matchedTimeSlots?: string | null;
       deadline: Date | null;
       createdAt: Date;
@@ -840,14 +827,10 @@ class EventStorageDB {
       name: prismaEvent.name,
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
-      requiredDays: prismaEvent.requiredDays,
-      requiredTimeSlots: prismaEvent.requiredTimeSlots ?? prismaEvent.requiredDays,
+      requiredTimeSlots: prismaEvent.requiredTimeSlots,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
-      matchedDates: prismaEvent.matchedDates ? 
-        JSON.parse(prismaEvent.matchedDates).map((d: string) => new Date(d)) : 
-        undefined,
       matchedTimeSlots: prismaEvent.matchedTimeSlots ? 
         JSON.parse(prismaEvent.matchedTimeSlots).map((ts: { date: string; timeSlot: string }) => ({
           date: new Date(ts.date),

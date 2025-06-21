@@ -92,10 +92,13 @@ async function seedTestData() {
         description: 'プロジェクト完了を祝って懇親会を開催します！',
         creatorId: 'alice',
         requiredParticipants: 2,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'matched',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
-        matchedDates: JSON.stringify([new Date(2024, 11, 20)]), // 2024年12月20日
+        matchedTimeSlots: JSON.stringify([
+          { date: new Date(2024, 11, 20), timeSlot: 'daytime' },
+          { date: new Date(2024, 11, 21), timeSlot: 'evening' }
+        ]),
         periodStart: new Date(2024, 11, 15), // 2024年12月15日
         periodEnd: new Date(2024, 11, 25), // 2024年12月25日
       },
@@ -118,7 +121,7 @@ async function seedTestData() {
         description: 'みんなで楽しく年末を締めくくりましょう！',
         creatorId: 'alice',
         requiredParticipants: 3,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'open',
         deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14日後
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後から
@@ -139,10 +142,13 @@ async function seedTestData() {
         description: '最新の技術トレンドについて学習しましょう',
         creatorId: 'bob',
         requiredParticipants: 2,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'matched',
         deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後
-        matchedDates: JSON.stringify([new Date(2024, 11, 22)]), // 2024年12月22日
+        matchedTimeSlots: JSON.stringify([
+          { date: new Date(2024, 11, 22), timeSlot: 'daytime' },
+          { date: new Date(2024, 11, 23), timeSlot: 'evening' }
+        ]),
         periodStart: new Date(2024, 11, 20), // 2024年12月20日
         periodEnd: new Date(2024, 11, 25), // 2024年12月25日
       },
@@ -165,7 +171,7 @@ async function seedTestData() {
         description: '48時間でアプリを作成するイベントです',
         creatorId: 'bob',
         requiredParticipants: 4,
-        requiredDays: 2,
+        requiredTimeSlots: 4,
         status: 'open',
         deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後
         periodStart: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後から
@@ -186,7 +192,7 @@ async function seedTestData() {
         description: '美味しいレストランでランチしませんか？',
         creatorId: 'charlie',
         requiredParticipants: 2,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'open',
         deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後
         periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から
@@ -202,10 +208,13 @@ async function seedTestData() {
         description: '様々なボードゲームを楽しみましょう！',
         creatorId: 'diana',
         requiredParticipants: 3,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'matched',
         deadline: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // 12日後
-        matchedDates: JSON.stringify([new Date(2024, 11, 25)]), // 2024年12月25日
+        matchedTimeSlots: JSON.stringify([
+          { date: new Date(2024, 11, 25), timeSlot: 'daytime' },
+          { date: new Date(2024, 11, 26), timeSlot: 'evening' }
+        ]),
         periodStart: new Date(2024, 11, 20), // 2024年12月20日
         periodEnd: new Date(2024, 11, 30), // 2024年12月30日
       },
@@ -232,10 +241,13 @@ async function seedTestData() {
         description: 'みんなで楽しくカラオケしましょう！',
         creatorId: 'taro',
         requiredParticipants: 2,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'matched',
         deadline: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // 6日後
-        matchedDates: JSON.stringify([new Date(2024, 11, 23)]), // 2024年12月23日
+        matchedTimeSlots: JSON.stringify([
+          { date: new Date(2024, 11, 23), timeSlot: 'evening' },
+          { date: new Date(2024, 11, 24), timeSlot: 'daytime' }
+        ]),
         periodStart: new Date(2024, 11, 20), // 2024年12月20日
         periodEnd: new Date(2024, 11, 25), // 2024年12月25日
       },
@@ -259,10 +271,13 @@ async function seedTestData() {
         description: 'サッカーの試合を一緒に見に行きませんか？',
         creatorId: 'alice',
         requiredParticipants: 3,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'matched',
         deadline: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), // 9日後
-        matchedDates: JSON.stringify([new Date(2024, 11, 28)]), // 2024年12月28日
+        matchedTimeSlots: JSON.stringify([
+          { date: new Date(2024, 11, 28), timeSlot: 'daytime' },
+          { date: new Date(2024, 11, 29), timeSlot: 'evening' }
+        ]),
         periodStart: new Date(2024, 11, 25), // 2024年12月25日
         periodEnd: new Date(2024, 11, 30), // 2024年12月30日
       },
@@ -289,7 +304,7 @@ async function seedTestData() {
         description: '最新作を一緒に見に行きませんか？',
         creatorId: 'charlie',
         requiredParticipants: 2,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'open',
         deadline: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 8日後
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
@@ -310,7 +325,7 @@ async function seedTestData() {
         description: '公園でゆったりと過ごしませんか？お弁当とレジャーシートを持参してください。',
         creatorId: 'diana',
         requiredParticipants: 3,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'open',
         periodStart: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後から
         periodEnd: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後まで
@@ -325,7 +340,7 @@ async function seedTestData() {
         description: 'プロのシェフから本格的なイタリア料理を学びましょう！初心者歓迎です。',
         creatorId: 'bob',
         requiredParticipants: 4,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'open',
         deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後（緊急）
         periodStart: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2日後から
@@ -345,7 +360,7 @@ async function seedTestData() {
         description: '現代美術の展示を見に行きませんか？芸術について語り合いましょう。',
         creatorId: 'alice',
         requiredParticipants: 2,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'open',
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
         periodEnd: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
@@ -360,7 +375,7 @@ async function seedTestData() {
         description: '2泊3日の自然を満喫するキャンプです。テントや寝袋の準備をお忘れなく！',
         creatorId: 'charlie',
         requiredParticipants: 5,
-        requiredDays: 3,
+        requiredTimeSlots: 6,
         status: 'open',
         deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日後
         periodStart: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // 20日後から
@@ -385,7 +400,7 @@ async function seedTestData() {
         description: '話題のカフェを一緒に回りませんか？コーヒーの飲み比べも楽しめます。',
         creatorId: 'diana',
         requiredParticipants: 2,
-        requiredDays: 1,
+        requiredTimeSlots: 2,
         status: 'open',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
         periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から

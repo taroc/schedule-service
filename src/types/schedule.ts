@@ -51,7 +51,6 @@ export interface MatchedEvent {
   description: string;
   status: 'matched';
   participants: string[];
-  matchedDates?: Date[]; // 後方互換性のため保持
   matchedTimeSlots?: MatchingTimeSlot[]; // 時間帯形式
   creatorId: string;
   createdAt: Date;
@@ -60,7 +59,6 @@ export interface MatchedEvent {
   periodStart: Date;
   periodEnd: Date;
   requiredParticipants: number;
-  requiredDays: number; // 後方互換性のため保持
   requiredTimeSlots: number; // 必要コマ数
   reservationStatus: string;
 }

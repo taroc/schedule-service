@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
       message: 'Global matching completed',
       results: results.map(result => ({
         ...result,
-        matchedDates: result.matchedDates.map(date => date.toISOString())
+        matchedTimeSlots: result.matchedTimeSlots.map(ts => ({
+          date: ts.date.toISOString(),
+          timeSlot: ts.timeSlot
+        }))
       }))
     });
 

@@ -24,7 +24,12 @@ export async function GET(
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
       deadline: event.deadline ? event.deadline.toISOString() : undefined,
-      matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
+      periodStart: event.periodStart.toISOString(),
+      periodEnd: event.periodEnd.toISOString(),
+      matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
+        date: ts.date.toISOString(),
+        timeSlot: ts.timeSlot
+      })) : undefined
     };
     
     return NextResponse.json(eventResponse);
@@ -128,7 +133,12 @@ export async function PUT(
       createdAt: updatedEvent.createdAt.toISOString(),
       updatedAt: updatedEvent.updatedAt.toISOString(),
       deadline: updatedEvent.deadline ? updatedEvent.deadline.toISOString() : undefined,
-      matchedDates: updatedEvent.matchedDates ? updatedEvent.matchedDates.map(d => d.toISOString()) : undefined
+      periodStart: updatedEvent.periodStart.toISOString(),
+      periodEnd: updatedEvent.periodEnd.toISOString(),
+      matchedTimeSlots: updatedEvent.matchedTimeSlots ? updatedEvent.matchedTimeSlots.map(ts => ({
+        date: ts.date.toISOString(),
+        timeSlot: ts.timeSlot
+      })) : undefined
     };
     
     return NextResponse.json(eventResponse);

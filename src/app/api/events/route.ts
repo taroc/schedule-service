@@ -97,7 +97,10 @@ export async function POST(request: NextRequest) {
       deadline: event.deadline ? event.deadline.toISOString() : null,
       periodStart: event.periodStart.toISOString(),
       periodEnd: event.periodEnd.toISOString(),
-      matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
+      matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
+        date: ts.date.toISOString(),
+        timeSlot: ts.timeSlot
+      })) : undefined
     };
     
     return NextResponse.json(eventResponse);
@@ -139,7 +142,10 @@ export async function GET(request: NextRequest) {
       deadline: event.deadline ? event.deadline.toISOString() : null,
       periodStart: event.periodStart.toISOString(),
       periodEnd: event.periodEnd.toISOString(),
-      matchedDates: event.matchedDates ? event.matchedDates.map(d => d.toISOString()) : undefined
+      matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
+        date: ts.date.toISOString(),
+        timeSlot: ts.timeSlot
+      })) : undefined
     }));
     
     

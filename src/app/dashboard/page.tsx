@@ -116,7 +116,6 @@ function DashboardContent() {
           deadline: event.deadline ? new Date(event.deadline) : undefined,
           periodStart: new Date(event.periodStart),
           periodEnd: new Date(event.periodEnd),
-          matchedDates: event.matchedDates ? event.matchedDates.map(d => new Date(d)) : undefined,
           matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
             date: new Date(ts.date),
             timeSlot: ts.timeSlot
@@ -185,7 +184,6 @@ function DashboardContent() {
           deadline: event.deadline ? new Date(event.deadline) : undefined,
           periodStart: new Date(event.periodStart),
           periodEnd: new Date(event.periodEnd),
-          matchedDates: event.matchedDates ? event.matchedDates.map(d => new Date(d)) : undefined,
           matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
             date: new Date(ts.date),
             timeSlot: ts.timeSlot
