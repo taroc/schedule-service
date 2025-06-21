@@ -24,6 +24,15 @@ describe('matchingEngine', () => {
       await eventStorage.deleteEvent(event.id);
     }
 
+    // 既存スケジュールをクリーンアップ（前のテストの影響を避ける）
+    try {
+      await scheduleStorage.deleteAllUserSchedules(mockUser1);
+      await scheduleStorage.deleteAllUserSchedules(mockUser2);
+      await scheduleStorage.deleteAllUserSchedules(mockCreator);
+    } catch (error) {
+      // ユーザーがまだ存在しない場合は無視
+    }
+
     // テストユーザーを作成
     await userStorage.createUser({
       userId: mockUser1,
