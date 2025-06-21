@@ -578,7 +578,7 @@ class EventStorageDB {
         name?: string;
         description?: string;
         requiredParticipants?: number;
-        deadline?: Date | null;
+        deadline?: Date;
         periodStart?: Date;
         periodEnd?: Date;
       } = {};
@@ -760,7 +760,7 @@ class EventStorageDB {
       name: prismaEvent.name,
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
-      requiredTimeSlots: prismaEvent.requiredTimeSlots,
+      requiredTimeSlots: prismaEvent.requiredTimeSlots || 1,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
@@ -806,7 +806,7 @@ class EventStorageDB {
       name: prismaEvent.name,
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
-      requiredTimeSlots: prismaEvent.requiredTimeSlots,
+      requiredTimeSlots: prismaEvent.requiredTimeSlots || 1,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],

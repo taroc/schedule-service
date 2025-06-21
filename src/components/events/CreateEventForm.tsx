@@ -26,8 +26,7 @@ export default function CreateEventForm({
       name: '',
       description: '',
       requiredParticipants: 1,
-      requiredDays: 1, // 後方互換性のため保持
-      requiredTimeSlots: 1, // 新しい時間帯単位数
+      requiredTimeSlots: 1, // 時間帯単位数
       deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1週間後,
       periodStart: tomorrow,
       periodEnd: twoWeeksLater
@@ -55,8 +54,6 @@ export default function CreateEventForm({
     if (deadlineDate) {
       const deadline = new Date(`${deadlineDate}T23:59:59`);
       setFormData(prev => ({ ...prev, deadline }));
-    } else {
-      setFormData(prev => ({ ...prev, deadline: undefined }));
     }
   }, [deadlineDate]);
 

@@ -113,7 +113,7 @@ function DashboardContent() {
           ...event,
           createdAt: new Date(event.createdAt),
           updatedAt: new Date(event.updatedAt),
-          deadline: event.deadline ? new Date(event.deadline) : undefined,
+          deadline: new Date(event.deadline),
           periodStart: new Date(event.periodStart),
           periodEnd: new Date(event.periodEnd),
           matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
@@ -181,7 +181,7 @@ function DashboardContent() {
           ...event,
           createdAt: new Date(event.createdAt),
           updatedAt: new Date(event.updatedAt),
-          deadline: event.deadline ? new Date(event.deadline) : undefined,
+          deadline: new Date(event.deadline),
           periodStart: new Date(event.periodStart),
           periodEnd: new Date(event.periodEnd),
           matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({

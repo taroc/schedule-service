@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // バッチ処理でスケジュール登録と自動マッチングを並列実行
-    const [, matchingResults] = await Promise.all([
+    await Promise.all([
       scheduleStorage.setAvailability(userId, dates, timeSlots),
       matchingEngine.onScheduleUpdated(userId)
     ]);
@@ -67,7 +67,7 @@ export async function DELETE(request: NextRequest) {
     const datesToDelete = dates.map(dateStr => new Date(dateStr));
 
     // バッチ処理でスケジュール削除と自動マッチングを並列実行
-    const [, matchingResults] = await Promise.all([
+    await Promise.all([
       dates.length === 0 
         ? scheduleStorage.deleteAllUserSchedules(userId)
         : scheduleStorage.deleteSchedules(userId, datesToDelete),

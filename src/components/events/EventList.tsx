@@ -283,8 +283,8 @@ export default function EventList({
               {/* その他の情報 */}
               <div className="flex items-center gap-6 flex-wrap text-sm text-gray-600">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">必要日数:</span>
-                  <span className="font-semibold">{event.requiredDays}日</span>
+                  <span className="font-medium">必要コマ数:</span>
+                  <span className="font-semibold">{event.requiredTimeSlots}コマ</span>
                 </div>
                 {event.deadline && (
                   <div className="flex items-center gap-2">
@@ -324,8 +324,8 @@ export default function EventList({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">必要日数:</span>
-                  <span className="text-base font-bold text-blue-600">{event.requiredDays}日</span>
+                  <span className="text-base font-semibold text-gray-700">必要コマ数:</span>
+                  <span className="text-base font-bold text-blue-600">{event.requiredTimeSlots}コマ</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold text-gray-700">募集人数:</span>

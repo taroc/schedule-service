@@ -65,8 +65,8 @@ export default function MultiSelectCalendar({
       
       // この日付に成立したイベントがあるかチェック
       const eventsOnThisDate = matchedEvents.filter(event => 
-        event.matchedDates?.some((eventDate: Date) => 
-          eventDate.toDateString() === dateStr
+        event.matchedTimeSlots?.some((timeSlot) => 
+          timeSlot.date.toDateString() === dateStr
         )
       ).map(event => ({
         id: event.id,

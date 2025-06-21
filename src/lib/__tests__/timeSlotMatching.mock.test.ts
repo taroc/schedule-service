@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { matchingEngine } from '../matchingEngine';
 import { eventStorage } from '../eventStorage';
 import { scheduleStorage } from '../scheduleStorage';
-import { CreateEventRequest, Event } from '@/types/event';
-import { TimeSlot, MatchingTimeSlot } from '@/types/schedule';
+import { Event } from '@/types/event';
+import { TimeSlot } from '@/types/schedule';
 
 // Mock the storage modules
 vi.mock('../eventStorage');
@@ -28,6 +28,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
         creatorId: 'creator-1',
         status: 'open',
         participants: ['creator-1'],
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -55,6 +56,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
         creatorId: 'creator-1',
         status: 'open',
         participants: ['creator-1', 'user-1', 'user-2'],
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -94,6 +96,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
         creatorId: 'creator-1',
         status: 'open',
         participants: ['creator-1', 'user-1', 'user-2'],
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -143,6 +146,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
         creatorId: 'creator-1',
         status: 'open',
         participants: ['creator-1', 'user-1', 'user-2'],
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -238,6 +242,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
         creatorId: 'creator-1',
         status: 'open',
         participants: ['creator-1'], // Only 1 participant, need 3
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
