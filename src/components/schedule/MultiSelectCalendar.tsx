@@ -30,6 +30,7 @@ export default function MultiSelectCalendar({
 }: MultiSelectCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<ScheduleCalendarDay[]>([]);
+  const lastRangeRef = React.useRef<string>('');
 
   const monthNames = [
     '1月', '2月', '3月', '4月', '5月', '6月',
@@ -38,24 +39,7 @@ export default function MultiSelectCalendar({
 
   const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
 
-  useEffect(() => {
-    console.log('MultiSelectCalendar useEffect triggered with:', {
-      schedulesCount: schedules.length,
-      selectedDatesCount: selectedDates.length,
-      matchedEventsCount: matchedEvents.length,
-      currentMonth: currentDate.getMonth() + 1
-    });
-    generateCalendarDays();
-  }, [currentDate, schedules, selectedDates, matchedEvents]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 初期表示時とcurrentDate変更時にコールバックを呼ぶ
-  useEffect(() => {
-    if (onCurrentDateChange) {
-      onCurrentDateChange(currentDate);
-    }
-  }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const generateCalendarDays = () => {
+  const generateCalendarDays = React.useCallback(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
@@ -114,11 +98,33 @@ export default function MultiSelectCalendar({
 
     setCalendarDays(days);
     
-    // カレンダー範囲を通知
+    // カレンダー範囲を通知（初回のみまたは範囲が変わった場合のみ）
     if (onCalendarRangeChange) {
-      onCalendarRangeChange(startDate, endDate);
+      const rangeKey = `${startDate.getTime()}-${endDate.getTime()}`;
+      
+      if (lastRangeRef.current !== rangeKey) {
+        lastRangeRef.current = rangeKey;
+        onCalendarRangeChange(startDate, endDate);
+      }
     }
-  };
+  }, [currentDate, schedules, selectedDates, matchedEvents, onCalendarRangeChange]);
+
+  useEffect(() => {
+    console.log('MultiSelectCalendar useEffect triggered with:', {
+      schedulesCount: schedules.length,
+      selectedDatesCount: selectedDates.length,
+      matchedEventsCount: matchedEvents.length,
+      currentMonth: currentDate.getMonth() + 1
+    });
+    generateCalendarDays();
+  }, [generateCalendarDays]);
+
+  // 初期表示時とcurrentDate変更時にコールバックを呼ぶ
+  useEffect(() => {
+    if (onCurrentDateChange) {
+      onCurrentDateChange(currentDate);
+    }
+  }, [currentDate, onCurrentDateChange]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);

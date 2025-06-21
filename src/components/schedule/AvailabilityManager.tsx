@@ -160,8 +160,18 @@ export default function AvailabilityManager() {
   }, []);
 
   const handleCalendarRangeChange = React.useCallback((startDate: Date, endDate: Date) => {
-    setCalendarStartDate(startDate);
-    setCalendarEndDate(endDate);
+    setCalendarStartDate(prev => {
+      if (prev.getTime() !== startDate.getTime()) {
+        return startDate;
+      }
+      return prev;
+    });
+    setCalendarEndDate(prev => {
+      if (prev.getTime() !== endDate.getTime()) {
+        return endDate;
+      }
+      return prev;
+    });
   }, []);
 
   // 曜日選択やカレンダー範囲が変更された時に日付を更新
