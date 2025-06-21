@@ -49,12 +49,16 @@ class ScheduleStorage {
     startDate: Date,
     endDate: Date
   ): Promise<UserSchedule[]> {
+    // 日付範囲を日付のみ（時刻は00:00:00と23:59:59）に調整
+    const adjustedStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const adjustedEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
+    
     const schedules = await prisma.userSchedule.findMany({
       where: {
         userId,
         date: {
-          gte: startDate,
-          lte: endDate
+          gte: adjustedStartDate,
+          lte: adjustedEndDate
         }
       },
       orderBy: { date: 'asc' }

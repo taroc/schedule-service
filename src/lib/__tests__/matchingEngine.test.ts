@@ -196,26 +196,26 @@ describe('matchingEngine', () => {
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
       
-      // 共通空き日程を設定
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // 共通空き日程を設定（periodStartと同じ日付を使用）
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000); // periodStartと同じ
+      const dateStr = tomorrow.toISOString().split('T')[0];
       
       // 作成者のスケジュールも設定
       await scheduleStorage.setAvailability(
         mockCreator,
-        [tomorrow.toISOString().split('T')[0]],
+        [dateStr],
         { daytime: true, evening: true }
       );
 
       await scheduleStorage.setAvailability(
         mockUser1,
-        [tomorrow.toISOString().split('T')[0]],
+        [dateStr],
         { daytime: true, evening: true }
       );
 
       await scheduleStorage.setAvailability(
         mockUser2,
-        [tomorrow.toISOString().split('T')[0]],
+        [dateStr],
         { daytime: true, evening: true }
       );
 
