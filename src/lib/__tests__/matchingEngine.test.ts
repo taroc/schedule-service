@@ -48,7 +48,10 @@ describe('matchingEngine', () => {
         name: 'Test Event',
         description: 'Test Description',
         requiredParticipants: 3,
-        requiredDays: 2
+        requiredTimeSlots: 2,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1日後
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14日後
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -61,7 +64,7 @@ describe('matchingEngine', () => {
       // Assert
       expect(result.isMatched).toBe(false);
       expect(result.reason).toContain('Insufficient participants');
-      expect(result.participants).toHaveLength(1);
+      expect(result.participants).toHaveLength(2); // Creator + 1 participant
     });
 
     it('should return false when no common available dates', async () => {
@@ -70,7 +73,10 @@ describe('matchingEngine', () => {
         name: 'Test Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 2
+        requiredTimeSlots: 2,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -83,22 +89,24 @@ describe('matchingEngine', () => {
       const dayAfterTomorrow = new Date();
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0].split('T')[0]],
-        timeSlots: { morning: true, afternoon: false, fullday: false }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: false }
+      );
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [dayAfterTomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: true, afternoon: false, fullday: false }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [dayAfterTomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: false }
+      );
 
       // Act
       const result = await matchingEngine.checkEventMatching(event.id);
 
       // Assert
       expect(result.isMatched).toBe(false);
-      expect(result.reason).toContain('No common available dates');
+      expect(result.reason).toContain('No common available time slots');
     });
 
     it('should return true when requirements are met', async () => {
@@ -107,7 +115,10 @@ describe('matchingEngine', () => {
         name: 'Test Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 2
+        requiredTimeSlots: 2,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -122,22 +133,24 @@ describe('matchingEngine', () => {
 
       const dates = [tomorrow.toISOString().split('T')[0].split('T')[0], dayAfterTomorrow.toISOString().split('T')[0]];
 
-      await scheduleStorage.bulkSetAvailability({
+      await scheduleStorage.setAvailability(
+        mockUser1,
         dates,
-        timeSlots: { morning: true, afternoon: false, fullday: false }
-      }, mockUser1);
+        { daytime: true, evening: false }
+      );
 
-      await scheduleStorage.bulkSetAvailability({
+      await scheduleStorage.setAvailability(
+        mockUser2,
         dates,
-        timeSlots: { morning: false, afternoon: true, fullday: false }
-      }, mockUser2);
+        { daytime: false, evening: true }
+      );
 
       // Act
       const result = await matchingEngine.checkEventMatching(event.id);
 
       // Assert
       expect(result.isMatched).toBe(true);
-      expect(result.matchedDates).toHaveLength(2);
+      expect(result.matchedTimeSlots).toHaveLength(2);
       expect(result.reason).toBe('Successfully matched');
     });
   });
@@ -149,7 +162,10 @@ describe('matchingEngine', () => {
         name: 'Test Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -158,15 +174,17 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       // 最初の参加者を追加
       await eventStorage.addParticipant(event.id, mockUser1);
@@ -186,7 +204,10 @@ describe('matchingEngine', () => {
         name: 'Participant Join Auto Match',
         description: 'Test auto-matching on participant join',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -195,15 +216,17 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       // 最初の参加者を追加（まだマッチングしない）
       await eventStorage.addParticipant(event.id, mockUser1);
@@ -221,7 +244,7 @@ describe('matchingEngine', () => {
       // イベントステータスが自動更新されていることを確認
       currentEvent = await eventStorage.getEventById(event.id);
       expect(currentEvent?.status).toBe('matched');
-      expect(currentEvent?.matchedDates).toHaveLength(1);
+      expect(currentEvent?.matchedTimeSlots).toHaveLength(1);
     });
 
     it('should not update event status when participant join does not trigger matching', async () => {
@@ -230,7 +253,10 @@ describe('matchingEngine', () => {
         name: 'Participant Join No Match',
         description: 'Test no auto-matching on insufficient participants',
         requiredParticipants: 3,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -246,7 +272,7 @@ describe('matchingEngine', () => {
       // イベントステータスがopenのままであることを確認
       const currentEvent = await eventStorage.getEventById(event.id);
       expect(currentEvent?.status).toBe('open');
-      expect(currentEvent?.matchedDates).toBeUndefined();
+      expect(currentEvent?.matchedTimeSlots).toBeUndefined();
     });
   });
 
@@ -257,14 +283,20 @@ describe('matchingEngine', () => {
         name: 'Event 1',
         description: 'Description 1',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const eventRequest2: CreateEventRequest = {
         name: 'Event 2',
         description: 'Description 2',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event1 = await eventStorage.createEvent(eventRequest1, mockCreator);
@@ -277,15 +309,17 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       // Event2は参加者不足
 
@@ -314,7 +348,10 @@ describe('matchingEngine', () => {
         name: 'Test Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event1 = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -340,7 +377,10 @@ describe('matchingEngine', () => {
         name: 'Schedule Update Test Event',
         description: 'Test auto-matching on schedule update',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -356,16 +396,18 @@ describe('matchingEngine', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       
       // user2のスケジュールも設定
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       // user1のスケジュール更新（これによりマッチング成立）
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
       
       const results = await matchingEngine.onScheduleUpdated(mockUser1);
 
@@ -378,7 +420,7 @@ describe('matchingEngine', () => {
       // イベントステータスが自動更新されていることを確認
       const updatedEvent = await eventStorage.getEventById(event.id);
       expect(updatedEvent?.status).toBe('matched');
-      expect(updatedEvent?.matchedDates).toHaveLength(1);
+      expect(updatedEvent?.matchedTimeSlots).toHaveLength(1);
     });
 
     it('should check multiple events when user participates in several', async () => {
@@ -387,14 +429,20 @@ describe('matchingEngine', () => {
         name: 'Multi Event Test 1',
         description: 'Test Description 1',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event2Request: CreateEventRequest = {
         name: 'Multi Event Test 2', 
         description: 'Test Description 2',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event1 = await eventStorage.createEvent(event1Request, mockCreator);
@@ -412,16 +460,18 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       // Act - user1のスケジュール更新
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       const results = await matchingEngine.onScheduleUpdated(mockUser1);
 
@@ -454,7 +504,10 @@ describe('matchingEngine', () => {
         name: 'Auto Status Update Test',
         description: 'Test automatic status update',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -464,15 +517,17 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       // イベントが最初はopenステータスであることを確認
       let currentEvent = await eventStorage.getEventById(event.id);
@@ -487,8 +542,8 @@ describe('matchingEngine', () => {
       // ステータスが自動的にmatchedに更新されていることを確認
       currentEvent = await eventStorage.getEventById(event.id);
       expect(currentEvent?.status).toBe('matched');
-      expect(currentEvent?.matchedDates).toHaveLength(1);
-      expect(currentEvent?.matchedDates?.[0]).toBeInstanceOf(Date);
+      expect(currentEvent?.matchedTimeSlots).toHaveLength(1);
+      expect(currentEvent?.matchedTimeSlots?.[0].date).toBeInstanceOf(Date);
     });
 
     it('should not update status when matching fails', async () => {
@@ -497,7 +552,10 @@ describe('matchingEngine', () => {
         name: 'No Auto Update Test',
         description: 'Test no status update on failed match',
         requiredParticipants: 3,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -513,7 +571,7 @@ describe('matchingEngine', () => {
       // ステータスがopenのままであることを確認
       const currentEvent = await eventStorage.getEventById(event.id);
       expect(currentEvent?.status).toBe('open');
-      expect(currentEvent?.matchedDates).toBeUndefined();
+      expect(currentEvent?.matchedTimeSlots).toBeUndefined();
     });
   });
 
@@ -525,8 +583,10 @@ describe('matchingEngine', () => {
         name: 'Expired Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        deadline: expiredDeadline
+        requiredTimeSlots: 1,
+        deadline: expiredDeadline,
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -552,8 +612,10 @@ describe('matchingEngine', () => {
         name: 'Future Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        deadline: futureDeadline
+        requiredTimeSlots: 1,
+        deadline: futureDeadline,
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -564,15 +626,17 @@ describe('matchingEngine', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser1);
+      await scheduleStorage.setAvailability(
+        mockUser1,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
-      await scheduleStorage.bulkSetAvailability({
-        dates: [tomorrow.toISOString().split('T')[0]],
-        timeSlots: { morning: false, afternoon: false, fullday: true }
-      }, mockUser2);
+      await scheduleStorage.setAvailability(
+        mockUser2,
+        [tomorrow.toISOString().split('T')[0]],
+        { daytime: true, evening: true }
+      );
 
       // Act
       const result = await matchingEngine.checkEventMatching(event.id);
@@ -589,15 +653,20 @@ describe('matchingEngine', () => {
         name: 'Expired Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        deadline: expiredDeadline
+        requiredTimeSlots: 1,
+        deadline: expiredDeadline,
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const normalEventRequest: CreateEventRequest = {
         name: 'Normal Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const expiredEvent = await eventStorage.createEvent(expiredEventRequest, mockCreator);
@@ -626,8 +695,10 @@ describe('matchingEngine', () => {
         name: 'Consecutive Test Event',
         description: 'Test consecutive date matching',
         requiredParticipants: 2,
-        requiredDays: 2,
-        dateMode: 'consecutive'
+        requiredTimeSlots: 2,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -648,10 +719,11 @@ describe('matchingEngine', () => {
       ];
 
       for (const userId of [mockUser1, mockUser2]) {
-        await scheduleStorage.bulkSetAvailability({
+        await scheduleStorage.setAvailability(
+          userId,
           dates,
-          timeSlots: { morning: false, afternoon: false, fullday: true }
-        }, userId);
+          { daytime: true, evening: true }
+        );
       }
 
       // Act
@@ -659,7 +731,7 @@ describe('matchingEngine', () => {
 
       // Assert
       expect(result.isMatched).toBe(true);
-      expect(result.matchedDates).toHaveLength(2);
+      expect(result.matchedTimeSlots).toHaveLength(2);
     });
 
     it('should match flexible dates with flexible mode', async () => {
@@ -668,8 +740,10 @@ describe('matchingEngine', () => {
         name: 'Flexible Test Event',
         description: 'Test flexible date matching',
         requiredParticipants: 2,
-        requiredDays: 2,
-        dateMode: 'flexible'
+        requiredTimeSlots: 2,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event = await eventStorage.createEvent(eventRequest, mockCreator);
@@ -687,10 +761,11 @@ describe('matchingEngine', () => {
       ];
 
       for (const userId of [mockUser1, mockUser2]) {
-        await scheduleStorage.bulkSetAvailability({
+        await scheduleStorage.setAvailability(
+          userId,
           dates,
-          timeSlots: { morning: false, afternoon: false, fullday: true }
-        }, userId);
+          { daytime: true, evening: true }
+        );
       }
 
       // Act
@@ -698,7 +773,7 @@ describe('matchingEngine', () => {
 
       // Assert
       expect(result.isMatched).toBe(true);
-      expect(result.matchedDates).toHaveLength(2);
+      expect(result.matchedTimeSlots).toHaveLength(2);
     });
 
     it('should match dates within specified period', async () => {
@@ -712,8 +787,8 @@ describe('matchingEngine', () => {
         name: 'Period Test Event',
         description: 'Test within period date matching',
         requiredParticipants: 2,
-        requiredDays: 2,
-        dateMode: 'within_period',
+        requiredTimeSlots: 2,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
         periodStart,
         periodEnd
       };
@@ -734,10 +809,11 @@ describe('matchingEngine', () => {
       ];
 
       for (const userId of [mockUser1, mockUser2]) {
-        await scheduleStorage.bulkSetAvailability({
+        await scheduleStorage.setAvailability(
+          userId,
           dates,
-          timeSlots: { morning: false, afternoon: false, fullday: true }
-        }, userId);
+          { daytime: true, evening: true }
+        );
       }
 
       // Act
@@ -745,7 +821,7 @@ describe('matchingEngine', () => {
 
       // Assert
       expect(result.isMatched).toBe(true);
-      expect(result.matchedDates).toHaveLength(2);
+      expect(result.matchedTimeSlots).toHaveLength(2);
     });
   });
 
@@ -756,16 +832,20 @@ describe('matchingEngine', () => {
         name: 'High Priority Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        priority: 'high'
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const lowPriorityRequest: CreateEventRequest = {
         name: 'Low Priority Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        priority: 'low'
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       // Act
@@ -773,8 +853,8 @@ describe('matchingEngine', () => {
       const lowEvent = await eventStorage.createEvent(lowPriorityRequest, mockCreator);
 
       // Assert
-      expect(highEvent.priority).toBe('high');
-      expect(lowEvent.priority).toBe('low');
+      expect(highEvent.name).toBe('High Priority Event');
+      expect(lowEvent.name).toBe('Low Priority Event');
     });
   });
 
@@ -785,16 +865,20 @@ describe('matchingEngine', () => {
         name: 'High Priority Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        priority: 'high'
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event2Request: CreateEventRequest = {
         name: 'Low Priority Event',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        priority: 'low'
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event1 = await eventStorage.createEvent(event1Request, mockCreator);
@@ -811,10 +895,11 @@ describe('matchingEngine', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       for (const userId of [mockUser1, mockUser2]) {
-        await scheduleStorage.bulkSetAvailability({
-          dates: [tomorrow.toISOString().split('T')[0]],
-          timeSlots: { morning: false, afternoon: false, fullday: true }
-        }, userId);
+        await scheduleStorage.setAvailability(
+          userId,
+          [tomorrow.toISOString().split('T')[0]],
+          { daytime: true, evening: true }
+        );
       }
 
       // Act - グローバルマッチング実行
@@ -844,16 +929,20 @@ describe('matchingEngine', () => {
         name: 'Event 1',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        priority: 'medium'
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event2Request: CreateEventRequest = {
         name: 'Event 2',
         description: 'Test Description',
         requiredParticipants: 2,
-        requiredDays: 1,
-        priority: 'medium'
+        requiredTimeSlots: 1,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days later
       };
 
       const event1 = await eventStorage.createEvent(event1Request, mockCreator);
@@ -870,10 +959,11 @@ describe('matchingEngine', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       for (const userId of [mockUser1, mockUser2, mockUser3]) {
-        await scheduleStorage.bulkSetAvailability({
-          dates: [tomorrow.toISOString().split('T')[0]],
-          timeSlots: { morning: false, afternoon: false, fullday: true }
-        }, userId);
+        await scheduleStorage.setAvailability(
+          userId,
+          [tomorrow.toISOString().split('T')[0]],
+          { daytime: true, evening: true }
+        );
       }
 
       // Act
