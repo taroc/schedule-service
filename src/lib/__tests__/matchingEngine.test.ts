@@ -74,7 +74,7 @@ describe('matchingEngine', () => {
       // Assert
       expect(result.isMatched).toBe(false);
       expect(result.reason).toContain('Insufficient participants');
-      expect(result.participants).toHaveLength(2); // Creator + 1 participant (creator is in participants array)
+      expect(result.participants).toHaveLength(2); // Creator + 1 added participant
     });
 
     it('should return false when no common available dates', async () => {
