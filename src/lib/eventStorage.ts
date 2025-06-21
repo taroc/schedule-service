@@ -373,13 +373,12 @@ class EventStorageDB {
         creatorId: {
           not: userId
         },
+        status: {
+          not: 'matched'
+        },
         OR: [
           { deadline: null },
-          { deadline: { gt: now } },
-          { 
-            deadline: { lt: now },
-            status: 'matched'
-          }
+          { deadline: { gt: now } }
         ]
       },
       include: {
@@ -517,13 +516,12 @@ class EventStorageDB {
         creatorId: {
           not: userId
         },
+        status: {
+          not: 'matched'
+        },
         OR: [
           { deadline: null },
-          { deadline: { gt: now } },
-          { 
-            deadline: { lt: now },
-            status: 'matched'
-          }
+          { deadline: { gt: now } }
         ]
       }
     });
