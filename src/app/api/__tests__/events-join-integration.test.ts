@@ -100,11 +100,30 @@ describe('Event Join API Integration - Automatic Matching', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     
-    // Reset shared state
+    // Reset shared state completely
     eventCounter = 0;
     mockEvents = new Map();
     participantStore = new Map();
     mockUsers = new Map();
+    
+    // Clear all mock implementations to ensure clean state
+    vi.mocked(eventStorage.getEventById).mockReset();
+    vi.mocked(eventStorage.createEvent).mockReset();
+    vi.mocked(eventStorage.addParticipant).mockReset();
+    vi.mocked(matchingEngine.onParticipantAdded).mockReset();
+    vi.mocked(matchingEngine.onScheduleUpdated).mockReset();
+    
+    // Reset auth mocks completely and re-setup
+    const { generateToken, verifyToken } = await import('@/lib/auth');
+    vi.mocked(generateToken).mockReset();
+    vi.mocked(verifyToken).mockReset();
+    
+    // Re-setup auth mocks for this test
+    vi.mocked(generateToken).mockImplementation((userSession) => `mock-token-${userSession.id}`);
+    vi.mocked(verifyToken).mockImplementation((token) => {
+      const userId = token.replace('mock-token-', '');
+      return { id: userId };
+    });
     
     // テスト毎にユニークなIDを生成
     const testRunId = Math.random().toString(36).substring(7);
@@ -259,6 +278,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
 
     // Setup eventStorage mocks using the same mockEvents Map
     vi.mocked(eventStorage.getEventById).mockImplementation(async (eventId) => {
+      console.log('getEventById called with:', eventId, 'mockEvents size:', mockEvents.size, 'mockEvents keys:', Array.from(mockEvents.keys()));
       return mockEvents.get(eventId) || null;
     });
     
@@ -281,7 +301,9 @@ describe('Event Join API Integration - Automatic Matching', () => {
         periodStart: eventData.periodStart,
         periodEnd: eventData.periodEnd
       };
+      console.log('createEvent storing event:', eventId, 'eventCounter:', eventCounter, 'in mockEvents, size before:', mockEvents.size);
       mockEvents.set(eventId, newEvent);
+      console.log('createEvent stored event, size after:', mockEvents.size);
       return newEvent;
     });
     
@@ -508,8 +530,11 @@ describe('Event Join API Integration - Automatic Matching', () => {
     });
 
     const createEventResponse = await CreateEvent(createEventRequest);
+    console.log('Test 2 - createEventResponse.status:', createEventResponse.status);
     const eventData = await createEventResponse.json();
+    console.log('Test 2 - eventData:', eventData);
     const eventId = eventData.id;
+    console.log('Test 2 - eventId:', eventId);
 
     // 両ユーザーをイベントに参加させる
     const user1JoinRequest = new NextRequest(`http://localhost:3000/api/events/${eventId}/join`, {
