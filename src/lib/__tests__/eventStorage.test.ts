@@ -519,8 +519,8 @@ describe('eventStorage', () => {
       // Arrange
       const event = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
       const matchedTimeSlots = [
-        { date: new Date('2025-01-01'), timeSlot: 'daytime' as const },
-        { date: new Date('2025-01-02'), timeSlot: 'evening' as const }
+        { date: new Date(Date.now() + 24 * 60 * 60 * 1000), timeSlot: 'daytime' as const },
+        { date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), timeSlot: 'evening' as const }
       ]
       
       // Act
@@ -587,7 +587,8 @@ describe('eventStorage', () => {
       await eventStorage.addParticipant(event.id, user2)
       
       // 共通で空いている時間帯を設定
-      const commonDate = '2025-01-01'
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const commonDate = tomorrow.toISOString().split('T')[0]
       await scheduleStorage.setAvailability(user1, [commonDate], { daytime: true, evening: false })
       await scheduleStorage.setAvailability(user2, [commonDate], { daytime: true, evening: false })
       
