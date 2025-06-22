@@ -76,6 +76,39 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
           return false;
         }
       );
+      
+      // Mock getUserSchedulesByDateRange to return conflicting schedule data
+      mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
+        async (userId: string, startDate: Date, endDate: Date) => {
+          const schedules = [];
+          const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
+          for (let i = 0; i <= daysDiff; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+            
+            if (userId === 'user-1') {
+              schedules.push({
+                id: `schedule-${userId}-${i}`,
+                userId,
+                date,
+                timeSlots: { daytime: true, evening: false },
+                createdAt: new Date(),
+                updatedAt: new Date()
+              });
+            } else if (userId === 'user-2') {
+              schedules.push({
+                id: `schedule-${userId}-${i}`,
+                userId,
+                date,
+                timeSlots: { daytime: false, evening: true },
+                createdAt: new Date(),
+                updatedAt: new Date()
+              });
+            }
+          }
+          return schedules;
+        }
+      );
 
       mockEventStorage.updateEventStatus.mockResolvedValue(true);
 
@@ -112,6 +145,28 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
           // Both users available in daytime only
           if (timeSlot === 'daytime') return true;
           return false;
+        }
+      );
+      
+      // Mock getUserSchedulesByDateRange to return schedule data
+      mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
+        async (userId: string, startDate: Date, endDate: Date) => {
+          const schedules = [];
+          // Return schedules for the requested date range
+          const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
+          for (let i = 0; i <= daysDiff; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+            schedules.push({
+              id: `schedule-${userId}-${i}`,
+              userId,
+              date,
+              timeSlots: { daytime: true, evening: false },
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+          return schedules;
         }
       );
 
@@ -158,6 +213,26 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
       
       // Mock schedule storage to return availability for multiple time slots
       mockScheduleStorage.isUserAvailableAtTimeSlot.mockResolvedValue(true);
+      
+      // Mock getUserSchedulesByDateRange to return multiple schedule data
+      mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
+        async (userId: string, startDate: Date, endDate: Date) => {
+          const schedules = [];
+          for (let i = 0; i < 3; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            schedules.push({
+              id: `schedule-${userId}-${i}`,
+              userId,
+              date,
+              timeSlots: { daytime: true, evening: true },
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+          return schedules;
+        }
+      );
 
       mockEventStorage.updateEventStatus.mockResolvedValue(true);
 
@@ -210,6 +285,27 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
       mockScheduleStorage.isUserAvailableAtTimeSlot.mockImplementation(
         async (userId: string, date: Date, timeSlot: TimeSlot): Promise<boolean> => {
           return timeSlot === 'daytime';
+        }
+      );
+      
+      // Mock getUserSchedulesByDateRange to return daytime availability
+      mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
+        async (userId: string, startDate: Date, endDate: Date) => {
+          const schedules = [];
+          const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
+          for (let i = 0; i <= daysDiff; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+            schedules.push({
+              id: `schedule-${userId}-${i}`,
+              userId,
+              date,
+              timeSlots: { daytime: true, evening: false },
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+          return schedules;
         }
       );
 

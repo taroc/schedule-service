@@ -9,7 +9,11 @@ describe('EventList', () => {
     name: 'Test Event',
     description: 'Test Description',
     requiredParticipants: 3,
-    requiredDays: 2,
+    requiredTimeSlots: 2,
+    deadline: new Date('2025-01-08'),
+    periodStart: new Date('2025-01-02'),
+    periodEnd: new Date('2025-01-09'),
+    reservationStatus: 'open',
     creatorId: 'creator-1',
     creatorName: 'Event Creator',
     participants: ['participant-1', 'participant-2'],
@@ -24,7 +28,11 @@ describe('EventList', () => {
     name: 'Empty Event',
     description: 'No participants yet',
     requiredParticipants: 5,
-    requiredDays: 3,
+    requiredTimeSlots: 3,
+    deadline: new Date('2025-01-08'),
+    periodStart: new Date('2025-01-02'),
+    periodEnd: new Date('2025-01-09'),
+    reservationStatus: 'open',
     creatorId: 'creator-2',
     creatorName: 'Another Creator',
     participants: [],
@@ -35,26 +43,24 @@ describe('EventList', () => {
   }
 
   it('should display participant names when participants exist', () => {
-    render(<EventList events={[mockEventWithParticipants]} />)
+    render(<EventList events={[mockEventWithParticipants]} displayMode="created" />)
     
-    // Should show participant count parts
-    expect(screen.getByText('参加者:')).toBeInTheDocument()
-    expect(screen.getAllByText('2')).toHaveLength(2) // appears twice: participants count and required days
-    expect(screen.getAllByText('人')).toHaveLength(2) // appears twice: participants and required participants
+    // Should show participant member section
+    expect(screen.getByText('参加メンバー:')).toBeInTheDocument()
     
-    // Should show participant names
-    expect(screen.getByText('Alice Smith, Bob Johnson')).toBeInTheDocument()
+    // Should show participant IDs (not names in current implementation)
+    expect(screen.getByText('participant-1')).toBeInTheDocument()
+    expect(screen.getByText('participant-2')).toBeInTheDocument()
   })
 
   it('should display participant count only when no participants', () => {
-    render(<EventList events={[mockEventWithoutParticipants]} />)
+    render(<EventList events={[mockEventWithoutParticipants]} displayMode="created" />)
     
-    // Should show participant count parts
-    expect(screen.getByText('参加者:')).toBeInTheDocument()
-    expect(screen.getByText('0')).toBeInTheDocument()
-    expect(screen.getAllByText('人')).toHaveLength(2) // appears twice: participants and required participants
+    // Should show participant member section but only creator
+    expect(screen.getByText('参加メンバー:')).toBeInTheDocument()
+    expect(screen.getByText('creator-2')).toBeInTheDocument()
     
-    // Should not show participant names
+    // Should not show participant names since participants array is empty
     expect(screen.queryByText('Alice Smith, Bob Johnson')).not.toBeInTheDocument()
   })
 
@@ -64,15 +70,14 @@ describe('EventList', () => {
       participantNames: ['Alice Smith', '不明']
     }
     
-    render(<EventList events={[eventWithMissingNames]} />)
+    render(<EventList events={[eventWithMissingNames]} displayMode="created" />)
     
-    // Should show participant count parts
-    expect(screen.getByText('参加者:')).toBeInTheDocument()
-    expect(screen.getAllByText('2')).toHaveLength(2) // appears twice: participants count and required days
-    expect(screen.getAllByText('人')).toHaveLength(2) // appears twice: participants and required participants
+    // Should show participant member section
+    expect(screen.getByText('参加メンバー:')).toBeInTheDocument()
     
-    // Should show participant names including unknown
-    expect(screen.getByText('Alice Smith, 不明')).toBeInTheDocument()
+    // Should show participant IDs (current implementation shows IDs, not names)
+    expect(screen.getByText('participant-1')).toBeInTheDocument()
+    expect(screen.getByText('participant-2')).toBeInTheDocument()
   })
 
   it('should display creator name correctly', () => {

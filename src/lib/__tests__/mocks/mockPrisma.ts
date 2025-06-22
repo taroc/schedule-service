@@ -1,0 +1,27 @@
+import { vi } from 'vitest';
+
+export const mockPrisma = {
+  user: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  event: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    updateMany: vi.fn(),
+  },
+  userSchedule: {
+    create: vi.fn(),
+    findMany: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+  $transaction: vi.fn((fn) => fn(mockPrisma)),
+};

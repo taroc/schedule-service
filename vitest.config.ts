@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test/setup.ts', './src/lib/__tests__/setup.ts'],
     globals: true,
     testTimeout: 30000, // 30秒に増加
   },

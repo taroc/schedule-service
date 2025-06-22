@@ -25,9 +25,22 @@ describe('eventStorage', () => {
     deadline: new Date(Date.now() + 24 * 60 * 60 * 1000) // 明日
   }
 
-  const mockCreatorId = 'user-123'
+  let mockCreatorId: string
+  let mockUserId1: string
+  let mockUserId2: string
+  let mockUserId3: string
+  let mockUserId4: string
+  let testRunId: string
 
   beforeEach(async () => {
+    // テスト毎にユニークなIDを生成
+    testRunId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
+    mockCreatorId = `creator-${testRunId}`
+    mockUserId1 = `user1-${testRunId}`
+    mockUserId2 = `user2-${testRunId}`
+    mockUserId3 = `user3-${testRunId}`
+    mockUserId4 = `user4-${testRunId}`
+
     // テスト前にテストユーザーを作成
     await userStorage.createUser({
       userId: mockCreatorId,
@@ -36,22 +49,22 @@ describe('eventStorage', () => {
     
     // 他のテストユーザーも作成
     await userStorage.createUser({
-      userId: 'user-456',
+      userId: mockUserId1,
       password: 'password123'
     })
     
     await userStorage.createUser({
-      userId: 'user-789',
+      userId: mockUserId2,
       password: 'password123'
     })
     
     await userStorage.createUser({
-      userId: 'creator-123',
+      userId: mockUserId3,
       password: 'password123'
     })
     
     await userStorage.createUser({
-      userId: 'participant-456',
+      userId: mockUserId4,
       password: 'password123'
     })
   })
@@ -89,14 +102,21 @@ describe('eventStorage', () => {
     })
 
     it('should generate unique IDs for different events', async () => {
+      // Create another creator for the second event
+      const anotherCreatorId = `creator2-${testRunId}`
+      await userStorage.createUser({
+        userId: anotherCreatorId,
+        password: 'password123'
+      })
+      
       // Act
       const event1 = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
-      const event2 = await eventStorage.createEvent(mockEventRequest, 'user-456')
+      const event2 = await eventStorage.createEvent(mockEventRequest, anotherCreatorId)
       
       // Assert
       expect(event1.id).not.toBe(event2.id)
       expect(event1.creatorId).toBe(mockCreatorId)
-      expect(event2.creatorId).toBe('user-456')
+      expect(event2.creatorId).toBe(anotherCreatorId)
     })
 
     it('should set correct timestamps', async () => {
@@ -113,8 +133,18 @@ describe('eventStorage', () => {
   describe('getEventsByCreator', () => {
     it('should return events created by specific user', async () => {
       // Arrange
-      const creator1 = 'user-123'
-      const creator2 = 'user-456'
+      const creator1 = `user-123-${testRunId}`
+      const creator2 = `user-456-${testRunId}`
+      
+      // Create the test users first
+      await userStorage.createUser({
+        userId: creator1,
+        password: 'password123'
+      })
+      await userStorage.createUser({
+        userId: creator2,
+        password: 'password123'
+      })
       
       await eventStorage.createEvent(mockEventRequest, creator1)
       await eventStorage.createEvent({ ...mockEventRequest, name: 'Event 2' }, creator2)
@@ -133,10 +163,22 @@ describe('eventStorage', () => {
 
     it('should return empty array when creator has no events', async () => {
       // Arrange
-      await eventStorage.createEvent(mockEventRequest, 'user-123')
+      const creator1 = `user-123-${testRunId}`
+      const creator2 = `user-456-${testRunId}`
+      
+      await userStorage.createUser({
+        userId: creator1,
+        password: 'password123'
+      })
+      await userStorage.createUser({
+        userId: creator2,
+        password: 'password123'
+      })
+      
+      await eventStorage.createEvent(mockEventRequest, creator1)
       
       // Act
-      const events = await eventStorage.getEventsByCreator('user-456')
+      const events = await eventStorage.getEventsByCreator(creator2)
       
       // Assert
       expect(events).toEqual([])
@@ -159,7 +201,7 @@ describe('eventStorage', () => {
     it('should allow other users to participate', async () => {
       // Arrange
       const event = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
-      const participantId = 'user-456'
+      const participantId = mockUserId1 // Use existing test user
       
       // Act
       const result = await eventStorage.addParticipant(event.id, participantId)
@@ -175,7 +217,7 @@ describe('eventStorage', () => {
     it('should prevent duplicate participation', async () => {
       // Arrange
       const event = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
-      const participantId = 'user-456'
+      const participantId = mockUserId1 // Use existing test user
       
       await eventStorage.addParticipant(event.id, participantId)
       
@@ -192,7 +234,7 @@ describe('eventStorage', () => {
     it('should delete event and related participations', async () => {
       // Arrange
       const event = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
-      await eventStorage.addParticipant(event.id, 'user-456')
+      await eventStorage.addParticipant(event.id, mockUserId1)
       
       // Act
       const result = await eventStorage.deleteEvent(event.id)
@@ -203,7 +245,7 @@ describe('eventStorage', () => {
       expect(deletedEvent).toBeNull()
       
       // 参加記録も削除されているかチェック
-      const participantEvents = await eventStorage.getParticipantEvents('user-456')
+      const participantEvents = await eventStorage.getParticipantEvents(mockUserId1)
       expect(participantEvents).toHaveLength(0)
     })
   })
@@ -234,11 +276,24 @@ describe('eventStorage', () => {
   describe('getStats', () => {
     it('should return correct statistics', async () => {
       // Arrange
-      const event1 = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
-      const event2 = await eventStorage.createEvent(mockEventRequest, 'user-456')
+      const anotherCreatorId = `user-456-${testRunId}`
+      const participantId = `user-789-${testRunId}`
       
-      await eventStorage.addParticipant(event1.id, 'user-789')
-      await eventStorage.addParticipant(event2.id, 'user-789')
+      // Create test users
+      await userStorage.createUser({
+        userId: anotherCreatorId,
+        password: 'password123'
+      })
+      await userStorage.createUser({
+        userId: participantId,
+        password: 'password123'
+      })
+      
+      const event1 = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
+      const event2 = await eventStorage.createEvent(mockEventRequest, anotherCreatorId)
+      
+      await eventStorage.addParticipant(event1.id, participantId)
+      await eventStorage.addParticipant(event2.id, participantId)
       await eventStorage.updateEventStatus(event1.id, 'matched')
       
       // Act
@@ -255,8 +310,8 @@ describe('eventStorage', () => {
   describe('schedule integration', () => {
     it('should find events with available time slots', async () => {
       // Arrange - ユーザーとイベントを作成
-      const user1 = 'user-123'
-      const user2 = 'user-456'
+      const user1 = mockUserId1
+      const user2 = mockUserId2
       
       // イベントを作成
       const event = await eventStorage.createEvent({
@@ -349,8 +404,8 @@ describe('eventStorage', () => {
   describe('participating events filtering', () => {
     it('should exclude matched events from participating events list', async () => {
       // Arrange
-      const creator = 'creator-123'
-      const participant = 'participant-456'
+      const creator = mockUserId3
+      const participant = mockUserId4
       
       // オープンなイベントを作成
       const openEvent = await eventStorage.createEvent({
@@ -368,8 +423,13 @@ describe('eventStorage', () => {
       await eventStorage.addParticipant(openEvent.id, participant)
       await eventStorage.addParticipant(matchedEvent.id, participant)
       
-      // 一つのイベントを成立状態にする
-      await eventStorage.updateEventStatus(matchedEvent.id, 'matched')
+      // 一つのイベントを成立状態にする（時間帯も指定）
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7); // 7日後
+      const matchedTimeSlots = [
+        { date: futureDate, timeSlot: 'daytime' as const }
+      ]
+      await eventStorage.updateEventStatus(matchedEvent.id, 'matched', matchedTimeSlots)
       
       // Act
       const participatingEvents = await eventStorage.getParticipatingEventsInRange(participant)

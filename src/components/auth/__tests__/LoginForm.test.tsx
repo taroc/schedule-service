@@ -23,7 +23,7 @@ describe('LoginForm', () => {
       render(<LoginForm {...defaultProps} />)
       
       expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument()
-      expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument()
+      expect(screen.getByLabelText('ユーザーID')).toBeInTheDocument()
       expect(screen.getByLabelText('パスワード')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'ログイン' })).toBeInTheDocument()
       expect(screen.getByText('アカウントをお持ちでない方は')).toBeInTheDocument()
@@ -33,12 +33,12 @@ describe('LoginForm', () => {
     it('should render input fields with correct types', () => {
       render(<LoginForm {...defaultProps} />)
       
-      const emailInput = screen.getByLabelText('メールアドレス')
+      const userIdInput = screen.getByLabelText('ユーザーID')
       const passwordInput = screen.getByLabelText('パスワード')
       
-      expect(emailInput).toHaveAttribute('type', 'email')
+      expect(userIdInput).toHaveAttribute('type', 'text')
       expect(passwordInput).toHaveAttribute('type', 'password')
-      expect(emailInput).toHaveAttribute('required')
+      expect(userIdInput).toHaveAttribute('required')
       expect(passwordInput).toHaveAttribute('required')
     })
 
@@ -64,10 +64,10 @@ describe('LoginForm', () => {
       const user = userEvent.setup()
       render(<LoginForm {...defaultProps} />)
       
-      const emailInput = screen.getByLabelText('メールアドレス')
-      await user.type(emailInput, 'test@example.com')
+      const userIdInput = screen.getByLabelText('ユーザーID')
+      await user.type(userIdInput, 'test@example.com')
       
-      expect(emailInput).toHaveValue('test@example.com')
+      expect(userIdInput).toHaveValue('test@example.com')
     })
 
     it('should update password input value when user types', async () => {
@@ -96,11 +96,11 @@ describe('LoginForm', () => {
       const user = userEvent.setup()
       render(<LoginForm {...defaultProps} />)
       
-      const emailInput = screen.getByLabelText('メールアドレス')
+      const userIdInput = screen.getByLabelText('ユーザーID')
       const passwordInput = screen.getByLabelText('パスワード')
       const submitButton = screen.getByRole('button', { name: 'ログイン' })
       
-      await user.type(emailInput, 'test@example.com')
+      await user.type(userIdInput, 'test@example.com')
       await user.type(passwordInput, 'password123')
       await user.click(submitButton)
       
@@ -112,10 +112,10 @@ describe('LoginForm', () => {
       const user = userEvent.setup()
       render(<LoginForm {...defaultProps} />)
       
-      const emailInput = screen.getByLabelText('メールアドレス')
+      const userIdInput = screen.getByLabelText('ユーザーID')
       const passwordInput = screen.getByLabelText('パスワード')
       
-      await user.type(emailInput, 'test@example.com')
+      await user.type(userIdInput, 'test@example.com')
       await user.type(passwordInput, 'password123')
       await user.keyboard('{Enter}')
       
@@ -139,11 +139,11 @@ describe('LoginForm', () => {
       
       render(<LoginForm {...defaultProps} onLogin={asyncOnLogin} />)
       
-      const emailInput = screen.getByLabelText('メールアドレス')
+      const userIdInput = screen.getByLabelText('ユーザーID')
       const passwordInput = screen.getByLabelText('パスワード')
       const submitButton = screen.getByRole('button', { name: 'ログイン' })
       
-      await user.type(emailInput, 'test@example.com')
+      await user.type(userIdInput, 'test@example.com')
       await user.type(passwordInput, 'password123')
       await user.click(submitButton)
       
@@ -154,13 +154,13 @@ describe('LoginForm', () => {
 
     it('should prevent default form submission', async () => {
       const user = userEvent.setup()
-      render(<LoginForm {...defaultProps} />)
+      const { container } = render(<LoginForm {...defaultProps} />)
       
-      const form = screen.getByRole('form', { name: /ログイン/i }) || screen.getByRole('form')
-      const emailInput = screen.getByLabelText('メールアドレス')
+      const form = container.querySelector('form')!
+      const userIdInput = screen.getByLabelText('ユーザーID')
       const passwordInput = screen.getByLabelText('パスワード')
       
-      await user.type(emailInput, 'test@example.com')
+      await user.type(userIdInput, 'testuser')
       await user.type(passwordInput, 'password123')
       
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
@@ -199,17 +199,17 @@ describe('LoginForm', () => {
     it('should have proper form labels', () => {
       render(<LoginForm {...defaultProps} />)
       
-      expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument()
+      expect(screen.getByLabelText('ユーザーID')).toBeInTheDocument()
       expect(screen.getByLabelText('パスワード')).toBeInTheDocument()
     })
 
     it('should have required attributes on inputs', () => {
       render(<LoginForm {...defaultProps} />)
       
-      const emailInput = screen.getByLabelText('メールアドレス')
+      const userIdInput = screen.getByLabelText('ユーザーID')
       const passwordInput = screen.getByLabelText('パスワード')
       
-      expect(emailInput).toBeRequired()
+      expect(userIdInput).toBeRequired()
       expect(passwordInput).toBeRequired()
     })
 
@@ -227,11 +227,11 @@ describe('LoginForm', () => {
       const user = userEvent.setup()
       render(<LoginForm {...defaultProps} />)
       
-      const emailInput = screen.getByLabelText('メールアドレス')
+      const userIdInput = screen.getByLabelText('ユーザーID')
       const passwordInput = screen.getByLabelText('パスワード')
       const submitButton = screen.getByRole('button', { name: 'ログイン' })
       
-      await user.type(emailInput, 'test+special@example.com')
+      await user.type(userIdInput, 'test+special@example.com')
       await user.type(passwordInput, 'P@ssw0rd!')
       await user.click(submitButton)
       

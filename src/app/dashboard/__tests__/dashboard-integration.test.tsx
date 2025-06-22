@@ -8,7 +8,12 @@ import { useRouter } from 'next/navigation';
 // モック
 vi.mock('@/contexts/AuthContext');
 vi.mock('@/hooks/useNotification');
-vi.mock('next/navigation');
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(),
+  useSearchParams: vi.fn(() => ({
+    get: vi.fn(() => null)
+  }))
+}));
 
 const mockUseAuth = vi.mocked(useAuth);
 const mockUseNotification = vi.mocked(useNotification);
@@ -21,14 +26,17 @@ const mockEvents = [
     description: 'Test description',
     creatorId: 'user1',
     requiredParticipants: 2,
-    requiredDays: 1,
+    requiredTimeSlots: 1,
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    reservationStatus: 'open',
     status: 'open',
     participants: [],
     creator: { id: 'user1', hashedPassword: 'hash' },
     createdAt: new Date(),
     updatedAt: new Date(),
-    deadline: null,
-    matchedDates: null
+    matchedTimeSlots: undefined
   },
   {
     id: '2',
@@ -36,14 +44,14 @@ const mockEvents = [
     description: 'Test description',
     creatorId: 'user1',
     requiredParticipants: 2,
-    requiredDays: 1,
+    requiredTimeSlots: 1,
     status: 'matched',
     participants: ['user2'],
     creator: { id: 'user1', hashedPassword: 'hash' },
     createdAt: new Date(),
     updatedAt: new Date(),
     deadline: null,
-    matchedDates: [new Date()]
+    matchedTimeSlots: [new Date()]
   },
   {
     id: '3',
@@ -51,14 +59,14 @@ const mockEvents = [
     description: 'Test description',
     creatorId: 'user2',
     requiredParticipants: 2,
-    requiredDays: 1,
+    requiredTimeSlots: 1,
     status: 'open',
     participants: ['user1'],
     creator: { id: 'user2', hashedPassword: 'hash' },
     createdAt: new Date(),
     updatedAt: new Date(),
     deadline: null,
-    matchedDates: null
+    matchedTimeSlots: null
   },
   {
     id: '4',
@@ -66,14 +74,14 @@ const mockEvents = [
     description: 'Test description',
     creatorId: 'user3',
     requiredParticipants: 2,
-    requiredDays: 1,
+    requiredTimeSlots: 1,
     status: 'matched',
     participants: ['user1'],
     creator: { id: 'user3', hashedPassword: 'hash' },
     createdAt: new Date(),
     updatedAt: new Date(),
     deadline: null,
-    matchedDates: [new Date()]
+    matchedTimeSlots: [new Date()]
   },
   {
     id: '5',
@@ -81,14 +89,14 @@ const mockEvents = [
     description: 'Test description',
     creatorId: 'user4',
     requiredParticipants: 2,
-    requiredDays: 1,
+    requiredTimeSlots: 1,
     status: 'open',
     participants: [],
     creator: { id: 'user4', hashedPassword: 'hash' },
     createdAt: new Date(),
     updatedAt: new Date(),
     deadline: null,
-    matchedDates: null
+    matchedTimeSlots: null
   }
 ];
 
