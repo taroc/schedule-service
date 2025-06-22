@@ -79,7 +79,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
       
       // Mock getUserSchedulesByDateRange to return conflicting schedule data
       mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
-        async (userId: string, startDate: Date, endDate: Date) => {
+        async (userId: string) => {
           const schedules = [];
           const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
           for (let i = 0; i <= daysDiff; i++) {
@@ -150,7 +150,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
       
       // Mock getUserSchedulesByDateRange to return schedule data
       mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
-        async (userId: string, startDate: Date, endDate: Date) => {
+        async (userId: string) => {
           const schedules = [];
           // Return schedules for the requested date range
           const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
@@ -216,7 +216,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
       
       // Mock getUserSchedulesByDateRange to return multiple schedule data
       mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
-        async (userId: string, startDate: Date, endDate: Date) => {
+        async (userId: string) => {
           const schedules = [];
           for (let i = 0; i < 3; i++) {
             const date = new Date();
@@ -290,7 +290,7 @@ describe('Time-Slot Based Matching Engine (Mocked)', () => {
       
       // Mock getUserSchedulesByDateRange to return daytime availability
       mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(
-        async (userId: string, startDate: Date, endDate: Date) => {
+        async (userId: string) => {
           const schedules = [];
           const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
           for (let i = 0; i <= daysDiff; i++) {

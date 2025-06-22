@@ -17,6 +17,14 @@ export const mockPrisma = {
     updateMany: vi.fn(),
     count: vi.fn().mockResolvedValue(0),
   },
+  eventParticipant: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+    count: vi.fn().mockResolvedValue(0),
+  },
   userSchedule: {
     create: vi.fn(),
     findMany: vi.fn(),

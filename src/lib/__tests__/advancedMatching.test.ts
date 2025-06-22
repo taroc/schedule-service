@@ -4,7 +4,6 @@ import { eventStorage } from '../eventStorage';
 import { userStorage } from '../userStorage';
 import { scheduleStorage } from '../scheduleStorage';
 import { CreateEventRequest, Event } from '@/types/event';
-import { TimeSlot } from '@/types/schedule';
 
 // Mock the storage modules
 vi.mock('../eventStorage');
@@ -39,16 +38,7 @@ describe('Advanced Matching Features', () => {
 
   describe('柔軟な日程マッチング', () => {
     it('should match flexible dates with flexible mode', async () => {
-      // Arrange
-      const eventRequest: CreateEventRequest = {
-        name: 'Flexible Test Event',
-        description: 'Test flexible date matching',
-        requiredParticipants: 2,
-        requiredTimeSlots: 2,
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-      };
+      // Arrange - Test skipped as functionality is not yet implemented
 
       const mockEvent: Event = {
         id: 'event-1',

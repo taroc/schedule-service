@@ -4,7 +4,6 @@ import { eventStorage } from '../eventStorage';
 import { userStorage } from '../userStorage';
 import { scheduleStorage } from '../scheduleStorage';
 import { CreateEventRequest, Event } from '@/types/event';
-import { TimeSlot } from '@/types/schedule';
 
 // Mock the storage modules
 vi.mock('../eventStorage');
@@ -36,11 +35,14 @@ describe('matchingEngine', () => {
       updatedAt: new Date()
     });
     
+    // Setup event storage with actual event tracking
+    const events = new Map<string, Event>();
+    
     // Mock event storage methods
     let eventIdCounter = 0;
     mockEventStorage.createEvent.mockImplementation(async (request, creatorId) => {
       eventIdCounter++;
-      return {
+      const event = {
         id: `event-${Date.now()}-${eventIdCounter}`,
         name: request.name,
         description: request.description,
@@ -56,14 +58,61 @@ describe('matchingEngine', () => {
         periodEnd: request.periodEnd,
         reservationStatus: 'open'
       };
+      events.set(event.id, event);
+      return event;
     });
     
-    mockEventStorage.addParticipant.mockResolvedValue({ success: true });
-    mockEventStorage.getEventById.mockResolvedValue(null);
-    mockEventStorage.updateEventStatus.mockResolvedValue(true);
-    mockEventStorage.getAllEvents.mockResolvedValue([]);
-    mockEventStorage.getParticipantEvents.mockResolvedValue([]);
-    mockEventStorage.expireOverdueEvents.mockResolvedValue(0);
+    mockEventStorage.addParticipant.mockImplementation(async (eventId, userId) => {
+      const event = events.get(eventId);
+      if (event && !event.participants.includes(userId)) {
+        event.participants.push(userId);
+        events.set(eventId, event);
+      }
+      return { success: true };
+    });
+    
+    mockEventStorage.updateEventStatus.mockImplementation(async (eventId, status, matchedTimeSlots) => {
+      const event = events.get(eventId);
+      if (event) {
+        event.status = status;
+        if (matchedTimeSlots) {
+          event.matchedTimeSlots = matchedTimeSlots;
+        }
+        events.set(eventId, event);
+        return true;
+      }
+      return false;
+    });
+    
+    mockEventStorage.expireOverdueEvents.mockImplementation(async () => {
+      let expiredCount = 0;
+      const now = new Date();
+      
+      for (const [id, event] of events.entries()) {
+        if (event.status === 'open' && event.deadline && new Date(event.deadline) < now) {
+          event.status = 'expired';
+          events.set(id, event);
+          expiredCount++;
+        }
+      }
+      
+      return expiredCount;
+    });
+    
+    mockEventStorage.getEventById.mockImplementation(async (eventId) => {
+      return events.get(eventId) || null;
+    });
+    
+    mockEventStorage.getAllEvents.mockImplementation(async () => {
+      return Array.from(events.values());
+    });
+    
+    mockEventStorage.getParticipantEvents.mockImplementation(async (userId) => {
+      return Array.from(events.values()).filter(e => 
+        e.participants.includes(userId) && e.status === 'open'
+      );
+    });
+    
     mockEventStorage.getStats.mockResolvedValue({
       totalEvents: 0,
       openEvents: 0,
@@ -71,6 +120,66 @@ describe('matchingEngine', () => {
       cancelledEvents: 0,
       expiredEvents: 0,
       totalParticipants: 0
+    });
+    
+    // Mock schedule storage
+    const schedules = new Map<string, {
+      userId: string;
+      date: string;
+      timeSlotsDaytime: boolean;
+      timeSlotsEvening: boolean;
+    }>();
+    
+    mockScheduleStorage.setAvailability.mockImplementation(async (userId, dates, timeSlots) => {
+      for (const date of dates) {
+        const key = `${userId}:${date}`;
+        schedules.set(key, {
+          userId,
+          date,
+          timeSlotsDaytime: timeSlots.daytime,
+          timeSlotsEvening: timeSlots.evening
+        });
+      }
+      return true;
+    });
+    
+    mockScheduleStorage.getUserSchedulesByDateRange.mockImplementation(async (userId, startDate, endDate) => {
+      const userSchedules = Array.from(schedules.values())
+        .filter(s => s.userId === userId)
+        .filter(s => {
+          const scheduleDate = new Date(s.date + 'T00:00:00.000Z');
+          const start = new Date(startDate.getTime());
+          const end = new Date(endDate.getTime());
+          
+          // Set to start/end of day for comparison
+          start.setHours(0, 0, 0, 0);
+          end.setHours(23, 59, 59, 999);
+          scheduleDate.setHours(0, 0, 0, 0);
+          
+          return scheduleDate >= start && scheduleDate <= end;
+        });
+      
+      return userSchedules.map(s => ({
+        id: `${s.userId}-${s.date}`,
+        userId: s.userId,
+        date: new Date(s.date + 'T00:00:00.000Z'),
+        timeSlots: {
+          daytime: s.timeSlotsDaytime,
+          evening: s.timeSlotsEvening
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }));
+    });
+    
+    mockScheduleStorage.isUserAvailableAtTimeSlot.mockImplementation(async (userId, date, timeSlot) => {
+      const dateStr = date.toISOString().split('T')[0];
+      const key = `${userId}:${dateStr}`;
+      const schedule = schedules.get(key);
+      
+      if (!schedule) return false;
+      
+      return timeSlot === 'daytime' ? schedule.timeSlotsDaytime : schedule.timeSlotsEvening;
     });
   });
 
@@ -513,7 +622,7 @@ describe('matchingEngine', () => {
       const event2Request: CreateEventRequest = {
         name: 'Multi Event Test 2', 
         description: 'Test Description 2',
-        requiredParticipants: 2,
+        requiredParticipants: 3, // 参加者不足を確実にするため3に変更
         requiredTimeSlots: 1,
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day later

@@ -191,8 +191,8 @@ describe('userStorage', () => {
     })
 
     it('should maintain user order', async () => {
-      const user1 = await userStorage.createUser(mockUserRequest)
-      const user2 = await userStorage.createUser({
+      await userStorage.createUser(mockUserRequest)
+      await userStorage.createUser({
         userId: `testuser2-${testRunId}`,
         password: 'correct-password'
       })

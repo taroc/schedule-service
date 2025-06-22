@@ -59,17 +59,41 @@ describe('eventStorage', () => {
     
     // Mock Prisma operations for eventStorage
     let eventIdCounter = 0
+    const createdEvents = new Map<string, {
+      id: string;
+      name: string;
+      description: string;
+      requiredParticipants: number;
+      requiredTimeSlots: number;
+      creatorId: string;
+      status: string;
+      participants: { userId: string }[];
+      deadline: Date;
+      createdAt: Date;
+      updatedAt: Date;
+      periodStart: Date;
+      periodEnd: Date;
+      reservationStatus: string;
+      matchedTimeSlots: unknown;
+    }>()
+    const participants = new Map<string, {
+      eventId: string;
+      userId: string;
+      joinedAt: Date;
+    }>()
+    
     mockPrisma.event.create.mockImplementation(async (args) => {
       eventIdCounter++
-      return {
-        id: `event-${Date.now()}-${eventIdCounter}`,
+      const eventId = `event-${Date.now()}-${eventIdCounter}`
+      const event = {
+        id: eventId,
         name: args.data.name,
         description: args.data.description,
         requiredParticipants: args.data.requiredParticipants,
         requiredTimeSlots: args.data.requiredTimeSlots || 1,
         creatorId: args.data.creatorId,
         status: 'open',
-        participants: [args.data.creatorId],
+        participants: [{ userId: args.data.creatorId }],
         deadline: args.data.deadline,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -78,13 +102,235 @@ describe('eventStorage', () => {
         reservationStatus: 'open',
         matchedTimeSlots: null
       }
+      createdEvents.set(eventId, event)
+      
+      // Add creator as participant
+      const creatorKey = `${eventId}:${args.data.creatorId}`
+      participants.set(creatorKey, {
+        eventId: eventId,
+        userId: args.data.creatorId,
+        joinedAt: new Date()
+      })
+      
+      return event
     })
     
-    mockPrisma.event.findMany.mockResolvedValue([])
-    mockPrisma.event.findUnique.mockResolvedValue(null)
-    mockPrisma.event.update.mockImplementation(async (args) => ({ ...args.data }))
-    mockPrisma.event.delete.mockResolvedValue({})
-    mockPrisma.event.updateMany.mockResolvedValue({ count: 0 })
+    mockPrisma.event.findMany.mockImplementation(async (args) => {
+      const events = Array.from(createdEvents.values())
+      let filteredEvents = events
+      
+      if (!args?.where) {
+        return filteredEvents
+      }
+      
+      const where = args.where
+      
+      // Handle simple creatorId filter
+      if (where.creatorId && typeof where.creatorId === 'string') {
+        filteredEvents = filteredEvents.filter(e => e.creatorId === where.creatorId)
+      }
+      
+      // Handle creatorId not filter (exclude creator's own events)
+      if (where.creatorId?.not) {
+        const excludeCreatorId = where.creatorId.not
+        filteredEvents = filteredEvents.filter(e => e.creatorId !== excludeCreatorId)
+      }
+      
+      // Handle participants filter
+      if (where.participants?.some?.userId) {
+        const userId = where.participants.some.userId
+        filteredEvents = filteredEvents.filter(e => 
+          e.participants.some((p: { userId: string }) => p.userId === userId)
+        )
+      }
+      
+      // Handle status not filter
+      if (where.status?.not) {
+        const excludeStatus = where.status.not
+        filteredEvents = filteredEvents.filter(e => e.status !== excludeStatus)
+      }
+      
+      // Handle status equals filter
+      if (where.status && typeof where.status === 'string') {
+        filteredEvents = filteredEvents.filter(e => e.status === where.status)
+      }
+      
+      // Handle deadline greater than filter
+      if (where.deadline?.gt) {
+        const now = where.deadline.gt
+        filteredEvents = filteredEvents.filter(e => 
+          e.deadline && new Date(e.deadline) > now
+        )
+      }
+      
+      // Handle deadline less than filter  
+      if (where.deadline?.lt) {
+        const deadline = where.deadline.lt
+        filteredEvents = filteredEvents.filter(e => 
+          e.deadline && new Date(e.deadline) < deadline
+        )
+      }
+      
+      // Handle OR conditions
+      if (where.OR) {
+        filteredEvents = filteredEvents.filter(e => {
+          return where.OR.some((condition: { creatorId?: string; participants?: { some?: { userId?: string } } }) => {
+            let matches = true
+            
+            if (condition.creatorId) {
+              matches = matches && e.creatorId === condition.creatorId
+            }
+            
+            if (condition.participants?.some?.userId) {
+              const userId = condition.participants.some.userId
+              matches = matches && e.participants.some((p: { userId: string }) => p.userId === userId)
+            }
+            
+            return matches
+          })
+        })
+      }
+      
+      return filteredEvents
+    })
+    
+    mockPrisma.event.findUnique.mockImplementation(async (args) => {
+      return createdEvents.get(args.where.id) || null
+    })
+    
+    mockPrisma.event.update.mockImplementation(async (args) => {
+      const existing = createdEvents.get(args.where.id)
+      if (existing) {
+        const updated = { ...existing, ...args.data }
+        createdEvents.set(args.where.id, updated)
+        return updated
+      }
+      throw new Error('Event not found')
+    })
+    
+    mockPrisma.event.delete.mockImplementation(async (args) => {
+      const existing = createdEvents.get(args.where.id)
+      if (existing) {
+        createdEvents.delete(args.where.id)
+        return existing
+      }
+      throw new Error('Event not found')
+    })
+    
+    mockPrisma.event.updateMany.mockImplementation(async (args) => {
+      const events = Array.from(createdEvents.values())
+      let count = 0
+      
+      // Handle deadline expiration
+      if (args?.where?.deadline?.lt && args?.where?.status === 'open') {
+        const now = args.where.deadline.lt
+        const expiredEvents = events.filter(e => 
+          e.status === 'open' && 
+          e.deadline && 
+          new Date(e.deadline) < now
+        )
+        
+        expiredEvents.forEach(event => {
+          event.status = 'expired'
+          event.matchedTimeSlots = null
+          createdEvents.set(event.id, event)
+          count++
+        })
+      }
+      
+      return { count }
+    })
+    mockPrisma.event.count.mockImplementation(async (args) => {
+      const events = Array.from(createdEvents.values())
+      if (args?.where?.status) {
+        return events.filter(e => e.status === args.where.status).length
+      }
+      return events.length
+    })
+
+    // Mock EventParticipant operations
+    mockPrisma.eventParticipant.findUnique.mockImplementation(async (args) => {
+      const key = `${args.where.eventId_userId.eventId}:${args.where.eventId_userId.userId}`
+      return participants.get(key) || null
+    })
+    
+    mockPrisma.eventParticipant.create.mockImplementation(async (args) => {
+      const key = `${args.data.eventId}:${args.data.userId}`
+      const participant = {
+        eventId: args.data.eventId,
+        userId: args.data.userId,
+        joinedAt: new Date()
+      }
+      participants.set(key, participant)
+      
+      // Update the event's participants list
+      const event = createdEvents.get(args.data.eventId)
+      if (event && !event.participants.find((p: { userId: string }) => p.userId === args.data.userId)) {
+        event.participants.push({ userId: args.data.userId })
+      }
+      
+      return participant
+    })
+    
+    mockPrisma.eventParticipant.delete.mockImplementation(async (args) => {
+      const key = `${args.where.eventId_userId.eventId}:${args.where.eventId_userId.userId}`
+      const participant = participants.get(key)
+      if (participant) {
+        participants.delete(key)
+        
+        // Update the event's participants list
+        const event = createdEvents.get(args.where.eventId_userId.eventId)
+        if (event) {
+          event.participants = event.participants.filter((p: { userId: string }) => p.userId !== args.where.eventId_userId.userId)
+        }
+        
+        return participant
+      }
+      throw new Error('Participant not found')
+    })
+    
+    mockPrisma.eventParticipant.findMany.mockImplementation(async (args) => {
+      const allParticipants = Array.from(participants.values())
+      if (args?.where?.eventId) {
+        return allParticipants.filter(p => p.eventId === args.where.eventId)
+      }
+      return allParticipants
+    })
+    
+    mockPrisma.eventParticipant.count.mockImplementation(async () => {
+      return participants.size
+    })
+
+    // Mock UserSchedule operations
+    const userSchedules = new Map<string, {
+      userId: string;
+      date: string;
+      timeSlotsDaytime: boolean;
+      timeSlotsEvening: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }>()
+    mockPrisma.userSchedule.findMany.mockImplementation(async (args) => {
+      const schedules = Array.from(userSchedules.values())
+      if (args?.where?.userId) {
+        return schedules.filter(s => s.userId === args.where.userId)
+      }
+      return schedules
+    })
+    
+    mockPrisma.userSchedule.upsert.mockImplementation(async (args) => {
+      const key = `${args.where.userId_date.userId}:${args.where.userId_date.date}`
+      const schedule = {
+        userId: args.where.userId_date.userId,
+        date: args.where.userId_date.date,
+        timeSlotsDaytime: args.update.timeSlotsDaytime,
+        timeSlotsEvening: args.update.timeSlotsEvening,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      userSchedules.set(key, schedule)
+      return schedule
+    })
   })
 
   describe('createEvent', () => {
