@@ -35,6 +35,43 @@ describe('matchingEngine', () => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
+    
+    // Mock event storage methods
+    let eventIdCounter = 0;
+    mockEventStorage.createEvent.mockImplementation(async (request, creatorId) => {
+      eventIdCounter++;
+      return {
+        id: `event-${Date.now()}-${eventIdCounter}`,
+        name: request.name,
+        description: request.description,
+        requiredParticipants: request.requiredParticipants,
+        requiredTimeSlots: request.requiredTimeSlots || 1,
+        creatorId,
+        status: 'open',
+        participants: [creatorId],
+        deadline: request.deadline,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        periodStart: request.periodStart,
+        periodEnd: request.periodEnd,
+        reservationStatus: 'open'
+      };
+    });
+    
+    mockEventStorage.addParticipant.mockResolvedValue({ success: true });
+    mockEventStorage.getEventById.mockResolvedValue(null);
+    mockEventStorage.updateEventStatus.mockResolvedValue(true);
+    mockEventStorage.getAllEvents.mockResolvedValue([]);
+    mockEventStorage.getParticipantEvents.mockResolvedValue([]);
+    mockEventStorage.expireOverdueEvents.mockResolvedValue(0);
+    mockEventStorage.getStats.mockResolvedValue({
+      totalEvents: 0,
+      openEvents: 0,
+      matchedEvents: 0,
+      cancelledEvents: 0,
+      expiredEvents: 0,
+      totalParticipants: 0
+    });
   });
 
   describe('checkEventMatching', () => {

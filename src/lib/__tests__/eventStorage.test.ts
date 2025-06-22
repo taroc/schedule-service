@@ -1,8 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eventStorage } from '../eventStorage'
 import { userStorage } from '../userStorage'
 import { CreateEventRequest } from '@/types/event'
 import { scheduleStorage } from '../scheduleStorage'
+import { mockPrisma } from './mocks/mockPrisma'
+
+// Mock the storage modules
+vi.mock('../userStorage')
+vi.mock('../scheduleStorage')
 
 describe('eventStorage', () => {
   const mockEventRequest: CreateEventRequest = {
@@ -32,7 +37,9 @@ describe('eventStorage', () => {
   let mockUserId4: string
   let testRunId: string
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    
     // テスト毎にユニークなIDを生成
     testRunId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
     mockCreatorId = `creator-${testRunId}`
@@ -41,32 +48,43 @@ describe('eventStorage', () => {
     mockUserId3 = `user3-${testRunId}`
     mockUserId4 = `user4-${testRunId}`
 
-    // テスト前にテストユーザーを作成
-    await userStorage.createUser({
-      userId: mockCreatorId,
-      password: 'password123'
+    // Mock userStorage.createUser to avoid database calls
+    const mockUserStorage = vi.mocked(userStorage)
+    mockUserStorage.createUser.mockResolvedValue({
+      id: 'mock-user-id',
+      password: 'hashed-password',
+      createdAt: new Date(),
+      updatedAt: new Date()
     })
     
-    // 他のテストユーザーも作成
-    await userStorage.createUser({
-      userId: mockUserId1,
-      password: 'password123'
+    // Mock Prisma operations for eventStorage
+    let eventIdCounter = 0
+    mockPrisma.event.create.mockImplementation(async (args) => {
+      eventIdCounter++
+      return {
+        id: `event-${Date.now()}-${eventIdCounter}`,
+        name: args.data.name,
+        description: args.data.description,
+        requiredParticipants: args.data.requiredParticipants,
+        requiredTimeSlots: args.data.requiredTimeSlots || 1,
+        creatorId: args.data.creatorId,
+        status: 'open',
+        participants: [args.data.creatorId],
+        deadline: args.data.deadline,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        periodStart: args.data.periodStart,
+        periodEnd: args.data.periodEnd,
+        reservationStatus: 'open',
+        matchedTimeSlots: null
+      }
     })
     
-    await userStorage.createUser({
-      userId: mockUserId2,
-      password: 'password123'
-    })
-    
-    await userStorage.createUser({
-      userId: mockUserId3,
-      password: 'password123'
-    })
-    
-    await userStorage.createUser({
-      userId: mockUserId4,
-      password: 'password123'
-    })
+    mockPrisma.event.findMany.mockResolvedValue([])
+    mockPrisma.event.findUnique.mockResolvedValue(null)
+    mockPrisma.event.update.mockImplementation(async (args) => ({ ...args.data }))
+    mockPrisma.event.delete.mockResolvedValue({})
+    mockPrisma.event.updateMany.mockResolvedValue({ count: 0 })
   })
 
   describe('createEvent', () => {
