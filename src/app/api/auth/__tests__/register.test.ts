@@ -90,16 +90,6 @@ describe('/api/auth/register', () => {
       expect(userStorage.createUser).not.toHaveBeenCalled()
     })
 
-    it('should return 400 when name is missing', async () => {
-      const invalidData = { ...mockUserData, name: '' }
-      const request = createMockRequest(invalidData)
-      const response = await POST(request)
-      const data = await response.json()
-
-      expect(response.status).toBe(400)
-      expect(data.error).toBe('User ID and password are required')
-      expect(userStorage.createUser).not.toHaveBeenCalled()
-    })
 
     it('should return 400 when all fields are missing', async () => {
       const request = createMockRequest({})
@@ -114,7 +104,7 @@ describe('/api/auth/register', () => {
 
   describe('user already exists', () => {
     it('should return 409 when user already exists', async () => {
-      const error = new Error('User already exists')
+      const error = new Error('User ID already exists')
       vi.mocked(userStorage.createUser).mockRejectedValue(error)
       
       const request = createMockRequest(mockUserData)
@@ -122,7 +112,7 @@ describe('/api/auth/register', () => {
       const data = await response.json()
 
       expect(response.status).toBe(409)
-      expect(data.error).toBe('User already exists')
+      expect(data.error).toBe('User ID already exists')
       expect(userStorage.createUser).toHaveBeenCalledWith(mockUserData)
     })
   })
@@ -161,15 +151,13 @@ describe('/api/auth/register', () => {
   describe('edge cases', () => {
     it('should handle special characters in user data', async () => {
       const specialData = {
-        email: 'test+special@example.com',
-        password: 'P@ssw0rd!',
-        name: 'Test User with Special Chars 日本語'
+        userId: 'test+special',
+        password: 'P@ssw0rd!'
       }
       
       vi.mocked(userStorage.createUser).mockResolvedValue({
         ...mockCreatedUser,
-        email: specialData.email,
-        name: specialData.name
+        id: specialData.userId
       })
       
       const request = createMockRequest(specialData)
@@ -177,21 +165,18 @@ describe('/api/auth/register', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.user.email).toBe(specialData.email)
-      expect(data.user.name).toBe(specialData.name)
+      expect(data.user.id).toBe(specialData.userId)
     })
 
     it('should handle very long inputs', async () => {
       const longData = {
-        email: 'a'.repeat(100) + '@example.com',
-        password: 'P'.repeat(200),
-        name: 'N'.repeat(300)
+        userId: 'a'.repeat(100),
+        password: 'P'.repeat(200)
       }
       
       vi.mocked(userStorage.createUser).mockResolvedValue({
         ...mockCreatedUser,
-        email: longData.email,
-        name: longData.name
+        id: longData.userId
       })
       
       const request = createMockRequest(longData)

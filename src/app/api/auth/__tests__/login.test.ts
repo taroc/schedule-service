@@ -115,7 +115,7 @@ describe('/api/auth/login', () => {
       expect(response.status).toBe(401)
       expect(data.error).toBe('Invalid credentials')
       expect(userStorage.verifyPassword).toHaveBeenCalledWith(
-        mockLoginData.email,
+        mockLoginData.userId,
         mockLoginData.password
       )
       expect(generateToken).not.toHaveBeenCalled()
@@ -132,7 +132,7 @@ describe('/api/auth/login', () => {
       expect(response.status).toBe(401)
       expect(data.error).toBe('Invalid credentials')
       expect(userStorage.verifyPassword).toHaveBeenCalledWith(
-        invalidData.email,
+        invalidData.userId,
         invalidData.password
       )
       expect(generateToken).not.toHaveBeenCalled()
@@ -141,7 +141,7 @@ describe('/api/auth/login', () => {
     it('should return 401 when email does not exist', async () => {
       vi.mocked(userStorage.verifyPassword).mockResolvedValue(null)
       
-      const invalidData = { ...mockLoginData, email: 'nonexistent@example.com' }
+      const invalidData = { ...mockLoginData, userId: 'nonexistentuser' }
       const request = createMockRequest(invalidData)
       const response = await POST(request)
       const data = await response.json()
@@ -149,7 +149,7 @@ describe('/api/auth/login', () => {
       expect(response.status).toBe(401)
       expect(data.error).toBe('Invalid credentials')
       expect(userStorage.verifyPassword).toHaveBeenCalledWith(
-        invalidData.email,
+        invalidData.userId,
         invalidData.password
       )
       expect(generateToken).not.toHaveBeenCalled()
@@ -168,7 +168,7 @@ describe('/api/auth/login', () => {
       expect(response.status).toBe(500)
       expect(data.error).toBe('Internal server error')
       expect(userStorage.verifyPassword).toHaveBeenCalledWith(
-        mockLoginData.email,
+        mockLoginData.userId,
         mockLoginData.password
       )
     })
@@ -193,13 +193,13 @@ describe('/api/auth/login', () => {
   describe('edge cases', () => {
     it('should handle special characters in credentials', async () => {
       const specialData = {
-        email: 'test+special@example.com',
+        userId: 'test+special',
         password: 'P@ssw0rd!'
       }
       
       vi.mocked(userStorage.verifyPassword).mockResolvedValue({
         ...mockUser,
-        email: specialData.email
+        id: specialData.userId
       })
       
       const request = createMockRequest(specialData)
@@ -207,16 +207,16 @@ describe('/api/auth/login', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.user.email).toBe(specialData.email)
+      expect(data.user.id).toBe(specialData.userId)
       expect(userStorage.verifyPassword).toHaveBeenCalledWith(
-        specialData.email,
+        specialData.userId,
         specialData.password
       )
     })
 
-    it('should handle case sensitivity in email', async () => {
+    it('should handle case sensitivity in userId', async () => {
       const casedData = {
-        email: 'Test@Example.COM',
+        userId: 'TestUser',
         password: 'password123'
       }
       
@@ -229,14 +229,14 @@ describe('/api/auth/login', () => {
       expect(response.status).toBe(401)
       expect(data.error).toBe('Invalid credentials')
       expect(userStorage.verifyPassword).toHaveBeenCalledWith(
-        casedData.email,
+        casedData.userId,
         casedData.password
       )
     })
 
     it('should handle empty strings as invalid credentials', async () => {
       const emptyData = {
-        email: '',
+        userId: '',
         password: ''
       }
       

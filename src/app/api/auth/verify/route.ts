@@ -13,7 +13,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const token = authHeader.substring(7);
+    const token = authHeader.substring(7).trim();
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: 'No token provided' },
+        { status: 401 }
+      );
+    }
+    
     const user = verifyToken(token);
 
     if (!user) {

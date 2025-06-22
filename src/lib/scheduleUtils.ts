@@ -83,6 +83,11 @@ export function getCommonAvailableDates(
 function findConsecutiveDates(dates: Date[], requiredDays: number): Date[] {
   if (dates.length < requiredDays) return [];
   
+  // 1日だけ必要な場合は最初の利用可能な日を返す
+  if (requiredDays === 1) {
+    return dates.length > 0 ? [dates[0]] : [];
+  }
+  
   dates.sort((a, b) => a.getTime() - b.getTime());
   
   for (let i = 0; i <= dates.length - requiredDays; i++) {

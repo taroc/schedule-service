@@ -61,10 +61,16 @@ class UserStoragePrisma {
     return isValid ? user : null;
   }
 
-  getAllUsers(): Omit<User, 'password'>[] {
-    // このメソッドは同期的に実装されているため空配列を返す
-    // 実際のアプリケーションでは使用されていない
-    return [];
+  async getAllUsers(): Promise<Omit<User, 'password'>[]> {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    return users;
   }
 
   async touchUser(id: string): Promise<void> {

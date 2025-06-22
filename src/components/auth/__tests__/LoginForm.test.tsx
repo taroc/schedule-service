@@ -184,7 +184,7 @@ describe('LoginForm', () => {
       render(<LoginForm {...defaultProps} isLoading={true} />)
       
       expect(screen.getByText('ログイン中...')).toBeInTheDocument()
-      expect(screen.queryByText('ログイン')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'ログイン' })).not.toBeInTheDocument()
     })
 
     it('should enable submit button when not loading', () => {
@@ -241,7 +241,8 @@ describe('LoginForm', () => {
     it('should handle empty error prop', () => {
       render(<LoginForm {...defaultProps} error="" />)
       
-      expect(screen.queryByText('')).not.toBeInTheDocument()
+      // 空文字列の場合はエラーメッセージのコンテナ自体が表示されない
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
 
     it('should handle undefined error prop', () => {

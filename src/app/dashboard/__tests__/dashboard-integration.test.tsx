@@ -117,12 +117,26 @@ describe('Dashboard Statistics Display', () => {
     });
 
     // fetch のモック
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
+    global.fetch = vi.fn((url) => {
+      if (url === '/api/events/stats') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            availableEvents: [],
+            stats: {
+              createdEvents: 2,
+              participatingEvents: 2,
+              matchedEvents: 2,
+              pendingEvents: 2
+            }
+          }),
+        }) as Promise<Response>;
+      }
+      return Promise.resolve({
         ok: true,
         json: () => Promise.resolve(mockEvents),
-      }) as Promise<Response>
-    );
+      }) as Promise<Response>;
+    });
 
     mockUseAuth.mockReturnValue({
       user: { id: 'user1', hashedPassword: 'hash' },
@@ -161,26 +175,22 @@ describe('Dashboard Statistics Display', () => {
     // データが読み込まれるのを待つ
     await waitFor(() => {
       expect(screen.getByText('作成したイベント')).toBeInTheDocument();
-      expect(screen.getByText('参加中のイベント')).toBeInTheDocument();
-      expect(screen.getByText('成立済み')).toBeInTheDocument();
-      expect(screen.getByText('調整中')).toBeInTheDocument();
+      expect(screen.getByText('参加表明したイベント')).toBeInTheDocument();
+      expect(screen.getByText('参加が決まったイベント')).toBeInTheDocument();
     });
 
     // 各統計の数値を確認
     // - 作成したイベント: 2 (user1が作成した id:1, id:2)
-    // - 参加中のイベント: 2 (user1が参加している id:3, id:4)
-    // - 成立済み: 2 (作成した成立済み:1個 + 参加している成立済み:1個)
-    // - 調整中: 2 (作成したopen:1個 + 参加しているopen:1個)
+    // - 参加表明したイベント: 2 (user1が参加している id:3, id:4)
+    // - 参加が決まったイベント: 2 (作成した成立済み:1個 + 参加している成立済み:1個)
     
     const createdEventsCard = screen.getByText('作成したイベント').closest('div');
-    const participatingEventsCard = screen.getByText('参加中のイベント').closest('div');
-    const matchedEventsCard = screen.getByText('成立済み').closest('div');
-    const pendingEventsCard = screen.getByText('調整中').closest('div');
+    const participatingEventsCard = screen.getByText('参加表明したイベント').closest('div');
+    const matchedEventsCard = screen.getByText('参加が決まったイベント').closest('div');
 
     expect(createdEventsCard).toContainElement(screen.getAllByText('2')[0]);
     expect(participatingEventsCard).toContainElement(screen.getAllByText('2')[1]);
     expect(matchedEventsCard).toContainElement(screen.getAllByText('2')[2]);
-    expect(pendingEventsCard).toContainElement(screen.getAllByText('2')[3]);
   });
 
   it('データ取得エラー時に適切なエラーメッセージを表示する', async () => {

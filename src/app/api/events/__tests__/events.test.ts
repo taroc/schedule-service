@@ -8,7 +8,8 @@ vi.mock('@/lib/eventStorage', () => ({
     createEvent: vi.fn(),
     getAllEvents: vi.fn(),
     getEventsByCreator: vi.fn(),
-    getOpenEvents: vi.fn(),
+    getEventsByStatus: vi.fn(),
+    getParticipantEvents: vi.fn()
   }
 }))
 
@@ -29,8 +30,9 @@ import { verifyToken } from '@/lib/auth'
 describe('/api/events', () => {
   const mockUser = {
     id: 'user-123',
-    email: 'test@example.com',
-    name: 'Test User'
+    password: 'hashed-password',
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 
   const mockEvent = {
@@ -38,12 +40,17 @@ describe('/api/events', () => {
     name: 'Test Event',
     description: 'Test Description',
     requiredParticipants: 3,
-    requiredDays: 2,
+    requiredTimeSlots: 2,
     creatorId: 'user-123',
     createdAt: new Date(),
     updatedAt: new Date(),
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     status: 'open' as const,
-    participants: []
+    participants: [],
+    matchedTimeSlots: undefined,
+    reservationStatus: 'open' as const
   }
 
   // mockEventSerializedは使用しないため削除
@@ -71,13 +78,17 @@ describe('/api/events', () => {
     it('should create event successfully when valid data and auth provided', async () => {
       // Arrange
       vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(userStorage.getUserById).mockResolvedValue(mockUser)
       vi.mocked(eventStorage.createEvent).mockResolvedValue(mockEvent)
       
       const eventData = {
         name: 'Test Event',
         description: 'Test Description',
         requiredParticipants: 3,
-        requiredDays: 2
+        requiredTimeSlots: 2,
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
       }
       
       const request = createMockRequest(eventData, 'valid-token')
@@ -93,7 +104,7 @@ describe('/api/events', () => {
         name: mockEvent.name,
         description: mockEvent.description,
         requiredParticipants: mockEvent.requiredParticipants,
-        requiredDays: mockEvent.requiredDays,
+        requiredTimeSlots: mockEvent.requiredTimeSlots,
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants
@@ -138,7 +149,7 @@ describe('/api/events', () => {
         name: mockEvent.name,
         description: mockEvent.description,
         requiredParticipants: mockEvent.requiredParticipants,
-        requiredDays: mockEvent.requiredDays,
+        requiredTimeSlots: mockEvent.requiredTimeSlots,
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
@@ -169,7 +180,7 @@ describe('/api/events', () => {
         name: mockEvent.name,
         description: mockEvent.description,
         requiredParticipants: mockEvent.requiredParticipants,
-        requiredDays: mockEvent.requiredDays,
+        requiredTimeSlots: mockEvent.requiredTimeSlots,
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
@@ -185,8 +196,6 @@ describe('/api/events', () => {
       const mockEvents = [mockEvent]
       const mockCreator = {
         id: 'user-123',
-        email: 'test@example.com',
-        name: 'Test User',
         password: 'hashed',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -209,7 +218,7 @@ describe('/api/events', () => {
         name: mockEvent.name,
         description: mockEvent.description,
         requiredParticipants: mockEvent.requiredParticipants,
-        requiredDays: mockEvent.requiredDays,
+        requiredTimeSlots: mockEvent.requiredTimeSlots,
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
@@ -225,14 +234,12 @@ describe('/api/events', () => {
       const mockEvents = [mockEvent]
       const mockCreator = {
         id: 'user-123',
-        email: 'test@example.com',
-        name: 'Test User',
         password: 'hashed',
         createdAt: new Date(),
         updatedAt: new Date()
       }
       
-      vi.mocked(eventStorage.getOpenEvents).mockResolvedValue(mockEvents)
+      vi.mocked(eventStorage.getEventsByStatus).mockResolvedValue(mockEvents)
       vi.mocked(userStorage.getUserById).mockResolvedValue(mockCreator)
       
       const request = createMockRequest({ status: 'open' })
@@ -249,14 +256,14 @@ describe('/api/events', () => {
         name: mockEvent.name,
         description: mockEvent.description,
         requiredParticipants: mockEvent.requiredParticipants,
-        requiredDays: mockEvent.requiredDays,
+        requiredTimeSlots: mockEvent.requiredTimeSlots,
         creatorId: mockEvent.creatorId,
         status: mockEvent.status,
         participants: mockEvent.participants,
       }))
       expect(data[0].createdAt).toBeDefined()
       expect(data[0].updatedAt).toBeDefined()
-      expect(eventStorage.getOpenEvents).toHaveBeenCalled()
+      expect(eventStorage.getEventsByStatus).toHaveBeenCalledWith('open')
       // userStorage.getUserById is no longer called since names are not stored
     })
   })
@@ -277,31 +284,6 @@ describe('/api/events', () => {
       ]
       
       vi.mocked(eventStorage.getAllEvents).mockResolvedValue(mockEvents)
-      vi.mocked(userStorage.getUserById)
-        .mockResolvedValueOnce({
-          id: 'user-1',
-          email: 'user1@example.com',
-          name: 'User One',
-          password: 'hashed',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .mockResolvedValueOnce({
-          id: 'user-2',
-          email: 'user2@example.com',
-          name: 'User Two',
-          password: 'hashed',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .mockResolvedValueOnce({
-          id: 'user-1',
-          email: 'user1@example.com',
-          name: 'User One',
-          password: 'hashed',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
       
       const request = createMockRequest()
       
@@ -312,10 +294,10 @@ describe('/api/events', () => {
       // Assert
       expect(response.status).toBe(200)
       expect(data).toHaveLength(3)
-      expect(data[0].creatorName).toBe('User One')
-      expect(data[1].creatorName).toBe('User Two')
-      expect(data[2].creatorName).toBe('User One')
-      expect(userStorage.getUserById).toHaveBeenCalledTimes(3)
+      expect(data[0].creatorId).toBe('user-1')
+      expect(data[1].creatorId).toBe('user-2')
+      expect(data[2].creatorId).toBe('user-1')
+      // Note: creatorName is no longer returned by the API
     })
 
     it('should handle getUserById errors gracefully', async () => {
@@ -323,7 +305,7 @@ describe('/api/events', () => {
       const mockEvents = [mockEvent]
       
       vi.mocked(eventStorage.getAllEvents).mockResolvedValue(mockEvents)
-      vi.mocked(userStorage.getUserById).mockRejectedValue(new Error('Database error'))
+      // Note: getUserById is no longer called in GET /events, so this test is no longer relevant
       
       const request = createMockRequest()
       
@@ -331,45 +313,18 @@ describe('/api/events', () => {
       const response = await GET(request)
       
       // Assert
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(200) // Should succeed since getUserById is not called
+      expect(response.status).not.toBe(500)
     })
 
-    it('should return events with participant names resolved', async () => {
+    it('should return events with participant IDs only', async () => {
       // Arrange
       const mockEventWithParticipants = {
         ...mockEvent,
         participants: ['participant-1', 'participant-2']
       }
-      const mockCreator = {
-        id: 'user-123',
-        email: 'creator@example.com',
-        name: 'Event Creator',
-        password: 'hashed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      const mockParticipant1 = {
-        id: 'participant-1',
-        email: 'participant1@example.com',
-        name: 'Participant One',
-        password: 'hashed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      const mockParticipant2 = {
-        id: 'participant-2',
-        email: 'participant2@example.com',
-        name: 'Participant Two',
-        password: 'hashed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
       
       vi.mocked(eventStorage.getAllEvents).mockResolvedValue([mockEventWithParticipants])
-      vi.mocked(userStorage.getUserById)
-        .mockResolvedValueOnce(mockCreator) // for creator
-        .mockResolvedValueOnce(mockParticipant1) // for participant-1
-        .mockResolvedValueOnce(mockParticipant2) // for participant-2
       
       const request = createMockRequest()
       
@@ -384,46 +339,21 @@ describe('/api/events', () => {
         id: mockEventWithParticipants.id,
         name: mockEventWithParticipants.name,
         creatorId: mockEventWithParticipants.creatorId,
-        creatorName: 'Event Creator',
-        participants: ['participant-1', 'participant-2'],
-        participantNames: ['Participant One', 'Participant Two']
+        participants: ['participant-1', 'participant-2']
+        // Note: participantNames are no longer returned by the API
       }))
       
-      // getUserById should be called for creator + each participant
-      expect(userStorage.getUserById).toHaveBeenCalledTimes(3)
-      // userStorage.getUserById is no longer called since names are not stored
-      expect(userStorage.getUserById).toHaveBeenCalledWith('participant-1')
-      expect(userStorage.getUserById).toHaveBeenCalledWith('participant-2')
+      // getUserById is no longer called since names are not resolved
     })
 
-    it('should handle missing participant names gracefully', async () => {
+    it('should handle events with participant IDs regardless of participant existence', async () => {
       // Arrange
       const mockEventWithParticipants = {
         ...mockEvent,
         participants: ['participant-1', 'missing-participant']
       }
-      const mockCreator = {
-        id: 'user-123',
-        email: 'creator@example.com',
-        name: 'Event Creator',
-        password: 'hashed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      const mockParticipant1 = {
-        id: 'participant-1',
-        email: 'participant1@example.com',
-        name: 'Participant One',
-        password: 'hashed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
       
       vi.mocked(eventStorage.getAllEvents).mockResolvedValue([mockEventWithParticipants])
-      vi.mocked(userStorage.getUserById)
-        .mockResolvedValueOnce(mockCreator) // for creator
-        .mockResolvedValueOnce(mockParticipant1) // for participant-1
-        .mockResolvedValueOnce(null) // for missing-participant
       
       const request = createMockRequest()
       
@@ -438,9 +368,8 @@ describe('/api/events', () => {
         id: mockEventWithParticipants.id,
         name: mockEventWithParticipants.name,
         creatorId: mockEventWithParticipants.creatorId,
-        creatorName: 'Event Creator',
-        participants: ['participant-1', 'missing-participant'],
-        participantNames: ['Participant One', '不明']
+        participants: ['participant-1', 'missing-participant']
+        // Note: API only returns participant IDs, not names
       }))
     })
   })

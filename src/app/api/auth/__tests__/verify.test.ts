@@ -7,7 +7,14 @@ vi.mock('@/lib/auth', () => ({
   verifyToken: vi.fn()
 }))
 
+vi.mock('@/lib/userStorage', () => ({
+  userStorage: {
+    getUserById: vi.fn(),
+  }
+}))
+
 import { verifyToken } from '@/lib/auth'
+import { userStorage } from '@/lib/userStorage'
 
 describe('/api/auth/verify', () => {
   const mockUser = {
@@ -35,6 +42,7 @@ describe('/api/auth/verify', () => {
   describe('successful verification', () => {
     it('should return user data when valid token provided', async () => {
       vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(userStorage.getUserById).mockResolvedValue(mockUser)
       
       const request = createMockRequest('Bearer valid-jwt-token')
       const response = await GET(request)
@@ -46,10 +54,12 @@ describe('/api/auth/verify', () => {
       })
       
       expect(verifyToken).toHaveBeenCalledWith('valid-jwt-token')
+      expect(userStorage.getUserById).toHaveBeenCalledWith(mockUser.id)
     })
 
     it('should handle token with extra spaces', async () => {
       vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(userStorage.getUserById).mockResolvedValue(mockUser)
       
       const request = createMockRequest('Bearer  valid-jwt-token  ')
       const response = await GET(request)
@@ -57,7 +67,8 @@ describe('/api/auth/verify', () => {
 
       expect(response.status).toBe(200)
       expect(data.user).toEqual(mockUser)
-      expect(verifyToken).toHaveBeenCalledWith(' valid-jwt-token  ')
+      expect(verifyToken).toHaveBeenCalledWith('valid-jwt-token')
+      expect(userStorage.getUserById).toHaveBeenCalledWith(mockUser.id)
     })
   })
 
@@ -110,8 +121,8 @@ describe('/api/auth/verify', () => {
       const data = await response.json()
 
       expect(response.status).toBe(401)
-      expect(data.error).toBe('Invalid token')
-      expect(verifyToken).toHaveBeenCalledWith('')
+      expect(data.error).toBe('No token provided')
+      expect(verifyToken).not.toHaveBeenCalled()
     })
 
     it('should handle case-sensitive Bearer keyword', async () => {
@@ -161,6 +172,20 @@ describe('/api/auth/verify', () => {
       expect(data.error).toBe('Invalid token')
       expect(verifyToken).toHaveBeenCalledWith('not-a-jwt-token')
     })
+
+    it('should return 401 when user not found in database', async () => {
+      vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(userStorage.getUserById).mockResolvedValue(null)
+      
+      const request = createMockRequest('Bearer valid-token-but-user-deleted')
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(401)
+      expect(data.error).toBe('User not found in database')
+      expect(verifyToken).toHaveBeenCalledWith('valid-token-but-user-deleted')
+      expect(userStorage.getUserById).toHaveBeenCalledWith(mockUser.id)
+    })
   })
 
   describe('server errors', () => {
@@ -196,6 +221,7 @@ describe('/api/auth/verify', () => {
     it('should handle very long tokens', async () => {
       const longToken = 'a'.repeat(10000)
       vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(userStorage.getUserById).mockResolvedValue(mockUser)
       
       const request = createMockRequest(`Bearer ${longToken}`)
       const response = await GET(request)
@@ -204,11 +230,13 @@ describe('/api/auth/verify', () => {
       expect(response.status).toBe(200)
       expect(data.user).toEqual(mockUser)
       expect(verifyToken).toHaveBeenCalledWith(longToken)
+      expect(userStorage.getUserById).toHaveBeenCalledWith(mockUser.id)
     })
 
     it('should handle special characters in token', async () => {
       const specialToken = 'abc.123+def/ghi='
       vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(userStorage.getUserById).mockResolvedValue(mockUser)
       
       const request = createMockRequest(`Bearer ${specialToken}`)
       const response = await GET(request)
@@ -217,10 +245,12 @@ describe('/api/auth/verify', () => {
       expect(response.status).toBe(200)
       expect(data.user).toEqual(mockUser)
       expect(verifyToken).toHaveBeenCalledWith(specialToken)
+      expect(userStorage.getUserById).toHaveBeenCalledWith(mockUser.id)
     })
 
     it('should handle multiple authorization headers (takes first one)', async () => {
       vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(userStorage.getUserById).mockResolvedValue(mockUser)
       
       const request = new NextRequest('http://localhost:3000/api/auth/verify', {
         method: 'GET',
@@ -235,7 +265,8 @@ describe('/api/auth/verify', () => {
 
       expect(response.status).toBe(200)
       expect(data.user).toEqual(mockUser)
-      expect(verifyToken).toHaveBeenCalledWith('first-token')
+      expect(verifyToken).toHaveBeenCalledWith('first-token, Bearer second-token')
+      expect(userStorage.getUserById).toHaveBeenCalledWith(mockUser.id)
     })
   })
 })

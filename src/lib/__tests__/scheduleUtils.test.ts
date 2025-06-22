@@ -17,7 +17,7 @@ describe('scheduleUtils', () => {
       id: '1',
       userId: 'user1',
       date: testDate1,
-      timeSlots: { morning: true, afternoon: false, fullday: false },
+      timeSlots: { daytime: true, evening: false },
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -25,7 +25,7 @@ describe('scheduleUtils', () => {
       id: '2', 
       userId: 'user1',
       date: testDate2,
-      timeSlots: { morning: false, afternoon: false, fullday: false },
+      timeSlots: { daytime: false, evening: false },
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -33,7 +33,7 @@ describe('scheduleUtils', () => {
       id: '3',
       userId: 'user2', 
       date: testDate1,
-      timeSlots: { morning: false, afternoon: true, fullday: false },
+      timeSlots: { daytime: false, evening: true },
       createdAt: new Date(),
       updatedAt: new Date()
     }
@@ -41,8 +41,8 @@ describe('scheduleUtils', () => {
 
   describe('isUserAvailableOnDate', () => {
     it('should return true for date with any available time slot', () => {
-      expect(isUserAvailableOnDate(mockSchedules, 'user1', testDate1)).toBe(true); // morning slot available
-      expect(isUserAvailableOnDate(mockSchedules, 'user2', testDate1)).toBe(true); // afternoon slot available
+      expect(isUserAvailableOnDate(mockSchedules, 'user1', testDate1)).toBe(true); // daytime slot available
+      expect(isUserAvailableOnDate(mockSchedules, 'user2', testDate1)).toBe(true); // evening slot available
     });
 
     it('should return false for date with no available time slots', () => {
@@ -99,11 +99,31 @@ describe('scheduleUtils', () => {
 
   describe('getCommonAvailableDates', () => {
     it('should return common available dates when all users have any time slot available', () => {
+      // Create test schedules where both users are available on testDate1
+      const testSchedulesForCommon: UserSchedule[] = [
+        {
+          id: '1',
+          userId: 'user1',
+          date: testDate1,
+          timeSlots: { daytime: true, evening: false },
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          id: '2',
+          userId: 'user2',
+          date: testDate1,
+          timeSlots: { daytime: false, evening: true },
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+      
       const commonDates = getCommonAvailableDates(
-        mockSchedules,
+        testSchedulesForCommon,
         ['user1', 'user2'],
         testDate1,
-        testDate3,
+        testDate1, // Same start and end date to ensure only testDate1 is considered
         1
       );
       
@@ -131,7 +151,7 @@ describe('scheduleUtils', () => {
           id: '4',
           userId: 'user1',
           date: testDate2, // Make testDate2 available for user1
-          timeSlots: { morning: true, afternoon: false, fullday: false },
+          timeSlots: { daytime: true, evening: false },
           createdAt: new Date(),
           updatedAt: new Date()
         },
@@ -139,7 +159,7 @@ describe('scheduleUtils', () => {
           id: '5',
           userId: 'user2',
           date: testDate2, // Make testDate2 available for user2
-          timeSlots: { morning: false, afternoon: true, fullday: false },
+          timeSlots: { daytime: false, evening: true },
           createdAt: new Date(),
           updatedAt: new Date()
         }

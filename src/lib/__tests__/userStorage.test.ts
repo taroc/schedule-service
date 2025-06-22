@@ -112,6 +112,20 @@ describe('userStorage', () => {
 
   describe('getUserById', () => {
     it('should return user when ID exists', async () => {
+      const mockCreatedUser = {
+        id: mockUserRequest.userId,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      // Setup mocks for createUser
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null) // User doesn't exist yet
+      mockPrisma.user.create.mockResolvedValue(mockCreatedUser)
+      
+      // Setup mock for getUserById
+      mockPrisma.user.findUnique.mockResolvedValueOnce(mockCreatedUser)
+      
       const createdUser = await userStorage.createUser(mockUserRequest)
       const foundUser = await userStorage.getUserById(createdUser.id)
       
@@ -121,6 +135,8 @@ describe('userStorage', () => {
     })
 
     it('should return null when ID does not exist', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null)
+      
       const foundUser = await userStorage.getUserById('nonexistent-id')
       
       expect(foundUser).toBeNull()
@@ -129,6 +145,20 @@ describe('userStorage', () => {
 
   describe('verifyPassword', () => {
     it('should return user when credentials are correct', async () => {
+      const mockUser = {
+        id: mockUserRequest.userId,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      // Setup mocks for createUser
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null) // User doesn't exist yet
+      mockPrisma.user.create.mockResolvedValue(mockUser)
+      
+      // Setup mock for verifyPassword
+      mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser)
+      
       await userStorage.createUser(mockUserRequest)
       const user = await userStorage.verifyPassword(
         mockUserRequest.userId,
@@ -140,6 +170,8 @@ describe('userStorage', () => {
     })
 
     it('should return null when userId does not exist', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null)
+      
       const user = await userStorage.verifyPassword(
         'nonexistentuserid',
         'correct-password'
@@ -149,12 +181,27 @@ describe('userStorage', () => {
     })
 
     it('should return null when password is incorrect', async () => {
+      const wrongPwdUserId = `testuser-wrong-pwd-${testRunId}`
+      const mockUser = {
+        id: wrongPwdUserId,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      // Setup mocks for createUser
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null) // User doesn't exist yet
+      mockPrisma.user.create.mockResolvedValue(mockUser)
+      
+      // Setup mock for verifyPassword - return user but bcrypt will fail comparison
+      mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser)
+      
       await userStorage.createUser({
-        userId: `testuser-wrong-pwd-${testRunId}`,
+        userId: wrongPwdUserId,
         password: 'correct-password'
       })
       const user = await userStorage.verifyPassword(
-        `testuser-wrong-pwd-${testRunId}`,
+        wrongPwdUserId,
         'wrong-password'
       )
       
@@ -162,6 +209,8 @@ describe('userStorage', () => {
     })
 
     it('should return null when both userId and password are incorrect', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null)
+      
       const user = await userStorage.verifyPassword(
         'wronguserid',
         'wrong-password'
@@ -172,39 +221,95 @@ describe('userStorage', () => {
   })
 
   describe('getAllUsers', () => {
-    it('should return empty array when no users exist', () => {
-      const users = userStorage.getAllUsers()
+    it('should return empty array when no users exist', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([])
+      
+      const users = await userStorage.getAllUsers()
       
       expect(users).toEqual([])
     })
 
     it('should return all users without passwords', async () => {
+      const mockUser1 = {
+        id: mockUserRequest.userId,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      const mockUser2 = {
+        id: `testuser2-${testRunId}`,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      // Setup mocks for createUser calls
+      mockPrisma.user.findUnique.mockResolvedValue(null).mockResolvedValue(null)
+      mockPrisma.user.create.mockResolvedValueOnce(mockUser1).mockResolvedValueOnce(mockUser2)
+      
+      // Setup mock for getAllUsers - select only specific fields as implemented
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: mockUser1.id, createdAt: mockUser1.createdAt, updatedAt: mockUser1.updatedAt },
+        { id: mockUser2.id, createdAt: mockUser2.createdAt, updatedAt: mockUser2.updatedAt }
+      ])
+      
       await userStorage.createUser(mockUserRequest)
       await userStorage.createUser({
         userId: `testuser2-${testRunId}`,
         password: 'correct-password'
       })
       
-      const users = userStorage.getAllUsers()
+      const users = await userStorage.getAllUsers()
       
-      expect(users).toHaveLength(0) // getAllUsers returns empty array in test implementation
+      expect(users).toHaveLength(2)
+      expect(users[0]).not.toHaveProperty('password')
+      expect(users[1]).not.toHaveProperty('password')
     })
 
     it('should maintain user order', async () => {
+      const mockUser1 = {
+        id: mockUserRequest.userId,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      const mockUser2 = {
+        id: `testuser2-${testRunId}`,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      // Setup mocks for createUser calls
+      mockPrisma.user.findUnique.mockResolvedValue(null).mockResolvedValue(null)
+      mockPrisma.user.create.mockResolvedValueOnce(mockUser1).mockResolvedValueOnce(mockUser2)
+      
+      // Setup mock for getAllUsers - select only specific fields as implemented
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: mockUser1.id, createdAt: mockUser1.createdAt, updatedAt: mockUser1.updatedAt },
+        { id: mockUser2.id, createdAt: mockUser2.createdAt, updatedAt: mockUser2.updatedAt }
+      ])
+      
       await userStorage.createUser(mockUserRequest)
       await userStorage.createUser({
         userId: `testuser2-${testRunId}`,
         password: 'correct-password'
       })
       
-      const users = userStorage.getAllUsers()
+      const users = await userStorage.getAllUsers()
       
-      expect(users).toHaveLength(0) // getAllUsers returns empty array in test implementation
+      expect(users).toHaveLength(2)
+      expect(users[0].id).toBe(mockUser1.id)
+      expect(users[1].id).toBe(mockUser2.id)
     })
   })
 
   describe('edge cases', () => {
     it('should handle empty string ID', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null)
+      
       const foundUser = await userStorage.getUserById('')
       expect(foundUser).toBeNull()
     })
@@ -214,6 +319,20 @@ describe('userStorage', () => {
         userId: `test-user_123-${testRunId}`,
         password: 'correct-password'
       }
+      
+      const mockSpecialUser = {
+        id: specialUser.userId,
+        password: 'hashed-correct-password',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      // Setup mocks for createUser
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null) // User doesn't exist yet
+      mockPrisma.user.create.mockResolvedValue(mockSpecialUser)
+      
+      // Setup mock for getUserById
+      mockPrisma.user.findUnique.mockResolvedValueOnce(mockSpecialUser)
       
       const user = await userStorage.createUser(specialUser)
       const foundUser = await userStorage.getUserById(specialUser.userId)

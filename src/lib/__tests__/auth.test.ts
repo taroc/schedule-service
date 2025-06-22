@@ -14,9 +14,7 @@ describe('auth utilities', () => {
   })
 
   const mockUser: UserSession = {
-    id: 'test-user-id',
-    email: 'test@example.com',
-    name: 'Test User'
+    id: 'test-user-id'
   }
 
   describe('generateToken', () => {
@@ -48,8 +46,6 @@ describe('auth utilities', () => {
       
       expect(result).toBeDefined()
       expect(result!.id).toBe(mockUser.id)
-      expect(result!.email).toBe(mockUser.email)
-      expect(result!.name).toBe(mockUser.name)
     })
 
     it('should return null for invalid token', () => {
@@ -83,9 +79,7 @@ describe('auth utilities', () => {
       const verifiedUser = verifyToken(token)
       expect(verifiedUser).toEqual(
         expect.objectContaining({
-          id: mockUser.id,
-          email: mockUser.email,
-          name: mockUser.name
+          id: mockUser.id
         })
       )
     })
