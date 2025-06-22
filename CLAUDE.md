@@ -16,6 +16,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `yarn db:studio` - Open Prisma Studio
 - `yarn seed` - Seed test data using scripts/seed-test-data.ts
 
+### Critical Build Requirements
+- **ALWAYS run `yarn lint` before committing** - Build will fail if ESLint errors exist
+- **NO `any` types allowed** - Replace with proper TypeScript interfaces
+- **Remove unused imports** - ESLint will block build with unused variable errors
+
 ## Architecture Overview
 
 This is a Next.js 15 schedule coordination service using the App Router architecture with JWT-based authentication and Prisma Accelerate for high-performance database access.
@@ -39,6 +44,14 @@ Uses Prisma Accelerate for high-performance database access:
 - Global edge caching and connection pooling via Prisma Accelerate
 - All storage classes use Prisma with Accelerate for database persistence (userStorage, eventStorage, scheduleStorage, matchingEngine)
 - No local database setup required - uses Prisma Accelerate for all environments
+
+### Data Serialization Patterns
+**IMPORTANT**: API routes convert Date objects to ISO strings for JSON serialization. Client components must handle both:
+```typescript
+// Safe date handling pattern for components
+const dateValue = typeof data.date === 'string' ? new Date(data.date) : data.date;
+```
+This pattern is critical for components like `MultiSelectCalendar` that receive API data.
 
 ### API Routes
 **Authentication** (`/src/app/api/auth/`):
@@ -115,6 +128,11 @@ The system supports real-time schedule coordination where:
 - **Run tests**: `yarn test` (watch mode), `yarn test:run` (single run), `yarn test:coverage` (with coverage)
 - **Test coverage**: Automatic matching scenarios are fully tested and verified
 
+### Test Data Management
+- **Seed script**: `scripts/seed-test-data.ts` creates realistic test data with current date baselines
+- **Mock system**: `src/lib/__tests__/mocks/mockPrisma.ts` provides comprehensive Prisma mocking
+- **Date handling**: All test data uses relative dates (Date.now() + offset) to avoid time-dependent failures
+
 ## UI/UX Guidelines
 
 ### Interactive Elements
@@ -180,3 +198,18 @@ function isSomeType(obj: unknown): obj is SomeType {
 6. Clean up any deprecated code paths
 
 These rules are MANDATORY and must be followed for all code changes.
+
+## Common Troubleshooting
+
+### Date/Time Issues
+- **TypeError: date.toDateString is not a function**: Use safe date conversion pattern above
+- **Test failures with dates**: Ensure test data uses relative dates, not fixed dates
+
+### Build Failures
+- **ESLint errors**: Check for unused imports, `any` types, and proper type definitions
+- **Prisma generation**: Run `npx prisma generate` if seeing Prisma Client errors
+
+### API Response Patterns
+- **Authentication**: All protected routes require `Authorization: Bearer <token>` header
+- **Date serialization**: API routes return ISO strings, components must convert to Date objects
+- **Error handling**: APIs return `{ error: string }` for errors, `{ success: boolean }` for success
