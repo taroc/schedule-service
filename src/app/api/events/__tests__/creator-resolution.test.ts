@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET, POST } from '../route'
-import { userStorage } from '@/lib/userStorage'
+// import { userStorage } from '@/lib/userStorage'
 import { eventStorage } from '@/lib/eventStorage'
 import { verifyToken } from '@/lib/auth'
 import { mockPrisma } from '@/lib/__tests__/mocks/mockPrisma'
@@ -17,7 +17,23 @@ vi.mock('@/lib/auth', () => ({
 }))
 
 describe('Event Creator Resolution Integration Test', () => {
-  let createdEvents: any[] = []
+  let createdEvents: {
+    id: string;
+    name: string;
+    description: string;
+    requiredParticipants: number;
+    requiredTimeSlots: number;
+    creatorId: string;
+    status: string;
+    participants: unknown[];
+    matchedTimeSlots: unknown;
+    reservationStatus: string;
+    deadline: Date;
+    periodStart: Date;
+    periodEnd: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  }[] = []
   
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -89,7 +105,22 @@ describe('Event Creator Resolution Integration Test', () => {
       periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
     }
 
-    let createdEvent: any = null
+    let createdEvent: {
+      id: string;
+      name: string;
+      description: string;
+      requiredParticipants: number;
+      requiredTimeSlots: number;
+      creatorId: string;
+      status: string;
+      participants: unknown[];
+      matchedTimeSlots: unknown;
+      deadline: Date;
+      periodStart: Date;
+      periodEnd: Date;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null = null
     mockPrisma.event.create.mockImplementation((query) => {
       createdEvent = {
         id: 'event-123',

@@ -4,7 +4,7 @@ import { POST } from '../events/[id]/join/route';
 import { POST as CreateEvent } from '../events/route';
 import { POST as Register } from '../auth/register/route';
 // Import actual route for reference, but we'll mock it
-import { POST as ActualSetAvailability } from '../schedules/availability/route';
+// import { POST as ActualSetAvailability } from '../schedules/availability/route';
 import { eventStorage } from '@/lib/eventStorage';
 import { matchingEngine } from '@/lib/matchingEngine';
 import { mockPrisma } from '@/lib/__tests__/mocks/mockPrisma';
@@ -93,9 +93,34 @@ describe('Event Join API Integration - Automatic Matching', () => {
 
   // Variables declared outside beforeEach to persist across test setup
   let eventCounter = 0;
-  let mockEvents: Map<string, any>;
-  let participantStore: Map<string, any>;
-  let mockUsers: Map<string, any>;
+  let mockEvents: Map<string, {
+    id: string;
+    name: string;
+    description: string;
+    requiredParticipants: number;
+    requiredTimeSlots: number;
+    creatorId: string;
+    status: string;
+    participants: { userId: string }[];
+    deadline: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    periodStart: Date;
+    periodEnd: Date;
+    reservationStatus: string;
+    matchedTimeSlots: unknown;
+  }>;
+  let participantStore: Map<string, {
+    eventId: string;
+    userId: string;
+    joinedAt: Date;
+  }>;
+  let mockUsers: Map<string, {
+    id: string;
+    password: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
