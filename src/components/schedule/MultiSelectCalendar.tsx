@@ -60,14 +60,21 @@ export default function MultiSelectCalendar({
 
     while (current <= endDate) {
       const dateStr = current.toDateString();
-      const schedule = schedules.find(s => s.date.toDateString() === dateStr);
+      const schedule = schedules.find(s => {
+        const scheduleDate = typeof s.date === 'string' ? new Date(s.date) : s.date;
+        return scheduleDate.toDateString() === dateStr;
+      });
       const isSelected = selectedDates.some(d => d.toDateString() === dateStr);
       
       // この日付に成立したイベントがあるかチェック
       const eventsOnThisDate = matchedEvents.filter(event => 
-        event.matchedTimeSlots?.some((timeSlot) => 
-          timeSlot.date.toDateString() === dateStr
-        )
+        event.matchedTimeSlots?.some((timeSlot) => {
+          // dateが文字列の場合はDateオブジェクトに変換
+          const slotDate = typeof timeSlot.date === 'string' 
+            ? new Date(timeSlot.date) 
+            : timeSlot.date;
+          return slotDate.toDateString() === dateStr;
+        })
       ).map(event => ({
         id: event.id,
         name: event.name,
@@ -131,7 +138,10 @@ export default function MultiSelectCalendar({
     }
 
     const dateStr = date.toDateString();
-    const schedule = schedules.find(s => s.date.toDateString() === dateStr);
+    const schedule = schedules.find(s => {
+      const scheduleDate = typeof s.date === 'string' ? new Date(s.date) : s.date;
+      return scheduleDate.toDateString() === dateStr;
+    });
 
     if (operationMode === 'delete') {
       // 削除モード：登録済みの日付のみ選択可能
