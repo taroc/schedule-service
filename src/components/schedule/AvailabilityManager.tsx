@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserSchedule, MatchedEvent } from '@/types/schedule';
 import MultiSelectCalendar from './MultiSelectCalendar';
 import WeekdaySelector from './WeekdaySelector';
+import QuickSelectButtons from './QuickSelectButtons';
 import { getDatesByWeekdays } from '@/lib/weekdayUtils';
 
 export default function AvailabilityManager() {
@@ -183,6 +184,19 @@ export default function AvailabilityManager() {
       setWeekdaySelectedDates([]);
     }
   }, [selectedWeekdays, calendarStartDate, calendarEndDate]);
+
+  // クイック選択ハンドラー
+  const handleQuickSelect = React.useCallback((quickSelectedDates: Date[]) => {
+    // カレンダー範囲内の日付のみをフィルタ
+    const filteredDates = quickSelectedDates.filter(date => 
+      date >= calendarStartDate && date <= calendarEndDate
+    );
+    
+    // 個別選択に設定（曜日選択はクリア）
+    setIndividualSelectedDates(filteredDates);
+    setSelectedWeekdays([]);
+    setWeekdaySelectedDates([]);
+  }, [calendarStartDate, calendarEndDate]);
 
   const handleSubmitAvailability = async () => {
     if (!token || selectedDates.length === 0) {
@@ -425,6 +439,16 @@ export default function AvailabilityManager() {
         <WeekdaySelector
           selectedWeekdays={selectedWeekdays}
           onWeekdaysChange={handleWeekdaysChange}
+        />
+      )}
+
+      {/* クイック選択ボタン（追加モード時のみ表示） */}
+      {operationMode === 'add' && (
+        <QuickSelectButtons
+          onQuickSelect={handleQuickSelect}
+          startDate={calendarStartDate}
+          endDate={calendarEndDate}
+          disabled={isSubmitting}
         />
       )}
 

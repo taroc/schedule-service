@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import CreateEventForm from '@/components/events/CreateEventForm';
 import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
-import NotificationToast from '@/components/ui/NotificationToast';
+import ToastManager from '@/components/ui/ToastManager';
 import { useNotification } from '@/hooks/useNotification';
 import { CreateEventRequest, EventWithCreator, EventResponse } from '@/types/event';
 
@@ -28,7 +28,7 @@ function DashboardContent() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { notifications, showSuccess, showError, showInfo, removeNotification } = useNotification();
+  const { showSuccess, showError, showInfo } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [modal, setModal] = useState<DashboardModal>({ type: null, isOpen: false });
 
@@ -529,16 +529,7 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* 通知トースト */}
-      {notifications.map((notification) => (
-        <NotificationToast
-          key={notification.id}
-          message={notification.message}
-          type={notification.type}
-          isVisible={true}
-          onClose={() => removeNotification(notification.id)}
-          duration={notification.duration}
-        />
-      ))}
+      <ToastManager />
 
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

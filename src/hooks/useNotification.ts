@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useToast, Toast } from './useToast';
 
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';
 
+// Backwards compatibility interface
 interface Notification {
   id: string;
   message: string;
@@ -10,51 +11,39 @@ interface Notification {
 }
 
 export const useNotification = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { toasts, addToast, removeToast, clearAll, success, error, info, warning } = useToast();
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-  }, []);
+  // Convert toasts to notifications for backwards compatibility
+  const notifications: Notification[] = toasts.map((toast: Toast) => ({
+    id: toast.id,
+    message: toast.message,
+    type: toast.type,
+    duration: toast.duration
+  }));
 
-  const showNotification = useCallback((
+  const showNotification = (
     message: string, 
     type: NotificationType = 'info', 
     duration = 5000
   ) => {
-    const id = Math.random().toString(36).substring(2);
-    const notification: Notification = {
-      id,
-      message,
-      type,
-      duration
-    };
+    return addToast({ message, type, duration });
+  };
 
-    setNotifications(prev => [...prev, notification]);
+  const removeNotification = (id: string) => {
+    removeToast(id);
+  };
 
-    if (duration > 0) {
-      setTimeout(() => {
-        removeNotification(id);
-      }, duration);
-    }
+  const showSuccess = (message: string, duration?: number) => 
+    success(message, duration);
 
-    return id;
-  }, [removeNotification]);
+  const showError = (message: string, duration?: number) => 
+    error(message, duration);
 
-  const showSuccess = useCallback((message: string, duration?: number) => 
-    showNotification(message, 'success', duration), [showNotification]);
+  const showInfo = (message: string, duration?: number) => 
+    info(message, duration);
 
-  const showError = useCallback((message: string, duration?: number) => 
-    showNotification(message, 'error', duration), [showNotification]);
-
-  const showInfo = useCallback((message: string, duration?: number) => 
-    showNotification(message, 'info', duration), [showNotification]);
-
-  const showWarning = useCallback((message: string, duration?: number) => 
-    showNotification(message, 'warning', duration), [showNotification]);
-
-  const clearAll = useCallback(() => {
-    setNotifications([]);
-  }, []);
+  const showWarning = (message: string, duration?: number) => 
+    warning(message, duration);
 
   return {
     notifications,
