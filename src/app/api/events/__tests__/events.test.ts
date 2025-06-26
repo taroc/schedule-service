@@ -9,7 +9,8 @@ vi.mock('@/lib/eventStorage', () => ({
     getAllEvents: vi.fn(),
     getEventsByCreator: vi.fn(),
     getEventsByStatus: vi.fn(),
-    getParticipantEvents: vi.fn()
+    getParticipantEvents: vi.fn(),
+    getAvailableEventsForUser: vi.fn()
   }
 }))
 
@@ -128,6 +129,20 @@ describe('/api/events', () => {
       })
     }
 
+    const createMockRequestWithAuth = (searchParams: Record<string, string> = {}, token: string) => {
+      const url = new URL('http://localhost:3000/api/events')
+      Object.entries(searchParams).forEach(([key, value]) => {
+        url.searchParams.set(key, value)
+      })
+      
+      return new NextRequest(url.toString(), {
+        method: 'GET',
+        headers: {
+          'authorization': `Bearer ${token}`
+        }
+      })
+    }
+
     it('should return events without creator names', async () => {
       // Arrange
       const mockEvents = [mockEvent]
@@ -229,20 +244,13 @@ describe('/api/events', () => {
       // userStorage.getUserById is no longer called since names are not stored
     })
 
-    it('should handle open events query correctly', async () => {
+    it('should handle open events query correctly with auth (legacy behavior)', async () => {
       // Arrange
       const mockEvents = [mockEvent]
-      const mockCreator = {
-        id: 'user-123',
-        password: 'hashed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
       
       vi.mocked(eventStorage.getEventsByStatus).mockResolvedValue(mockEvents)
-      vi.mocked(userStorage.getUserById).mockResolvedValue(mockCreator)
       
-      const request = createMockRequest({ status: 'open' })
+      const request = createMockRequest({ status: 'matched' }) // Use non-open status for legacy behavior
       
       // Act
       const response = await GET(request)
@@ -263,8 +271,59 @@ describe('/api/events', () => {
       }))
       expect(data[0].createdAt).toBeDefined()
       expect(data[0].updatedAt).toBeDefined()
-      expect(eventStorage.getEventsByStatus).toHaveBeenCalledWith('open')
-      // userStorage.getUserById is no longer called since names are not stored
+      expect(eventStorage.getEventsByStatus).toHaveBeenCalledWith('matched')
+    })
+
+    it('should require authentication for status=open query', async () => {
+      // Arrange
+      const request = createMockRequest({ status: 'open' })
+      
+      // Act
+      const response = await GET(request)
+      const data = await response.json()
+      
+      // Assert
+      expect(response.status).toBe(401)
+      expect(data.error).toBe('認証が必要です')
+    })
+
+    it('should return available events for authenticated user when status=open', async () => {
+      // Arrange
+      const mockAvailableEvents = [
+        { ...mockEvent, id: 'available-event-1', creatorId: 'other-user' },
+        { ...mockEvent, id: 'available-event-2', creatorId: 'another-user' }
+      ]
+      
+      vi.mocked(verifyToken).mockReturnValue(mockUser)
+      vi.mocked(eventStorage.getAvailableEventsForUser).mockResolvedValue(mockAvailableEvents)
+      
+      const request = createMockRequestWithAuth({ status: 'open' }, 'valid-token')
+      
+      // Act
+      const response = await GET(request)
+      const data = await response.json()
+      
+      // Assert
+      expect(response.status).toBe(200)
+      expect(data).toHaveLength(2)
+      expect(eventStorage.getAvailableEventsForUser).toHaveBeenCalledWith(mockUser.id)
+      expect(data[0].id).toBe('available-event-1')
+      expect(data[1].id).toBe('available-event-2')
+    })
+
+    it('should return 401 for invalid token when status=open', async () => {
+      // Arrange
+      vi.mocked(verifyToken).mockReturnValue(null)
+      
+      const request = createMockRequestWithAuth({ status: 'open' }, 'invalid-token')
+      
+      // Act
+      const response = await GET(request)
+      const data = await response.json()
+      
+      // Assert
+      expect(response.status).toBe(401)
+      expect(data.error).toBe('認証が必要です')
     })
   })
 

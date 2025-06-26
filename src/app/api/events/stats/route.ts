@@ -54,8 +54,6 @@ export async function GET(request: NextRequest) {
       const matchedEvents: EventSummary[] = matchedEventsResult.status === 'fulfilled' ? matchedEventsResult.value : [];
 
       // 統計計算（型安全性を向上）
-      const matchedCreated = createdEvents.filter(e => e.status === 'matched').length;
-      const matchedParticipating = participatingEvents.filter(e => e.status === 'matched').length;
       const openCreated = createdEvents.filter(e => e.status === 'open').length;
       const openParticipating = participatingEvents.filter(e => e.status === 'open').length;
 

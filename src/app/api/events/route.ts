@@ -128,6 +128,29 @@ export async function GET(request: NextRequest) {
       // 参加しているイベントを取得（作成者として以外）
       const participantEvents = await eventStorage.getParticipantEvents(participantId);
       events = participantEvents.filter(event => event.creatorId !== participantId);
+    } else if (status === 'open') {
+      // status=openの場合は認証チェックして参加可能なイベントのみ返す
+      const authHeader = request.headers.get('authorization');
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return NextResponse.json(
+          { error: '認証が必要です' },
+          { status: 401 }
+        );
+      }
+
+      const token = authHeader.substring(7);
+      const user = verifyToken(token);
+
+      if (!user) {
+        return NextResponse.json(
+          { error: '認証が必要です' },
+          { status: 401 }
+        );
+      }
+
+      // ユーザーが参加可能なイベントのみを取得
+      events = await eventStorage.getAvailableEventsForUser(user.id);
     } else if (status) {
       events = await eventStorage.getEventsByStatus(status as 'open' | 'matched' | 'cancelled' | 'expired');
     } else {
