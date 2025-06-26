@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eventStorage } from '@/lib/eventStorage';
-import { verifyToken } from '@/lib/auth';
-import { EventWithCreator, EventResponse } from '@/types/event';
+import { verifyJWT } from '@/lib/auth';
+import { getEventsByUserId, getParticipatingEvents } from '@/lib/eventStorage';
 
-interface DashboardStatsResponse {
-  availableEvents: EventResponse[];
-  stats: {
-    createdEvents: number;
-    participatingEvents: number;
-    matchedEvents: number;
-    pendingEvents: number;
-  };
+interface StatsResponse {
+  createdEvents: number;
+  participatingEvents: number;
+  matchedEvents: number;
+  pendingEvents: number;
+}
+
+interface EventSummary {
+  status: 'open' | 'matched' | 'cancelled' | 'expired';
 }
 
 export async function GET(request: NextRequest) {
@@ -20,67 +20,60 @@ export async function GET(request: NextRequest) {
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: '認証が必要です' },
         { status: 401 }
       );
     }
 
     const token = authHeader.substring(7);
-    const user = verifyToken(token);
+    
+    try {
+      const user = await verifyJWT(token);
+      
+      // データ取得とエラーハンドリング（部分的失敗に対応）
+      const [createdEventsResult, participatingEventsResult] = await Promise.allSettled([
+        getEventsByUserId(user.userId),
+        getParticipatingEvents(user.userId)
+      ]);
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
+      // どちらも失敗した場合は500エラー
+      if (createdEventsResult.status === 'rejected' && participatingEventsResult.status === 'rejected') {
+        throw new Error('両方のデータ取得に失敗しました');
+      }
+
+      // 部分的失敗の場合はgraceful degradation
+      const createdEvents: EventSummary[] = createdEventsResult.status === 'fulfilled' ? createdEventsResult.value : [];
+      const participatingEvents: EventSummary[] = participatingEventsResult.status === 'fulfilled' ? participatingEventsResult.value : [];
+
+      // 統計計算（型安全性を向上）
+      const matchedCreated = createdEvents.filter(e => e.status === 'matched').length;
+      const matchedParticipating = participatingEvents.filter(e => e.status === 'matched').length;
+      const openCreated = createdEvents.filter(e => e.status === 'open').length;
+      const openParticipating = participatingEvents.filter(e => e.status === 'open').length;
+
+      const stats: StatsResponse = {
+        createdEvents: createdEvents.length,
+        participatingEvents: participatingEvents.length,
+        matchedEvents: matchedCreated + matchedParticipating,
+        pendingEvents: openCreated + openParticipating,
+      };
+
+      return NextResponse.json(stats);
+    } catch (authError) {
+      // 認証エラーの場合のみ401を返す
+      if (authError instanceof Error && authError.message.includes('token')) {
+        return NextResponse.json(
+          { error: '認証が必要です' },
+          { status: 401 }
+        );
+      }
+      // その他のエラー（DBエラーなど）は500として扱う
+      throw authError;
     }
-
-    // 統計情報と参加可能イベントのみ取得
-    const [
-      createdEventsCount,
-      participatingEventsCount,
-      matchedEventsCount,
-      availableEventsData
-    ] = await Promise.all([
-      eventStorage.getCreatedEventsCount(user.id),
-      eventStorage.getParticipatingEventsCount(user.id),
-      eventStorage.getMatchedEventsCount(user.id),
-      eventStorage.getAvailableEventsForUser(user.id)
-    ]);
-
-    const stats = {
-      createdEvents: createdEventsCount,
-      participatingEvents: participatingEventsCount,
-      matchedEvents: matchedEventsCount,
-      pendingEvents: createdEventsCount + participatingEventsCount - matchedEventsCount,
-    };
-
-    // DateオブジェクトをISO 8601文字列に変換
-    const convertEventDates = (events: EventWithCreator[]): EventResponse[] => {
-      return events.map(event => ({
-        ...event,
-        createdAt: event.createdAt.toISOString(),
-        updatedAt: event.updatedAt.toISOString(),
-        deadline: event.deadline.toISOString(),
-        periodStart: event.periodStart.toISOString(),
-        periodEnd: event.periodEnd.toISOString(),
-        matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
-          date: ts.date.toISOString(),
-          timeSlot: ts.timeSlot
-        })) : undefined
-      }));
-    };
-
-    const response: DashboardStatsResponse = {
-      availableEvents: convertEventDates(availableEventsData),
-      stats
-    };
-
-    return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
+    console.error('Stats API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: '統計データの取得に失敗しました' },
       { status: 500 }
     );
   }

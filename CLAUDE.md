@@ -106,7 +106,9 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - ✅ Time-slot unit specification for events (requiredTimeSlots)
 - ✅ Database persistence with Prisma Accelerate
 - ✅ Real-time automatic matching validation and testing completed
-- 🚧 Error handling improvements needed for API stability
+- ✅ **API error handling enhancement** - 堅牢なエラーハンドリングと graceful degradation（TDD実装済み）
+- ✅ **Loading states and skeleton UI** - ユーザー体験向上のためのスケルトンローディング（TDD実装済み）
+- ✅ **Error Boundary implementation** - アプリケーション全体のエラー境界とユーザーフレンドリーなエラー表示（TDD実装済み）
 - 🚧 UX enhancements for schedule management interface
 - 🚧 Performance optimizations for initial page loads
 
@@ -123,17 +125,159 @@ The system supports real-time schedule coordination where:
 - Matched events display detailed information including final time-slots (date + time-slot pairs)
 
 ## Testing Strategy
+
+### Test-Driven Development (TDD)
+このプロジェクトでは **t-wadaさんのTDD方法論** を厳格に適用します：
+
+#### TDDの基本サイクル
+1. **🔴 Red Phase**: 最初に失敗するテストを書く
+2. **🟢 Green Phase**: テストが通る最小限のコードを実装する  
+3. **🔵 Refactor Phase**: テストを保持しながらコードの質を向上させる
+
+#### TDD実装例
+```typescript
+// 🔴 Red Phase: 失敗するテストを先に書く
+describe('🔴 Red Phase: API Error Handling', () => {
+  it('データベース接続エラー時に500ではなく適切なエラーレスポンスを返すべき', async () => {
+    // Arrange: 認証は成功するがDBエラーが発生する状況
+    vi.mocked(verifyJWT).mockResolvedValue({ userId: 'user1' });
+    vi.mocked(getEventsByUserId).mockRejectedValue(new Error('Database connection failed'));
+    
+    // Act: API呼び出し
+    const response = await GET(request);
+    const data = await response.json();
+    
+    // Assert: 適切なエラーハンドリング
+    expect(response.status).toBe(500);
+    expect(data).toEqual({ error: '統計データの取得に失敗しました' });
+  });
+});
+
+// 🟢 Green Phase: テストが通るように実装
+export async function GET(request: NextRequest) {
+  try {
+    const user = await verifyJWT(token);
+    const [createdEventsResult, participatingEventsResult] = await Promise.allSettled([
+      getEventsByUserId(user.userId),
+      getParticipatingEvents(user.userId)
+    ]);
+    // 実装続き...
+  } catch (error) {
+    return NextResponse.json({ error: '統計データの取得に失敗しました' }, { status: 500 });
+  }
+}
+
+// 🔵 Refactor Phase: コードの質を向上（型安全性など）
+interface EventSummary {
+  status: 'open' | 'matched' | 'cancelled' | 'expired';
+}
+const createdEvents: EventSummary[] = createdEventsResult.status === 'fulfilled' ? createdEventsResult.value : [];
+```
+
+### 包括的なテストカバレッジ
+
+#### 既存のテストスイート
 - **Unit tests**: `src/lib/__tests__/matchingEngine.test.ts` (16 tests) - Core matching logic
 - **API integration tests**: `src/app/api/__tests__/events-join-integration.test.ts` (3 tests) - End-to-end scenarios
+
+#### 新規実装されたテストスイート（TDD方式）
+- **API Error Handling**: `src/app/api/events/__tests__/stats-error-handling.test.ts` (6 tests)
+  - データベース接続エラー、部分的失敗、認証エラー、予期しないエラーのハンドリング
+- **UI Components**: `src/components/ui/__tests__/skeletons.test.tsx` (13 tests) 
+  - スケルトンUI、アクセシビリティ、レスポンシブ対応
+- **EventList Integration**: `src/components/events/__tests__/EventList-skeleton.test.tsx` (7 tests)
+  - ローディング状態、異なるdisplayMode、アクセシビリティ
+- **Error Boundary**: `src/components/ui/__tests__/ErrorBoundary.test.tsx` (14 tests)
+  - エラータイプ別表示、カスタムfallback、エラー報告、リセット機能
+
+### テスト実装の重要な原則
+
+#### 1. テストファースト開発
+```typescript
+// ❌ BAD: 実装後にテストを追加
+// 実装 → テスト追加
+
+// ✅ GOOD: TDD方式
+// 失敗するテスト → 実装 → リファクタリング
+```
+
+#### 2. 適切なテスト構造
+```typescript
+describe('🔴 Red Phase: Component Name', () => {
+  describe('機能カテゴリ', () => {
+    it('具体的な期待動作を日本語で記述すべき', () => {
+      // Arrange: テスト環境セットアップ
+      // Act: テスト対象の実行
+      // Assert: 期待結果の検証
+    });
+  });
+});
+```
+
+#### 3. モックとスタブの適切な使用
+```typescript
+// 外部依存をモック
+vi.mock('@/lib/auth', () => ({
+  verifyJWT: vi.fn(),
+}));
+
+// 型安全なモック
+interface MockEvent {
+  id: string;
+  status: 'open' | 'matched' | 'cancelled' | 'expired';
+}
+vi.mocked(getEventsByUserId).mockResolvedValue(mockEvents as MockEvent[]);
+```
+
+#### 4. アクセシビリティテスト
+```typescript
+it('エラー状態が適切にaria属性で伝達されるべき', () => {
+  render(<ErrorBoundary><ThrowError /></ErrorBoundary>);
+  
+  const errorContainer = screen.getByTestId('error-boundary-fallback');
+  expect(errorContainer).toHaveAttribute('role', 'alert');
+  expect(errorContainer).toHaveAttribute('aria-live', 'assertive');
+});
+```
+
+### テスト環境とツール
+
+#### Test Framework Setup
 - **Test framework**: Vitest with jsdom environment and React Testing Library
 - **Test setup**: `src/test/setup.ts` configures global test environment
-- **Run tests**: `yarn test` (watch mode), `yarn test:run` (single run), `yarn test:coverage` (with coverage)
-- **Test coverage**: Automatic matching scenarios are fully tested and verified
+- **Run commands**: 
+  - `yarn test` (watch mode)
+  - `yarn test:run` (single run) 
+  - `yarn test:coverage` (with coverage)
+  - `yarn test <path>` (specific test file)
 
-### Test Data Management
+#### Test Data Management
 - **Seed script**: `scripts/seed-test-data.ts` creates realistic test data with current date baselines
 - **Mock system**: `src/lib/__tests__/mocks/mockPrisma.ts` provides comprehensive Prisma mocking
 - **Date handling**: All test data uses relative dates (Date.now() + offset) to avoid time-dependent failures
+
+### テスト品質基準
+
+#### 必須要件
+- **すべての新機能はTDDで実装**: 例外なし
+- **テストカバレッジ維持**: 新しいコードは必ずテスト済み
+- **型安全なテスト**: `any` 型の使用禁止、適切なインターフェース定義
+- **アクセシビリティテスト**: UI コンポーネントは aria 属性のテストを含む
+
+#### テスト実行フロー
+1. **開発前**: 要件に基づいて失敗するテストを作成
+2. **開発中**: テストが通るように最小限の実装
+3. **開発後**: テストを保持しながらリファクタリング
+4. **コミット前**: 必ず `yarn test` および `yarn lint` を実行
+
+#### テストの分類
+- **Unit Tests**: 個別関数・コンポーネントの動作確認
+- **Integration Tests**: API エンドポイントと複数コンポーネントの連携
+- **Error Handling Tests**: エラー境界、失敗ケース、回復処理
+- **Accessibility Tests**: スクリーンリーダー、キーボードナビゲーション
+- **Performance Tests**: ローディング状態、レスポンシブ対応
+
+この TDD 方法論により、堅牢で保守性の高いコードベースを維持し、回帰バグを防止します。
 
 ## UI/UX Guidelines
 
@@ -222,15 +366,27 @@ function isSomeType(obj: unknown): obj is SomeType {
 }
 ```
 
-### Development Workflow
-1. Identify feature/bug requirements
-2. **Write/update tests first**
-3. Run tests to confirm they fail appropriately
-4. Implement minimal code to make tests pass
-5. Refactor while maintaining test coverage
-6. Clean up any deprecated code paths
+### Development Workflow (TDD Required)
+1. **要件分析**: 機能・バグ修正の要件を明確化
+2. **🔴 Red Phase**: 失敗するテストを最初に作成
+   - 期待する動作を具体的にテストケースで表現
+   - `yarn test <test-file>` で失敗することを確認
+3. **🟢 Green Phase**: テストが通る最小限のコードを実装
+   - テストが通るための最低限の機能のみ実装
+   - 完璧なコードを目指さず、テストをパスすることに集中
+4. **🔵 Refactor Phase**: テストを保持しながらコードの質を向上
+   - 型安全性の向上、パフォーマンス最適化、可読性向上
+   - `yarn test` でテストが継続して通ることを確認
+5. **品質チェック**: `yarn lint` で ESLint 規則に準拠
+6. **廃止コードの清理**: 後方互換性コードの削除
 
-These rules are MANDATORY and must be followed for all code changes.
+**このワークフローは必須であり、すべてのコード変更で従う必要があります。**
+
+#### TDD実装時の注意事項
+- **テストが落ちることを確認してから実装を開始**: 偽装テスト（常にパスするテスト）を防ぐため
+- **テストの修正ではなく実装の修正**: テストが失敗した場合、テストを修正するのではなく実装を修正する
+- **段階的な実装**: 一度に多くの機能を実装せず、小さなステップで進める
+- **継続的なリファクタリング**: 動作するコードができたら品質向上のためのリファクタリングを行う
 
 ## Known Issues and Improvements
 

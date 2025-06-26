@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { EventWithCreator } from '@/types/event';
+import { EventCardSkeleton } from '@/components/ui/skeletons';
 
 type EventDisplayMode = 'created' | 'participating' | 'completed' | 'available' | 'allEvents' | 'default';
 
@@ -56,9 +57,8 @@ export default function EventList({
   };
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        <span className="ml-2 text-gray-600">読み込み中...</span>
+      <div aria-busy="true">
+        <EventCardSkeleton count={3} />
       </div>
     );
   }
