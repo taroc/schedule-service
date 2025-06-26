@@ -107,25 +107,11 @@ function DashboardContent() {
 
       const statsData = await statsRes.json();
 
-      // EventResponseをEventWithCreatorに変換
-      const convertResponseToEvent = (events: EventResponse[]): EventWithCreator[] => {
-        return events.map(event => ({
-          ...event,
-          createdAt: new Date(event.createdAt),
-          updatedAt: new Date(event.updatedAt),
-          deadline: new Date(event.deadline),
-          periodStart: new Date(event.periodStart),
-          periodEnd: new Date(event.periodEnd),
-          matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
-            date: new Date(ts.date),
-            timeSlot: ts.timeSlot
-          })) : undefined
-        }));
-      };
-
-      // 状態を更新
-      setAvailableEvents(convertResponseToEvent(statsData.availableEvents));
-      setDashboardStats(statsData.stats);
+      // 状態を更新（statsDataは直接統計データ）
+      setDashboardStats(statsData);
+      
+      // 参加可能なイベントは別途読み込み
+      await loadAvailableEvents(token);
 
     } catch (error) {
       console.error('Data loading error:', error);
@@ -134,6 +120,43 @@ function DashboardContent() {
       showError(errorMessage);
     } finally {
       setIsLoadingStats(false);
+    }
+  };
+
+  // 参加可能なイベントを読み込む関数
+  const loadAvailableEvents = async (token: string) => {
+    try {
+      const availableRes = await fetch('/api/events?status=open', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (availableRes.ok) {
+        const availableData: EventResponse[] = await availableRes.json();
+        
+        // EventResponseをEventWithCreatorに変換
+        const convertResponseToEvent = (events: EventResponse[]): EventWithCreator[] => {
+          return events.map(event => ({
+            ...event,
+            createdAt: new Date(event.createdAt),
+            updatedAt: new Date(event.updatedAt),
+            deadline: new Date(event.deadline),
+            periodStart: new Date(event.periodStart),
+            periodEnd: new Date(event.periodEnd),
+            matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
+              date: new Date(ts.date),
+              timeSlot: ts.timeSlot
+            })) : undefined
+          }));
+        };
+
+        setAvailableEvents(convertResponseToEvent(availableData));
+      } else {
+        console.warn('Available events fetch failed:', availableRes.status);
+        setAvailableEvents([]);
+      }
+    } catch (error) {
+      console.warn('Failed to load available events:', error);
+      setAvailableEvents([]);
     }
   };
 

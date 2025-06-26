@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyJWT } from '@/lib/auth';
-import { getEventsByUserId, getParticipatingEvents } from '@/lib/eventStorage';
+import { verifyToken } from '@/lib/auth';
+import { eventStorage } from '@/lib/eventStorage';
 
 interface StatsResponse {
   createdEvents: number;
@@ -26,14 +26,21 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
+    const user = verifyToken(token);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: '認証が必要です' },
+        { status: 401 }
+      );
+    }
     
     try {
-      const user = await verifyJWT(token);
-      
       // データ取得とエラーハンドリング（部分的失敗に対応）
-      const [createdEventsResult, participatingEventsResult] = await Promise.allSettled([
-        getEventsByUserId(user.userId),
-        getParticipatingEvents(user.userId)
+      const [createdEventsResult, participatingEventsResult, matchedEventsResult] = await Promise.allSettled([
+        eventStorage.getEventsByCreator(user.id),
+        eventStorage.getParticipantEvents(user.id),
+        eventStorage.getMatchedEventsForUser(user.id)
       ]);
 
       // どちらも失敗した場合は500エラー
@@ -44,6 +51,7 @@ export async function GET(request: NextRequest) {
       // 部分的失敗の場合はgraceful degradation
       const createdEvents: EventSummary[] = createdEventsResult.status === 'fulfilled' ? createdEventsResult.value : [];
       const participatingEvents: EventSummary[] = participatingEventsResult.status === 'fulfilled' ? participatingEventsResult.value : [];
+      const matchedEvents: EventSummary[] = matchedEventsResult.status === 'fulfilled' ? matchedEventsResult.value : [];
 
       // 統計計算（型安全性を向上）
       const matchedCreated = createdEvents.filter(e => e.status === 'matched').length;
@@ -53,22 +61,15 @@ export async function GET(request: NextRequest) {
 
       const stats: StatsResponse = {
         createdEvents: createdEvents.length,
-        participatingEvents: participatingEvents.length,
-        matchedEvents: matchedCreated + matchedParticipating,
+        participatingEvents: participatingEvents.filter(e => e.creatorId !== user.id).length, // 自分が作成者でないものだけ
+        matchedEvents: matchedEvents.length,
         pendingEvents: openCreated + openParticipating,
       };
 
       return NextResponse.json(stats);
-    } catch (authError) {
-      // 認証エラーの場合のみ401を返す
-      if (authError instanceof Error && authError.message.includes('token')) {
-        return NextResponse.json(
-          { error: '認証が必要です' },
-          { status: 401 }
-        );
-      }
-      // その他のエラー（DBエラーなど）は500として扱う
-      throw authError;
+    } catch (error) {
+      console.error('Stats API error:', error);
+      throw error;
     }
   } catch (error) {
     console.error('Stats API error:', error);
