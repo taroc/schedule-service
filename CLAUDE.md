@@ -105,8 +105,10 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - ✅ UI improvements with visual event status distinction
 - ✅ Time-slot unit specification for events (requiredTimeSlots)
 - ✅ Database persistence with Prisma Accelerate
-- 🚧 Test coverage updates needed for time-slot matching
-- 🚧 Cleanup of deprecated backward compatibility code needed
+- ✅ Real-time automatic matching validation and testing completed
+- 🚧 Error handling improvements needed for API stability
+- 🚧 UX enhancements for schedule management interface
+- 🚧 Performance optimizations for initial page loads
 
 ## Time-Slot Based Matching System
 The system supports real-time schedule coordination where:
@@ -154,6 +156,37 @@ The system supports real-time schedule coordination where:
   <h3 className={`text-xl ${isClickable ? 'cursor-pointer hover:text-blue-600' : ''}`}>
   ```
 
+### Loading States and Feedback
+- **Implement skeleton loading** for better perceived performance during data fetching
+- **Provide clear success/error feedback** for all user actions
+- **Use loading spinners** for operations that take more than 500ms
+- **Examples**:
+  ```tsx
+  // Good: Skeleton loading for dashboard stats
+  <div className="animate-pulse">
+    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+    <div className="h-8 bg-gray-300 rounded"></div>
+  </div>
+  
+  // Good: Action feedback with toast notifications
+  <Toast type="success">イベントが正常に作成されました</Toast>
+  <Toast type="error">データの読み込みに失敗しました</Toast>
+  ```
+
+### Error Handling Patterns
+- **Graceful degradation**: Show partial data when possible instead of complete failure
+- **User-friendly error messages**: Avoid technical jargon in user-facing errors
+- **Retry mechanisms**: Provide easy ways for users to retry failed operations
+- **Examples**:
+  ```tsx
+  // Good: Error boundary with retry option
+  <ErrorBoundary>
+    <button onClick={retry} className="cursor-pointer">
+      データを再読み込み
+    </button>
+  </ErrorBoundary>
+  ```
+
 ## Documentation
 - **README.md**: Main project documentation with setup instructions and feature overview
 - **prisma/schema.prisma**: Database schema definitions
@@ -199,7 +232,29 @@ function isSomeType(obj: unknown): obj is SomeType {
 
 These rules are MANDATORY and must be followed for all code changes.
 
+## Known Issues and Improvements
+
+### Database Stability Issues
+- **Internal Server Error on fresh start**: `/api/events/stats` endpoint may fail on initial database connection
+- **Resolution**: Run `npx prisma db push` followed by `yarn seed` to reset and populate database
+- **Prevention**: Implement better error boundaries and graceful fallbacks in API routes
+
+### Performance Optimization Areas
+- **Initial page load**: Loading states can persist for 2-3 seconds
+- **Resolution**: Implement skeleton loading components and optimize API response times
+- **Data fetching**: Consider implementing React Query for better caching and background updates
+
+### UX Enhancement Opportunities
+- **Schedule management**: Calendar interface requires multiple clicks for date range selection
+- **Improvement**: Add quick-select buttons for common patterns (weekdays, weekends, specific time slots)
+- **Visual feedback**: Loading states and action confirmations could be more prominent
+
 ## Common Troubleshooting
+
+### Database Issues
+- **"Internal server error"**: Database connection may be unstable, run `npx prisma db push --force-reset && yarn seed`
+- **Missing data**: Use `yarn seed` to populate with realistic test data
+- **Prisma errors**: Run `npx prisma generate` to regenerate client
 
 ### Date/Time Issues
 - **TypeError: date.toDateString is not a function**: Use safe date conversion pattern above
@@ -213,3 +268,7 @@ These rules are MANDATORY and must be followed for all code changes.
 - **Authentication**: All protected routes require `Authorization: Bearer <token>` header
 - **Date serialization**: API routes return ISO strings, components must convert to Date objects
 - **Error handling**: APIs return `{ error: string }` for errors, `{ success: boolean }` for success
+
+### Development Workflow Issues
+- **Port conflicts**: Use `pkill -f "yarn dev"` to stop existing development servers
+- **Cache issues**: Clear browser cache and restart development server if seeing stale data
