@@ -16,6 +16,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `yarn db:studio` - Open Prisma Studio
 - `yarn seed` - Seed test data using scripts/seed-test-data.ts
 
+### Database Migration Commands
+
+#### Development Environment
+- `npx prisma migrate dev --name <name>` - Create new migration for development
+- `yarn migration:deploy` - Deploy migrations to development database
+- `yarn migration:reset` - Reset development database (dangerous)
+
+#### Production Environment  
+- `yarn migration-prod:create <name>` - Create migration using .env.production
+- `yarn migration-prod:deploy` - Deploy migrations to production database
+- `yarn seed:prod` - Seed production database with admin user
+- `yarn deploy:prod` - Full production deployment (migrate + seed)
+
 ### Critical Build Requirements
 - **ALWAYS run `yarn lint` before committing** - Build will fail if ESLint errors exist
 - **NO `any` types allowed** - Replace with proper TypeScript interfaces
@@ -43,7 +56,9 @@ Uses Prisma Accelerate for high-performance database access:
 - Prisma Client with Accelerate extension for type-safe database queries
 - Global edge caching and connection pooling via Prisma Accelerate
 - All storage classes use Prisma with Accelerate for database persistence (userStorage, eventStorage, scheduleStorage, matchingEngine)
-- No local database setup required - uses Prisma Accelerate for all environments
+- Environment separation: `.env` for development, `.env.production` for production
+- **Migration system**: Uses dotenv-cli for proper environment variable handling
+- **Production scripts**: `scripts/migrate-production.ts` and `scripts/seed-production.ts`
 
 ### Data Serialization Patterns
 **IMPORTANT**: API routes convert Date objects to ISO strings for JSON serialization. Client components must handle both:
@@ -65,12 +80,17 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - `GET /api/events/[id]` - Get event details
 - `PUT /api/events/[id]` - Update event
 - `DELETE /api/events/[id]` - Delete event
-- `POST /api/events/[id]/join` - Join event (triggers automatic matching)
+- `POST /api/events/[id]/join` - Join event (NO longer triggers automatic matching)
 - `DELETE /api/events/[id]/join` - Leave event
+- `GET /api/events/check-deadlines` - Manual deadline checking endpoint
+- `GET /api/events/stats` - Get user event statistics
 
 **Schedules** (`/src/app/api/schedules/`):
-- `POST /api/schedules/availability` - Set availability (triggers automatic matching)
+- `POST /api/schedules/availability` - Set availability (NO longer triggers automatic matching)
 - `GET /api/schedules/availability` - Get user availability
+
+**Cron Jobs** (`/src/app/api/cron/`):
+- `GET /api/cron/check-deadlines` - Automated deadline checking (secured with CRON_SECRET)
 
 **Matching** (`/src/app/api/matching/`):
 - `GET /api/matching` - Get matching statistics
@@ -93,8 +113,30 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - **Path mapping**: `@/*` maps to `./src/*`
 - **JWT secret**: Defaults to hardcoded value, set `JWT_SECRET` environment variable for production
 - **Database**: Prisma Accelerate connection (prisma+postgres://accelerate.prisma-data.net/?api_key=...)
+- **Environment files**: `.env` for development, `.env.production` for production
+- **Migration tooling**: Uses `dotenv-cli` for environment separation
 - **Turbopack**: Enabled for fast development builds
 - **Japanese locale**: UI is in Japanese, HTML lang="ja"
+
+## Database Migration System
+The project uses a comprehensive environment-separated migration system:
+
+### Environment Isolation
+- **Development**: Uses `.env` file automatically loaded by Prisma
+- **Production**: Uses `.env.production` with explicit `dotenv-cli` loading
+- **Never cross-contaminate**: Each environment has separate database URLs
+
+### Migration Workflow
+1. **Schema changes**: Edit `prisma/schema.prisma`
+2. **Development migration**: Run `npx prisma migrate dev --name <description>`
+3. **Test locally**: Verify changes work in development
+4. **Production deployment**: Use `yarn migration-prod:deploy` for production
+5. **Seed if needed**: Run `yarn seed:prod` for production data
+
+### Migration Troubleshooting
+- **Failed migrations**: Use `npx prisma migrate resolve --applied <name>` or `--rolled-back`
+- **Clean slate**: Remove failed migration directories from `prisma/migrations/`
+- **Environment checking**: Always verify which DATABASE_URL is being used
 
 ## Implementation Status
 - ✅ Phase 1: User authentication and event management
@@ -102,7 +144,8 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - ✅ Phase 3: Time-slot based matching engine (NOT date-based)
 - ✅ Event deadline functionality
 - ✅ **Deadline-based matching system** - 即座マッチングから締め切り日ベースマッチングに変更（TDD実装済み）
-- ✅ **Automated cron job processing** - 毎日自動で締め切り日チェック（Vercel Cron）
+- ✅ **Automated cron job processing** - 毎日21:00に自動で締め切り日チェック（Vercel Cron）
+- ✅ **Production migration system** - 環境分離型マイグレーションシステム（dotenv-cli使用）
 - ✅ UI improvements with visual event status distinction
 - ✅ Time-slot unit specification for events (requiredTimeSlots)
 - ✅ Database persistence with Prisma Accelerate
@@ -113,17 +156,25 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - 🚧 Performance optimizations for initial page loads
 
 ## Deadline-Based Matching System
-The system supports deadline-based schedule coordination where:
+**IMPORTANT**: The system has been refactored from immediate matching to deadline-based matching:
+
+### Current Behavior (Post-Refactor)
 - Users create events requiring specific numbers of participants and **time-slot units** (NOT days)
 - Participants register their availability in time slots (daytime, evening)
 - **Time-slot matching** ensures daytime-available and evening-available users don't incorrectly match
+- **NO immediate matching** - joining events or updating schedules does NOT trigger matching
 - **Deadline-based matching triggers** when:
-  1. Event deadline is reached (automated via Vercel Cron at 9:00 PM daily)
+  1. Event deadline is reached (automated via Vercel Cron at 21:00 JST daily)
   2. Manual deadline check via `GET /api/events/check-deadlines`
   3. Cron job endpoint `GET /api/cron/check-deadlines` (secured with CRON_SECRET)
 - Matching engine finds common available time-slots and updates event status to 'matched' or 'expired'
 - Events are visually distinguished by status (open vs matched vs expired) with color coding
 - Matched events display detailed information including final time-slots (date + time-slot pairs)
+
+### Legacy System (Removed)
+- ❌ **Immediate matching on participant join** - REMOVED
+- ❌ **Immediate matching on schedule update** - REMOVED
+- ❌ **onParticipantAdded/onScheduleUpdated methods** - REMOVED
 
 ## Testing Strategy
 
@@ -332,6 +383,12 @@ it('エラー状態が適切にaria属性で伝達されるべき', () => {
   </ErrorBoundary>
   ```
 
+## Vercel Cron Configuration
+- **Automated deadline checking**: Configured in `vercel.json` with cron job
+- **Schedule**: Daily at 21:00 JST (`"0 21 * * *"`)
+- **Endpoint**: `/api/cron/check-deadlines` - Automatically checks and updates expired events
+- **Purpose**: Ensures events past their deadline are marked as expired without manual intervention
+
 ## Documentation
 - **README.md**: Main project documentation with setup instructions and feature overview
 - **prisma/schema.prisma**: Database schema definitions
@@ -412,6 +469,14 @@ function isSomeType(obj: unknown): obj is SomeType {
 - **"Internal server error"**: Database connection may be unstable, run `npx prisma db push --force-reset && yarn seed`
 - **Missing data**: Use `yarn seed` to populate with realistic test data
 - **Prisma errors**: Run `npx prisma generate` to regenerate client
+
+### Migration Issues
+- **Failed migrations**: Use `npx prisma migrate resolve --applied <migration-name>` to mark as applied
+- **"Migration file not found"**: Remove failed migration directories from `prisma/migrations/`
+- **Environment confusion**: Always specify environment explicitly:
+  - Development: Default `.env` file used
+  - Production: Use `dotenv -e .env.production` or `yarn migration-prod:*` commands
+- **Data loss warnings**: For new NOT NULL columns, add default values in schema before migration
 
 ### Date/Time Issues
 - **TypeError: date.toDateString is not a function**: Use safe date conversion pattern above
