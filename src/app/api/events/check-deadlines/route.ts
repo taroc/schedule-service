@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
             isMatched: true,
             finalStatus: 'matched',
             matchedTimeSlots: matchingResult.matchedTimeSlots,
-            reason: updateSuccess ? matchingResult.reason : 'マッチング成功したが状態更新に失敗'
+            reason: updateSuccess ? (matchingResult.reason || 'マッチング成功') : 'マッチング成功したが状態更新に失敗'
           });
         } else {
           // マッチング失敗時は期限切れステータスに更新
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
             eventName: event.name,
             isMatched: false,
             finalStatus: 'expired',
-            reason: updateSuccess ? matchingResult.reason : 'マッチング失敗、状態更新にも失敗'
+            reason: updateSuccess ? (matchingResult.reason || 'マッチング失敗') : 'マッチング失敗、状態更新にも失敗'
           });
         }
       } catch (error) {
