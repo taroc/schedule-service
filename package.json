@@ -13,7 +13,10 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "db:studio": "prisma studio",
-    "seed": "tsx scripts/seed-test-data.ts"
+    "seed": "tsx scripts/seed-test-data.ts",
+    "migrate:prod": "NODE_ENV=production tsx scripts/migrate-production.ts",
+    "seed:prod": "NODE_ENV=production tsx scripts/seed-production.ts",
+    "deploy:prod": "npm run migrate:prod && npm run seed:prod"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
@@ -34,6 +37,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/dotenv": "^8.2.3",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^20",
     "@types/react": "^19",

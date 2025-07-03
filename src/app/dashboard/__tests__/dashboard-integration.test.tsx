@@ -122,13 +122,10 @@ describe('Dashboard Statistics Display', () => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
-            availableEvents: [],
-            stats: {
-              createdEvents: 2,
-              participatingEvents: 2,
-              matchedEvents: 2,
-              pendingEvents: 2
-            }
+            createdEvents: 2,
+            participatingEvents: 2,
+            matchedEvents: 2,
+            pendingEvents: 2
           }),
         }) as Promise<Response>;
       }
@@ -188,9 +185,9 @@ describe('Dashboard Statistics Display', () => {
     const participatingEventsCard = screen.getByText('参加表明したイベント').closest('div');
     const matchedEventsCard = screen.getByText('参加が決まったイベント').closest('div');
 
-    expect(createdEventsCard).toContainElement(screen.getAllByText('2')[0]);
-    expect(participatingEventsCard).toContainElement(screen.getAllByText('2')[1]);
-    expect(matchedEventsCard).toContainElement(screen.getAllByText('2')[2]);
+    expect(createdEventsCard).toHaveTextContent('2');
+    expect(participatingEventsCard).toHaveTextContent('2');
+    expect(matchedEventsCard).toHaveTextContent('2');
   });
 
   it('データ取得エラー時に適切なエラーメッセージを表示する', async () => {

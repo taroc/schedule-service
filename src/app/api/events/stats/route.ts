@@ -11,6 +11,7 @@ interface StatsResponse {
 
 interface EventSummary {
   status: 'open' | 'matched' | 'cancelled' | 'expired';
+  creatorId: string;
 }
 
 export async function GET(request: NextRequest) {
