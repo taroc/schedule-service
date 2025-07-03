@@ -101,27 +101,28 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - ✅ Phase 2: User schedule management with time slots (daytime, evening)
 - ✅ Phase 3: Time-slot based matching engine (NOT date-based)
 - ✅ Event deadline functionality
-- ✅ Automatic matching triggers (on participant join and schedule update)
+- ✅ **Deadline-based matching system** - 即座マッチングから締め切り日ベースマッチングに変更（TDD実装済み）
+- ✅ **Automated cron job processing** - 毎日自動で締め切り日チェック（Vercel Cron）
 - ✅ UI improvements with visual event status distinction
 - ✅ Time-slot unit specification for events (requiredTimeSlots)
 - ✅ Database persistence with Prisma Accelerate
-- ✅ Real-time automatic matching validation and testing completed
 - ✅ **API error handling enhancement** - 堅牢なエラーハンドリングと graceful degradation（TDD実装済み）
 - ✅ **Loading states and skeleton UI** - ユーザー体験向上のためのスケルトンローディング（TDD実装済み）
 - ✅ **Error Boundary implementation** - アプリケーション全体のエラー境界とユーザーフレンドリーなエラー表示（TDD実装済み）
 - 🚧 UX enhancements for schedule management interface
 - 🚧 Performance optimizations for initial page loads
 
-## Time-Slot Based Matching System
-The system supports real-time schedule coordination where:
+## Deadline-Based Matching System
+The system supports deadline-based schedule coordination where:
 - Users create events requiring specific numbers of participants and **time-slot units** (NOT days)
 - Participants register their availability in time slots (daytime, evening)
 - **Time-slot matching** ensures daytime-available and evening-available users don't incorrectly match
-- **Automatic matching triggers** when:
-  1. A user joins an event (`POST /api/events/[id]/join`)
-  2. A user updates their schedule (`POST /api/schedules/availability`)
-- Matching engine finds common available time-slots and automatically updates event status
-- Events are visually distinguished by status (open vs matched) with color coding
+- **Deadline-based matching triggers** when:
+  1. Event deadline is reached (automated via Vercel Cron at 9:00 PM daily)
+  2. Manual deadline check via `GET /api/events/check-deadlines`
+  3. Cron job endpoint `GET /api/cron/check-deadlines` (secured with CRON_SECRET)
+- Matching engine finds common available time-slots and updates event status to 'matched' or 'expired'
+- Events are visually distinguished by status (open vs matched vs expired) with color coding
 - Matched events display detailed information including final time-slots (date + time-slot pairs)
 
 ## Testing Strategy

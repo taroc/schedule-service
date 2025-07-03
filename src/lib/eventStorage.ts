@@ -669,6 +669,32 @@ class EventStorageDB {
     return events.map(event => this.mapPrismaToEvent(event));
   }
 
+  async getEventsWithDeadlinesPassed(): Promise<Event[]> {
+    const events = await prisma.event.findMany({
+      where: {
+        deadline: {
+          lte: new Date(),
+        },
+        status: 'open',
+      },
+      include: {
+        participants: {
+          select: {
+            userId: true,
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        deadline: 'asc',
+      },
+    });
+
+    return events.map(event => this.mapPrismaToEvent(event));
+  }
+
   async expireOverdueEvents(): Promise<number> {
     const result = await prisma.event.updateMany({
       where: {

@@ -2,7 +2,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { scheduleStorage } from '@/lib/scheduleStorage';
-import { matchingEngine } from '@/lib/matchingEngine';
 import { verifyToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -29,11 +28,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '時間帯の指定が必要です' }, { status: 400 });
     }
 
-    // バッチ処理でスケジュール登録と自動マッチングを並列実行
-    await Promise.all([
-      scheduleStorage.setAvailability(userId, dates, timeSlots),
-      matchingEngine.onScheduleUpdated(userId)
-    ]);
+    // スケジュール登録
+    await scheduleStorage.setAvailability(userId, dates, timeSlots);
 
     return NextResponse.json({ success: true });
 
@@ -66,13 +62,12 @@ export async function DELETE(request: NextRequest) {
     // 日付文字列をDateオブジェクトに変換
     const datesToDelete = dates.map(dateStr => new Date(dateStr));
 
-    // バッチ処理でスケジュール削除と自動マッチングを並列実行
-    await Promise.all([
-      dates.length === 0 
-        ? scheduleStorage.deleteAllUserSchedules(userId)
-        : scheduleStorage.deleteSchedules(userId, datesToDelete),
-      matchingEngine.onScheduleUpdated(userId)
-    ]);
+    // スケジュール削除
+    if (dates.length === 0) {
+      await scheduleStorage.deleteAllUserSchedules(userId);
+    } else {
+      await scheduleStorage.deleteSchedules(userId, datesToDelete);
+    }
 
     return NextResponse.json({ success: true });
 

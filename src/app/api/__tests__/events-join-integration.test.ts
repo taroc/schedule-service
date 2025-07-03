@@ -59,7 +59,7 @@ vi.mock('@/lib/auth', async () => {
   };
 });
 
-// Mock SetAvailability function that returns matching data
+// Mock SetAvailability function for deadline-based matching
 const SetAvailability = async (request: NextRequest) => {
   // 認証チェック
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
@@ -67,18 +67,9 @@ const SetAvailability = async (request: NextRequest) => {
     return Response.json({ error: '認証トークンが必要です' }, { status: 401 });
   }
 
-  // Get user ID from token
-  const userId = token.replace('mock-token-', '');
-  
-  // 実際のAPIロジックをシミュレート (but don't await it, we'll handle the response ourselves)
-  
-  // Call the matching engine to get real results
-  const matchingResult = await matchingEngine.onScheduleUpdated(userId);
-  
-  // テスト期待値に合わせたレスポンスを返す
+  // 新しい締め切り日ベースのマッチングでは自動マッチングは実行しない
   return Response.json({ 
-    success: true,
-    matching: matchingResult
+    success: true
   });
 };
 
@@ -419,7 +410,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     });
   });
 
-  it('should automatically match event when second participant joins via API', async () => {
+  it('should NOT automatically match event when participants join (deadline-based matching)', async () => {
     // Step 1: Create event
     const createEventRequest = new NextRequest('http://localhost:3000/api/events', {
       method: 'POST',
@@ -428,8 +419,8 @@ describe('Event Join API Integration - Automatic Matching', () => {
         'Authorization': `Bearer ${creatorToken}`
       },
       body: JSON.stringify({
-        name: 'API統合マッチングテスト',
-        description: 'API経由での自動マッチング検証',
+        name: '締め切り日ベースマッチングテスト',
+        description: '参加時には自動マッチングしない新しいロジック',
         requiredParticipants: 2,
         requiredTimeSlots: 1,
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -468,7 +459,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user1ScheduleResponse = await SetAvailability(user1ScheduleRequest);
     expect(user1ScheduleResponse.status).toBe(200);
     const user1ScheduleData = await user1ScheduleResponse.json();
-    expect(user1ScheduleData.matching.eventsChecked).toBe(0); // まだイベントに参加していない
+    expect(user1ScheduleData.success).toBe(true); // 自動マッチングは無効化済み
 
     // User2のスケジュール設定
     const user2ScheduleRequest = new NextRequest('http://localhost:3000/api/schedules/availability', {
@@ -486,7 +477,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user2ScheduleResponse = await SetAvailability(user2ScheduleRequest);
     expect(user2ScheduleResponse.status).toBe(200);
 
-    // Step 3: First user joins event (should not trigger matching)
+    // Step 3: First user joins event (no automatic matching)
     const user1JoinRequest = new NextRequest(`http://localhost:3000/api/events/${eventId}/join`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${user1Token}` }
@@ -496,10 +487,9 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user1JoinResponse.status).toBe(200);
     const user1JoinData = await user1JoinResponse.json();
     
-    // マッチングが実行されたが成立しなかった
-    expect(user1JoinData.matching.checked).toBe(true);
-    expect(user1JoinData.matching.isMatched).toBe(false);
-    expect(user1JoinData.matching.reason).toContain('Insufficient participants');
+    // 自動マッチングは無効化されている
+    expect(user1JoinData.matching).toBeUndefined();
+    expect(user1JoinData.message).toBe('Successfully joined event');
 
     // イベントステータスの確認（まだopen）
     const eventAfterUser1 = await eventStorage.getEventById(eventId);
@@ -507,7 +497,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(eventAfterUser1?.participants).toHaveLength(1);
     expect(eventAfterUser1?.participants).toContain(mockUser1);
 
-    // Step 4: Second user joins event (should trigger automatic matching!)
+    // Step 4: Second user joins event (still no automatic matching)
     const user2JoinRequest = new NextRequest(`http://localhost:3000/api/events/${eventId}/join`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${user2Token}` }
@@ -517,25 +507,20 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user2JoinResponse.status).toBe(200);
     const user2JoinData = await user2JoinResponse.json();
 
-    // マッチングが実行され成立した
-    expect(user2JoinData.matching.checked).toBe(true);
-    expect(user2JoinData.matching.isMatched).toBe(true);
-    expect(user2JoinData.matching.reason).toBe('Successfully matched');
+    // 自動マッチングは無効化されている
+    expect(user2JoinData.matching).toBeUndefined();
+    expect(user2JoinData.message).toBe('Successfully joined event');
 
-    // Step 5: Verify event status was automatically updated
+    // Step 5: Event remains open until deadline check
     const finalEvent = await eventStorage.getEventById(eventId);
-    expect(finalEvent?.status).toBe('matched');
+    expect(finalEvent?.status).toBe('open'); // 締め切り日チェックまでopen状態
     expect(finalEvent?.participants).toHaveLength(2);
     expect(finalEvent?.participants).toContain(mockUser1);
     expect(finalEvent?.participants).toContain(mockUser2);
-    expect(finalEvent?.matchedTimeSlots).toHaveLength(1);
-    expect(finalEvent?.matchedTimeSlots?.[0].date).toBeInstanceOf(Date);
-    
-    // 更新日時が設定されている（作成日時以降）
-    expect(finalEvent?.updatedAt?.getTime()).toBeGreaterThanOrEqual(finalEvent?.createdAt.getTime() || 0);
+    expect(finalEvent?.matchedTimeSlots).toBeUndefined(); // まだマッチングしていない
   });
 
-  it('should handle schedule updates triggering automatic matching via API', async () => {
+  it('should NOT trigger automatic matching on schedule updates (deadline-based)', async () => {
     // Step 1: Create event and add participants first
     const createEventRequest = new NextRequest('http://localhost:3000/api/events', {
       method: 'POST',
@@ -597,11 +582,11 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user1ScheduleResponse = await SetAvailability(user1ScheduleRequest);
     const user1ScheduleData = await user1ScheduleResponse.json();
     
-    // User1のスケジュール更新でマッチングがチェックされたが、User2のスケジュールがないので成立しない
-    expect(user1ScheduleData.matching.eventsChecked).toBe(1);
-    expect(user1ScheduleData.matching.newMatches).toBe(0);
+    // 自動マッチングは無効化されている
+    expect(user1ScheduleData.success).toBe(true);
+    expect(user1ScheduleData.matching).toBeUndefined();
 
-    // Step 3: User2がスケジュールを設定（これでマッチング成立）
+    // Step 3: User2がスケジュールを設定（自動マッチングなし）
     const user2ScheduleRequest = new NextRequest('http://localhost:3000/api/schedules/availability', {
       method: 'POST',
       headers: {
@@ -617,17 +602,17 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user2ScheduleResponse = await SetAvailability(user2ScheduleRequest);
     const user2ScheduleData = await user2ScheduleResponse.json();
 
-    // User2のスケジュール更新でマッチングが成立
-    expect(user2ScheduleData.matching.eventsChecked).toBe(1);
-    expect(user2ScheduleData.matching.newMatches).toBe(1);
+    // 自動マッチングは無効化されている
+    expect(user2ScheduleData.success).toBe(true);
+    expect(user2ScheduleData.matching).toBeUndefined();
 
-    // Step 4: Verify automatic status update
+    // Step 4: Event remains open until deadline check
     currentEvent = await eventStorage.getEventById(eventId);
-    expect(currentEvent?.status).toBe('matched');
-    expect(currentEvent?.matchedTimeSlots).toHaveLength(1);
+    expect(currentEvent?.status).toBe('open'); // 締め切り日チェックまでopen状態
+    expect(currentEvent?.matchedTimeSlots).toBeUndefined();
   });
 
-  it('should not match when participants have no common schedule via API', async () => {
+  it('should not automatically check schedule compatibility (deadline-based)', async () => {
     // Step 1: Create event
     const createEventRequest = new NextRequest('http://localhost:3000/api/events', {
       method: 'POST',
@@ -698,12 +683,11 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user2JoinResponse = await POST(user2JoinRequest, { params: Promise.resolve({ id: eventId }) });
     const user2JoinData = await user2JoinResponse.json();
 
-    // マッチングが実行されたが成立しなかった
-    expect(user2JoinData.matching.checked).toBe(true);
-    expect(user2JoinData.matching.isMatched).toBe(false);
-    expect(user2JoinData.matching.reason).toContain('No common available dates');
+    // 自動マッチングは無効化されている
+    expect(user2JoinData.matching).toBeUndefined();
+    expect(user2JoinData.message).toBe('Successfully joined event');
 
-    // イベントはopenのまま
+    // イベントはopenのまま（締め切り日チェックまで）
     const finalEvent = await eventStorage.getEventById(eventId);
     expect(finalEvent?.status).toBe('open');
     expect(finalEvent?.matchedTimeSlots).toBeUndefined();
