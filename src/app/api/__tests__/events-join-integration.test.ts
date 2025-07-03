@@ -6,7 +6,6 @@ import { POST as Register } from '../auth/register/route';
 // Import actual route for reference, but we'll mock it
 // import { POST as ActualSetAvailability } from '../schedules/availability/route';
 import { eventStorage } from '@/lib/eventStorage';
-import { matchingEngine } from '@/lib/matchingEngine';
 import { mockPrisma } from '@/lib/__tests__/mocks/mockPrisma';
 
 // Prismaクライアントをモック
@@ -38,13 +37,6 @@ vi.mock('@/lib/eventStorage', () => ({
   }
 }));
 
-// MatchingEngineをモック
-vi.mock('@/lib/matchingEngine', () => ({
-  matchingEngine: {
-    onParticipantAdded: vi.fn(),
-    onScheduleUpdated: vi.fn()
-  }
-}));
 
 // JWT認証をモック
 vi.mock('@/lib/auth', async () => {
@@ -126,8 +118,6 @@ describe('Event Join API Integration - Automatic Matching', () => {
     vi.mocked(eventStorage.getEventById).mockReset();
     vi.mocked(eventStorage.createEvent).mockReset();
     vi.mocked(eventStorage.addParticipant).mockReset();
-    vi.mocked(matchingEngine.onParticipantAdded).mockReset();
-    vi.mocked(matchingEngine.onScheduleUpdated).mockReset();
     
     // Reset auth mocks completely and re-setup
     const { generateToken, verifyToken } = await import('@/lib/auth');
@@ -335,79 +325,6 @@ describe('Event Join API Integration - Automatic Matching', () => {
       return { success: true };
     });
 
-    // Setup dynamic matching engine mock responses
-    vi.mocked(matchingEngine.onParticipantAdded).mockImplementation(async (eventId) => {
-      const event = mockEvents.get(eventId);
-      if (!event) {
-        return { isMatched: false, reason: 'Event not found' };
-      }
-      
-      // For the second and third tests, we need to be more sophisticated - check if participants have schedules
-      const testName = expect.getState().currentTestName;
-      if (testName?.includes('schedule updates triggering automatic matching') || 
-          testName?.includes('no common schedule')) {
-        // In these tests, joining should not trigger matching immediately
-        const reason = testName?.includes('no common schedule') ? 'No common available dates' : 'Insufficient participants';
-        return { isMatched: false, reason: reason };
-      }
-      
-      // Check if we have enough participants
-      if (event.participants.length >= event.requiredParticipants) {
-        // Update event status to matched
-        event.status = 'matched';
-        event.matchedTimeSlots = [{
-          date: new Date(),
-          timeSlot: 'daytime'
-        }];
-        return { isMatched: true, reason: 'Successfully matched' };
-      }
-      
-      return { isMatched: false, reason: 'Insufficient participants' };
-    });
-    
-    vi.mocked(matchingEngine.onScheduleUpdated).mockImplementation(async (userId) => {
-      const testName = expect.getState().currentTestName;
-      if (testName?.includes('schedule updates triggering automatic matching')) {
-        // Find events where this user participates
-        const userEvents = Array.from(mockEvents.values()).filter(event => 
-          event.participants.includes(userId) && event.status === 'open'
-        );
-        
-        let newMatches = 0;
-        userEvents.forEach(event => {
-          // Check if we have enough participants and this is the second user setting schedule
-          if (event.participants.length >= event.requiredParticipants && userId === mockUser2) {
-            event.status = 'matched';
-            event.matchedTimeSlots = [{
-              date: new Date(),
-              timeSlot: 'daytime'
-            }];
-            newMatches++;
-          }
-        });
-        
-        return {
-          eventsChecked: userEvents.length,
-          newMatches: newMatches
-        };
-      } else if (testName?.includes('no common schedule')) {
-        // Find events where this user participates
-        const userEvents = Array.from(mockEvents.values()).filter(event => 
-          event.participants.includes(userId) && event.status === 'open'
-        );
-        
-        // In this test, users have different schedules, so no matching should occur
-        return {
-          eventsChecked: userEvents.length,
-          newMatches: 0
-        };
-      }
-      
-      return {
-        eventsChecked: 0,
-        newMatches: 0
-      };
-    });
   });
 
   it('should NOT automatically match event when participants join (deadline-based matching)', async () => {
@@ -487,8 +404,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user1JoinResponse.status).toBe(200);
     const user1JoinData = await user1JoinResponse.json();
     
-    // 自動マッチングは無効化されている
-    expect(user1JoinData.matching).toBeUndefined();
+    // 参加成功
     expect(user1JoinData.message).toBe('Successfully joined event');
 
     // イベントステータスの確認（まだopen）
@@ -507,8 +423,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     expect(user2JoinResponse.status).toBe(200);
     const user2JoinData = await user2JoinResponse.json();
 
-    // 自動マッチングは無効化されている
-    expect(user2JoinData.matching).toBeUndefined();
+    // 参加成功
     expect(user2JoinData.message).toBe('Successfully joined event');
 
     // Step 5: Event remains open until deadline check
@@ -582,9 +497,8 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user1ScheduleResponse = await SetAvailability(user1ScheduleRequest);
     const user1ScheduleData = await user1ScheduleResponse.json();
     
-    // 自動マッチングは無効化されている
+    // スケジュール登録成功
     expect(user1ScheduleData.success).toBe(true);
-    expect(user1ScheduleData.matching).toBeUndefined();
 
     // Step 3: User2がスケジュールを設定（自動マッチングなし）
     const user2ScheduleRequest = new NextRequest('http://localhost:3000/api/schedules/availability', {
@@ -602,9 +516,8 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user2ScheduleResponse = await SetAvailability(user2ScheduleRequest);
     const user2ScheduleData = await user2ScheduleResponse.json();
 
-    // 自動マッチングは無効化されている
+    // スケジュール登録成功
     expect(user2ScheduleData.success).toBe(true);
-    expect(user2ScheduleData.matching).toBeUndefined();
 
     // Step 4: Event remains open until deadline check
     currentEvent = await eventStorage.getEventById(eventId);
@@ -683,8 +596,7 @@ describe('Event Join API Integration - Automatic Matching', () => {
     const user2JoinResponse = await POST(user2JoinRequest, { params: Promise.resolve({ id: eventId }) });
     const user2JoinData = await user2JoinResponse.json();
 
-    // 自動マッチングは無効化されている
-    expect(user2JoinData.matching).toBeUndefined();
+    // 参加成功
     expect(user2JoinData.message).toBe('Successfully joined event');
 
     // イベントはopenのまま（締め切り日チェックまで）

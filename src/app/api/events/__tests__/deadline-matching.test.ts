@@ -1,20 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { POST as joinEvent } from '../[id]/join/route';
-import { POST as setAvailability } from '../../schedules/availability/route';
 import { GET as checkDeadlines } from '../check-deadlines/route';
 import { eventStorage } from '@/lib/eventStorage';
-import { scheduleStorage } from '@/lib/scheduleStorage';
 import { matchingEngine } from '@/lib/matchingEngine';
 import { verifyToken } from '@/lib/auth';
 
 // モック設定
 vi.mock('@/lib/auth');
 vi.mock('@/lib/eventStorage');
-vi.mock('@/lib/scheduleStorage');
 vi.mock('@/lib/matchingEngine');
 
-describe('🔴 Red Phase: 締め切り日チェック機能', () => {
+describe('締め切り日ベースマッチング機能', () => {
   const mockUser = { id: 'user1' };
   const mockEvent = {
     id: 'event1',
@@ -39,48 +35,6 @@ describe('🔴 Red Phase: 締め切り日チェック機能', () => {
     vi.clearAllMocks();
   });
 
-  describe('即座マッチング無効化', () => {
-    it('イベント参加時に自動マッチングを実行しないべき', async () => {
-      // Arrange: イベント参加のセットアップ
-      vi.mocked(eventStorage.getEventById).mockResolvedValue(mockEvent);
-      vi.mocked(eventStorage.addParticipant).mockResolvedValue({ success: true });
-      
-      const request = new NextRequest('http://localhost/api/events/event1/join', {
-        method: 'POST',
-        headers: { 'authorization': 'Bearer valid-token' }
-      });
-
-      // Act: イベント参加API呼び出し
-      const response = await joinEvent(request, { params: Promise.resolve({ id: 'event1' }) });
-      const data = await response.json();
-
-      // Assert: 自動マッチングが実行されていないこと
-      expect(vi.mocked(matchingEngine.onParticipantAdded)).not.toHaveBeenCalled();
-      expect(data.matching).toBeUndefined();
-      expect(response.status).toBe(200);
-    });
-
-    it('スケジュール更新時に自動マッチングを実行しないべき', async () => {
-      // Arrange: スケジュール更新のセットアップ
-      vi.mocked(scheduleStorage.setAvailability).mockResolvedValue(undefined);
-      
-      const request = new NextRequest('http://localhost/api/schedules/availability', {
-        method: 'POST',
-        headers: { 'authorization': 'Bearer valid-token' },
-        body: JSON.stringify({
-          dates: ['2024-01-01'],
-          timeSlots: ['daytime']
-        })
-      });
-
-      // Act: スケジュール更新API呼び出し
-      const response = await setAvailability(request);
-
-      // Assert: 自動マッチングが実行されていないこと
-      expect(vi.mocked(matchingEngine.onScheduleUpdated)).not.toHaveBeenCalled();
-      expect(response.status).toBe(200);
-    });
-  });
 
   describe('締め切り日チェック機能', () => {
     it('締め切り日が来たイベントのマッチング判定を実行すべき', async () => {

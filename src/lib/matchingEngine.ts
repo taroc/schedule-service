@@ -205,30 +205,6 @@ class MatchingEngine {
   }
 
 
-  /**
-   * 参加者が追加された時の自動マッチング実行
-   */
-  async onParticipantAdded(eventId: string): Promise<MatchingResult> {
-    return await this.checkEventMatching(eventId);
-  }
-
-  /**
-   * スケジュールが更新された時の関連イベントのマッチング再実行
-   */
-  async onScheduleUpdated(userId: string): Promise<MatchingResult[]> {
-    // ユーザーが参加している全てのオープンイベントを取得
-    const userEvents = await eventStorage.getParticipantEvents(userId);
-    const openUserEvents = userEvents.filter(event => event.status === 'open');
-
-    const results: MatchingResult[] = [];
-    
-    for (const event of openUserEvents) {
-      const result = await this.checkEventMatching(event.id);
-      results.push(result);
-    }
-    
-    return results;
-  }
 
   /**
    * 期限切れイベントを自動的に期限切れステータスに更新

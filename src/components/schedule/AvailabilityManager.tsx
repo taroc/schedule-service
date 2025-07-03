@@ -234,7 +234,7 @@ export default function AvailabilityManager() {
         setWeekdaySelectedDates([]);
         setSelectedWeekdays([]);
 
-        // スケジュールのみ再取得（イベント情報は自動マッチングで更新される）
+        // スケジュールのみ再取得
         await fetchSchedules();
       }
     } catch {
