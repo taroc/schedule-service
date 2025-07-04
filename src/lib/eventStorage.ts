@@ -836,6 +836,16 @@ class EventStorageDB {
       optimalParticipants: undefined,
       selectionDeadline: undefined,
       lotterySeed: undefined,
+      
+      // 🟢 Green Phase: 成立条件詳細設定フィールド（デフォルト値）
+      allowPartialMatching: false,
+      minimumTimeSlots: undefined,
+      suggestMultipleOptions: false,
+      maxSuggestions: undefined,
+      preferredDates: undefined,
+      dateWeights: undefined,
+      requireAllParticipants: false,
+      fallbackStrategy: undefined,
     };
   }
 
@@ -895,6 +905,16 @@ class EventStorageDB {
       optimalParticipants: undefined,
       selectionDeadline: undefined,
       lotterySeed: undefined,
+      
+      // 🟢 Green Phase: 成立条件詳細設定フィールド（デフォルト値）
+      allowPartialMatching: false,
+      minimumTimeSlots: undefined,
+      suggestMultipleOptions: false,
+      maxSuggestions: undefined,
+      preferredDates: undefined,
+      dateWeights: undefined,
+      requireAllParticipants: false,
+      fallbackStrategy: undefined,
       
       creator: {
         id: prismaEvent.creator?.id || prismaEvent.creatorId,

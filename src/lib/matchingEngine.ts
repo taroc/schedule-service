@@ -1,6 +1,6 @@
 import { eventStorage } from './eventStorage';
 import { scheduleStorage } from './scheduleStorage';
-import { Event } from '@/types/event';
+import { Event, MatchingSuggestion } from '@/types/event';
 import { TimeSlot, MatchingTimeSlot, UserSchedule } from '@/types/schedule';
 
 export interface MatchingResult {
@@ -10,6 +10,10 @@ export interface MatchingResult {
   participants: string[];
   requiredTimeSlots: number;
   reason?: string;
+  // 🔴 Red Phase: 成立条件詳細設定用フィールド
+  suggestions?: MatchingSuggestion[]; // 複数候補提示
+  completeness?: number; // 0.0-1.0 (要求に対する充足率)
+  isPartialMatch?: boolean; // 部分成立フラグ
 }
 
 export interface MatchingEngineStats {
@@ -77,19 +81,73 @@ class MatchingEngine {
     // 🟢 Green Phase: 参加者選択戦略に基づく参加者選択
     const selectedParticipants = await this.selectParticipants(event);
     
+    // 🟢 Green Phase: 高度なマッチング条件チェック
+    const advancedMatchingResult = await this.checkAdvancedMatchingConditions(event, selectedParticipants);
+    if (!advancedMatchingResult.isValid) {
+      return {
+        eventId,
+        isMatched: false,
+        matchedTimeSlots: [],
+        participants: selectedParticipants,
+        requiredTimeSlots: event.requiredTimeSlots || 0,
+        reason: advancedMatchingResult.reason
+      };
+    }
+    
     // 🟢 Green Phase: マッチング戦略に基づくスケジュールマッチングを実行
     const requiredTimeSlots = event.requiredTimeSlots || 1;
     
-    // 🔵 Refactor Phase: 選択された参加者でマッチングを実行（元のparticipantsを使わない）
+    // 🔵 Refactor Phase: 選択された参加者でマッチングを実行（重み付けを考慮）
     const eventForMatching = { ...event, participants: selectedParticipants };
-    const matchingResult = await this.findMatchingTimeSlotsWithStrategy(
-      eventForMatching,
-      selectedParticipants,
-      requiredTimeSlots
-    );
+    let matchingResult;
+    
+    if (event.dateWeights || event.preferredDates) {
+      // 重み付けを考慮したマッチング
+      matchingResult = await this.findMatchingTimeSlotsWithPreferences(
+        eventForMatching,
+        selectedParticipants,
+        requiredTimeSlots
+      );
+    } else {
+      // 通常のマッチング
+      matchingResult = await this.findMatchingTimeSlotsWithStrategy(
+        eventForMatching,
+        selectedParticipants,
+        requiredTimeSlots
+      );
+    }
 
-    const isMatched = matchingResult.isMatched;
-    const finalMatchedTimeSlots = matchingResult.timeSlots;
+    let isMatched = matchingResult.isMatched;
+    let finalMatchedTimeSlots = matchingResult.timeSlots;
+    let completeness = 1.0;
+    let isPartialMatch = false;
+    let suggestions: MatchingSuggestion[] | undefined;
+
+    // 🟢 Green Phase: 部分成立許可のチェック
+    if (!isMatched && event.allowPartialMatching) {
+      const partialResult = await this.checkPartialMatching(event, selectedParticipants);
+      if (partialResult.isMatched) {
+        isMatched = true;
+        finalMatchedTimeSlots = partialResult.timeSlots;
+        isPartialMatch = true;
+        completeness = partialResult.completeness || 0.5;
+      } else if (partialResult.reason) {
+        // 部分成立も失敗した場合は、その理由を返す
+        return {
+          eventId,
+          isMatched: false,
+          matchedTimeSlots: [],
+          participants: selectedParticipants,
+          requiredTimeSlots,
+          reason: partialResult.reason
+        };
+      }
+    }
+
+    // 🟢 Green Phase: 複数候補提示の処理
+    if (event.suggestMultipleOptions) {
+      suggestions = await this.generateMultipleSuggestions(event, selectedParticipants);
+    }
 
     // マッチした場合は自動的にイベントステータスを更新
     if (isMatched) {
@@ -102,7 +160,11 @@ class MatchingEngine {
       matchedTimeSlots: finalMatchedTimeSlots,
       participants: selectedParticipants, // 🟢 Green Phase: 選択された参加者を返す
       requiredTimeSlots,
-      reason: isMatched ? 'Successfully matched' : matchingResult.reason || 'No common available time slots found'
+      reason: isMatched ? 'Successfully matched' : matchingResult.reason || 'No common available time slots found',
+      // 🟢 Green Phase: 新機能のレスポンス
+      suggestions,
+      completeness,
+      isPartialMatch
     };
   }
 
@@ -846,6 +908,223 @@ class MatchingEngine {
     
     // 正の値に変換して0-1の範囲に正規化
     return Math.abs(hash) / 2147483647; // 2^31 - 1
+  }
+
+  /**
+   * 🟢 Green Phase: 高度なマッチング条件のチェック
+   */
+  private async checkAdvancedMatchingConditions(
+    event: Event, 
+    selectedParticipants: string[]
+  ): Promise<{ isValid: boolean; reason?: string }> {
+    // 全参加者合意必須のチェック
+    if (event.requireAllParticipants) {
+      // 全参加者がスケジュール的に参加可能かチェック
+      const requiredTimeSlots = event.requiredTimeSlots || 1;
+      const participantsToCheck = event.requireAllParticipants ? event.participants : selectedParticipants;
+      const commonTimeSlots = await this.findCommonAvailableTimeSlotsWithRestriction(
+        participantsToCheck,
+        event.periodStart,
+        event.periodEnd,
+        event.timeSlotRestriction || 'both'
+      );
+
+      if (commonTimeSlots.length < requiredTimeSlots) {
+        return {
+          isValid: false,
+          reason: 'all participants required but not all participants have common available time slots'
+        };
+      }
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * 🟢 Green Phase: 部分成立許可のチェック
+   */
+  private async checkPartialMatching(
+    event: Event, 
+    selectedParticipants: string[]
+  ): Promise<{ isMatched: boolean; timeSlots: MatchingTimeSlot[]; completeness?: number; reason?: string }> {
+    const minimumSlots = event.minimumTimeSlots || Math.ceil((event.requiredTimeSlots || 1) * 0.5);
+    
+    // 全ての空き時間帯を取得
+    const availableTimeSlots = await this.findCommonAvailableTimeSlotsWithWeights(
+      selectedParticipants,
+      event.periodStart,
+      event.periodEnd,
+      event.timeSlotRestriction || 'both',
+      event.dateWeights
+    );
+
+    // 最低コマ数チェック
+    if (availableTimeSlots.length < minimumSlots) {
+      return {
+        isMatched: false,
+        timeSlots: [],
+        completeness: 0,
+        reason: `insufficient time slots to meet minimum time slots requirement (${availableTimeSlots.length}/${minimumSlots})`
+      };
+    }
+    
+    // 部分成立用の低い要求でマッチングを試行
+    const partialMatchingResult = await this.findMatchingTimeSlotsWithStrategy(
+      { ...event, requiredTimeSlots: minimumSlots },
+      selectedParticipants,
+      minimumSlots
+    );
+
+    if (partialMatchingResult.isMatched && partialMatchingResult.timeSlots.length >= minimumSlots) {
+      const completeness = partialMatchingResult.timeSlots.length / (event.requiredTimeSlots || 1);
+      return {
+        isMatched: true,
+        timeSlots: partialMatchingResult.timeSlots,
+        completeness
+      };
+    }
+
+    return {
+      isMatched: false,
+      timeSlots: [],
+      completeness: 0,
+      reason: 'failed to find minimum time slots'
+    };
+  }
+
+  /**
+   * 🟢 Green Phase: 複数候補提示の生成
+   */
+  private async generateMultipleSuggestions(
+    event: Event, 
+    selectedParticipants: string[]
+  ): Promise<MatchingSuggestion[]> {
+    const maxSuggestions = event.maxSuggestions || 3;
+    const suggestions: MatchingSuggestion[] = [];
+
+    // 時間帯制限を考慮した空き時間帯を取得
+    const availableTimeSlots = await this.findCommonAvailableTimeSlotsWithWeights(
+      selectedParticipants,
+      event.periodStart,
+      event.periodEnd,
+      event.timeSlotRestriction || 'both',
+      event.dateWeights
+    );
+
+    // 複数の組み合わせを生成
+    const requiredSlots = event.requiredTimeSlots || 1;
+    for (let i = 0; i < maxSuggestions && i < Math.max(1, availableTimeSlots.length - requiredSlots + 1); i++) {
+      const startIndex = i;
+      const suggestedSlots = availableTimeSlots.slice(startIndex, startIndex + requiredSlots);
+      
+      if (suggestedSlots.length >= requiredSlots) {
+        const score = this.calculateSuggestionScore(suggestedSlots, event.dateWeights);
+        const completeness = suggestedSlots.length / requiredSlots;
+        
+        suggestions.push({
+          timeSlots: suggestedSlots,
+          participants: selectedParticipants,
+          score,
+          completeness
+        });
+      }
+    }
+
+    return suggestions.sort((a, b) => b.score - a.score);
+  }
+
+  /**
+   * 🟢 Green Phase: 重み付きの空き時間帯取得
+   */
+  private async findCommonAvailableTimeSlotsWithWeights(
+    participantIds: string[],
+    periodStart: Date,
+    periodEnd: Date,
+    timeSlotRestriction: string,
+    dateWeights?: Record<string, number>
+  ): Promise<MatchingTimeSlot[]> {
+    // 基本的な空き時間帯を取得
+    const availableTimeSlots = await this.findCommonAvailableTimeSlotsWithRestriction(
+      participantIds,
+      periodStart,
+      periodEnd,
+      timeSlotRestriction
+    );
+
+    // 重み付けでソート
+    if (dateWeights) {
+      return availableTimeSlots.sort((a, b) => {
+        const aDateStr = a.date.toISOString().split('T')[0];
+        const bDateStr = b.date.toISOString().split('T')[0];
+        const aWeight = dateWeights[aDateStr] || 1.0;
+        const bWeight = dateWeights[bDateStr] || 1.0;
+        return bWeight - aWeight; // 高い重みを優先
+      });
+    }
+
+    return availableTimeSlots;
+  }
+
+  /**
+   * 🟢 Green Phase: 候補のスコア計算
+   */
+  private calculateSuggestionScore(
+    timeSlots: MatchingTimeSlot[],
+    dateWeights?: Record<string, number>
+  ): number {
+    let score = 100; // ベーススコア
+
+    // 日程の重み付けスコア
+    if (dateWeights) {
+      const weightScore = timeSlots.reduce((sum, slot) => {
+        const dateStr = slot.date.toISOString().split('T')[0];
+        const weight = dateWeights[dateStr] || 1.0;
+        return sum + weight;
+      }, 0);
+      score += weightScore * 10; // 重み付けを反映
+    }
+
+    // 早い日程ほど高スコア
+    const avgTime = timeSlots.reduce((sum, slot) => sum + slot.date.getTime(), 0) / timeSlots.length;
+    const now = Date.now();
+    const daysDiff = (avgTime - now) / (1000 * 60 * 60 * 24);
+    score += Math.max(0, 50 - daysDiff); // 早いほど高スコア
+
+    return score;
+  }
+
+  /**
+   * 🟢 Green Phase: 優先度を考慮したマッチング
+   */
+  private async findMatchingTimeSlotsWithPreferences(
+    event: Event,
+    participantIds: string[],
+    requiredTimeSlots: number
+  ): Promise<{ isMatched: boolean; timeSlots: MatchingTimeSlot[]; reason?: string }> {
+    // 重み付きの空き時間帯を取得
+    const availableTimeSlots = await this.findCommonAvailableTimeSlotsWithWeights(
+      participantIds,
+      event.periodStart,
+      event.periodEnd,
+      event.timeSlotRestriction || 'both',
+      event.dateWeights
+    );
+
+    if (availableTimeSlots.length < requiredTimeSlots) {
+      return {
+        isMatched: false,
+        timeSlots: [],
+        reason: 'insufficient time slots'
+      };
+    }
+
+    // 必要な分を選択（既に重み付けでソートされている）
+    const selectedTimeSlots = availableTimeSlots.slice(0, requiredTimeSlots);
+
+    return {
+      isMatched: true,
+      timeSlots: selectedTimeSlots
+    };
   }
 
 }

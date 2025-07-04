@@ -288,8 +288,66 @@ export interface Event {
 }
 ```
 
-### Phase 3以降: 順次実装
-- 成立条件の詳細設定
+## 次のステップ
+
+### Phase 3: 成立条件の詳細設定（実装開始）
+
+#### 目標
+より細かい成立条件を設定可能にし、多様なイベント形式に対応する
+
+#### 実装予定項目
+
+1. **部分成立許可システム**
+   - `allowPartialMatching`: 必要コマ数未満での成立許可
+   - `minimumTimeSlots`: 部分成立時の最低コマ数
+   - 段階的な成立レベル（例：50%, 75%, 100%）
+
+2. **複数候補提示機能**
+   - `suggestMultipleOptions`: 複数日程案の提示モード
+   - `maxSuggestions`: 提示する候補数の上限
+   - スコアベースのランキング表示
+
+3. **優先日程設定**
+   - `preferredDates`: 特定日程への重み付け
+   - `dateWeights`: 日程別の優先度スコア
+   - 優先度を考慮したマッチング
+
+4. **高度なマッチング条件**
+   - `requireAllParticipants`: 全参加者の合意が必要
+   - `fallbackStrategy`: 第一希望が不成立時の代替戦略
+   - `escalationRules`: 段階的な条件緩和
+
+#### データベーススキーマ追加予定
+```typescript
+// Event インターフェースに追加するフィールド
+allowPartialMatching: boolean;           // 部分成立許可
+minimumTimeSlots?: number;              // 部分成立時の最低コマ数
+suggestMultipleOptions: boolean;        // 複数候補提示
+maxSuggestions?: number;                // 最大候補数
+preferredDates?: string[];              // 優先日程（ISO文字列配列）
+dateWeights?: Record<string, number>;   // 日程別重み（日付文字列 → スコア）
+requireAllParticipants: boolean;        // 全参加者合意必須
+fallbackStrategy?: FallbackStrategy;    // 代替戦略
+```
+
+#### 新しい型定義
+```typescript
+export type FallbackStrategy = 'lower_requirements' | 'extend_period' | 'split_event' | 'cancel';
+
+export interface DateWeight {
+  date: string;    // ISO date string
+  weight: number;  // 1.0 = normal, >1.0 = preferred, <1.0 = avoided
+}
+
+export interface MatchingSuggestion {
+  timeSlots: MatchingTimeSlot[];
+  participants: string[];
+  score: number;
+  completeness: number; // 0.0-1.0 (要求に対する充足率)
+}
+```
+
+### Phase 4以降: 順次実装
 - 通知・確認設定
 - データベーススキーマ変更
 - UI対応

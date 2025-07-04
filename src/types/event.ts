@@ -29,6 +29,16 @@ export interface Event {
   optimalParticipants?: number;             // 理想人数
   selectionDeadline?: Date;                 // 手動選択の締切
   lotterySeed?: number;                     // 抽選用シード値
+  
+  // 🔴 Red Phase: 成立条件詳細設定
+  allowPartialMatching: boolean;            // 部分成立許可
+  minimumTimeSlots?: number;                // 部分成立時の最低コマ数
+  suggestMultipleOptions: boolean;          // 複数候補提示
+  maxSuggestions?: number;                  // 最大候補数
+  preferredDates?: string[];                // 優先日程（ISO文字列配列）
+  dateWeights?: Record<string, number>;     // 日程別重み（日付文字列 → スコア）
+  requireAllParticipants: boolean;          // 全参加者合意必須
+  fallbackStrategy?: FallbackStrategy;      // 代替戦略
 }
 
 export type EventStatus = 'open' | 'matched' | 'cancelled' | 'expired';
@@ -41,6 +51,21 @@ export type TimeSlotRestriction = 'both' | 'daytime_only' | 'evening_only';
 
 // 🟢 Green Phase: 参加者選択戦略関連の型定義
 export type ParticipantSelectionStrategy = 'first_come' | 'lottery' | 'manual';
+
+// 🔴 Red Phase: 成立条件詳細設定関連の型定義
+export type FallbackStrategy = 'lower_requirements' | 'extend_period' | 'split_event' | 'cancel';
+
+export interface DateWeight {
+  date: string;    // ISO date string
+  weight: number;  // 1.0 = normal, >1.0 = preferred, <1.0 = avoided
+}
+
+export interface MatchingSuggestion {
+  timeSlots: { date: Date; timeSlot: 'daytime' | 'evening' }[];
+  participants: string[];
+  score: number;
+  completeness: number; // 0.0-1.0 (要求に対する充足率)
+}
 
 export interface CreateEventRequest {
   name: string;
@@ -65,6 +90,16 @@ export interface CreateEventRequest {
   optimalParticipants?: number;             // 理想人数
   selectionDeadline?: Date;                 // 手動選択の締切
   lotterySeed?: number;                     // 抽選用シード値
+  
+  // 🔴 Red Phase: 成立条件詳細設定（オプション）
+  allowPartialMatching?: boolean;           // 部分成立許可
+  minimumTimeSlots?: number;                // 部分成立時の最低コマ数
+  suggestMultipleOptions?: boolean;         // 複数候補提示
+  maxSuggestions?: number;                  // 最大候補数
+  preferredDates?: string[];                // 優先日程（ISO文字列配列）
+  dateWeights?: Record<string, number>;     // 日程別重み（日付文字列 → スコア）
+  requireAllParticipants?: boolean;         // 全参加者合意必須
+  fallbackStrategy?: FallbackStrategy;      // 代替戦略
 }
 
 export interface UpdateEventRequest {
@@ -90,6 +125,16 @@ export interface UpdateEventRequest {
   optimalParticipants?: number;
   selectionDeadline?: Date;
   lotterySeed?: number;
+  
+  // 🔴 Red Phase: 成立条件詳細設定
+  allowPartialMatching?: boolean;
+  minimumTimeSlots?: number;
+  suggestMultipleOptions?: boolean;
+  maxSuggestions?: number;
+  preferredDates?: string[];
+  dateWeights?: Record<string, number>;
+  requireAllParticipants?: boolean;
+  fallbackStrategy?: FallbackStrategy;
 }
 
 export interface EventParticipation {
@@ -131,4 +176,14 @@ export interface EventResponse {
   optimalParticipants?: number;
   selectionDeadline?: string; // API レスポンスではstring
   lotterySeed?: number;
+  
+  // 🔴 Red Phase: 成立条件詳細設定
+  allowPartialMatching: boolean;
+  minimumTimeSlots?: number;
+  suggestMultipleOptions: boolean;
+  maxSuggestions?: number;
+  preferredDates?: string[];
+  dateWeights?: Record<string, number>;
+  requireAllParticipants: boolean;
+  fallbackStrategy?: FallbackStrategy;
 }
