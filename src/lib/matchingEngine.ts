@@ -73,17 +73,16 @@ class MatchingEngine {
       };
     }
 
-    // スケジュールマッチングを実行
+    // 🟢 Green Phase: マッチング戦略に基づくスケジュールマッチングを実行
     const requiredTimeSlots = event.requiredTimeSlots || 1;
-    const matchedTimeSlots = await this.findCommonAvailableTimeSlots(
+    const matchingResult = await this.findMatchingTimeSlotsWithStrategy(
+      event,
       event.participants,
-      requiredTimeSlots,
-      event.periodStart,
-      event.periodEnd
+      requiredTimeSlots
     );
 
-    const isMatched = matchedTimeSlots.length >= requiredTimeSlots;
-    const finalMatchedTimeSlots = isMatched ? matchedTimeSlots.slice(0, requiredTimeSlots) : [];
+    const isMatched = matchingResult.isMatched;
+    const finalMatchedTimeSlots = matchingResult.timeSlots;
 
     // マッチした場合は自動的にイベントステータスを更新
     if (isMatched) {
@@ -96,7 +95,7 @@ class MatchingEngine {
       matchedTimeSlots: finalMatchedTimeSlots,
       participants: event.participants,
       requiredTimeSlots,
-      reason: isMatched ? 'Successfully matched' : 'No common available time slots found'
+      reason: isMatched ? 'Successfully matched' : matchingResult.reason || 'No common available time slots found'
     };
   }
 
@@ -351,6 +350,312 @@ class MatchingEngine {
     });
 
     return availableTimeSlots;
+  }
+
+  /**
+   * 🟢 Green Phase: マッチング戦略に基づく時間帯マッチング
+   */
+  private async findMatchingTimeSlotsWithStrategy(
+    event: Event,
+    participantIds: string[],
+    requiredTimeSlots: number
+  ): Promise<{ isMatched: boolean; timeSlots: MatchingTimeSlot[]; reason?: string }> {
+    // デフォルト値の設定
+    const strategy = event.matchingStrategy || 'consecutive';
+    const timeSlotRestriction = event.timeSlotRestriction || 'both';
+    const minimumConsecutive = event.minimumConsecutive || 1;
+
+    // 時間帯制限を適用した空き時間帯を取得
+    const availableTimeSlots = await this.findCommonAvailableTimeSlotsWithRestriction(
+      participantIds,
+      event.periodStart,
+      event.periodEnd,
+      timeSlotRestriction
+    );
+
+    if (availableTimeSlots.length < requiredTimeSlots) {
+      return {
+        isMatched: false,
+        timeSlots: [],
+        reason: timeSlotRestriction === 'daytime_only' ? 'insufficient daytime slots' :
+                timeSlotRestriction === 'evening_only' ? 'insufficient evening slots' :
+                'insufficient time slots'
+      };
+    }
+
+    // マッチング戦略に基づく選択
+    let selectedTimeSlots: MatchingTimeSlot[];
+    
+    if (strategy === 'consecutive') {
+      selectedTimeSlots = this.selectConsecutiveTimeSlots(availableTimeSlots, requiredTimeSlots, minimumConsecutive);
+      
+      // 🔵 Refactor Phase: 最低連続コマ数のチェックを強化
+      if (minimumConsecutive > 1 && !this.hasMinimumConsecutiveSlots(selectedTimeSlots, minimumConsecutive)) {
+        return {
+          isMatched: false,
+          timeSlots: [],
+          reason: 'minimum consecutive requirement not met'
+        };
+      }
+    } else if (strategy === 'flexible') {
+      selectedTimeSlots = this.selectFlexibleTimeSlots(availableTimeSlots, requiredTimeSlots);
+    } else {
+      // フォールバック: デフォルトロジック
+      selectedTimeSlots = availableTimeSlots.slice(0, requiredTimeSlots);
+    }
+
+    return {
+      isMatched: selectedTimeSlots.length >= requiredTimeSlots,
+      timeSlots: selectedTimeSlots.slice(0, requiredTimeSlots)
+    };
+  }
+
+  /**
+   * 🟢 Green Phase: 時間帯制限を適用した空き時間帯取得
+   */
+  private async findCommonAvailableTimeSlotsWithRestriction(
+    participantIds: string[],
+    periodStart: Date,
+    periodEnd: Date,
+    timeSlotRestriction: string
+  ): Promise<MatchingTimeSlot[]> {
+    const availableTimeSlots: MatchingTimeSlot[] = [];
+    
+    // 全参加者の指定期間内のスケジュールを一度に取得
+    const allSchedules = new Map<string, UserSchedule[]>();
+    for (const participantId of participantIds) {
+      const schedules = await scheduleStorage.getUserSchedulesByDateRange(
+        participantId,
+        periodStart,
+        periodEnd
+      );
+      allSchedules.set(participantId, schedules);
+    }
+    
+    // 時間帯の制限を決定
+    const allowedTimeSlots: TimeSlot[] = [];
+    if (timeSlotRestriction === 'both') {
+      allowedTimeSlots.push('daytime', 'evening');
+    } else if (timeSlotRestriction === 'daytime_only') {
+      allowedTimeSlots.push('daytime');
+    } else if (timeSlotRestriction === 'evening_only') {
+      allowedTimeSlots.push('evening');
+    }
+    
+    // 期間内の各日でループ（最大100日間に制限）
+    let dayCount = 0;
+    for (let d = new Date(periodStart); d <= periodEnd && dayCount < 100; d = new Date(d.getTime() + 24 * 60 * 60 * 1000), dayCount++) {
+      const dateStr = d.toISOString().split('T')[0];
+      
+      // 許可された時間帯でチェック
+      for (const timeSlot of allowedTimeSlots) {
+        // 全参加者がこの日時に空いているかチェック
+        const isAvailable = participantIds.every(participantId => {
+          const userSchedules = allSchedules.get(participantId) || [];
+          const daySchedule = userSchedules.find(s => 
+            s.date.toISOString().split('T')[0] === dateStr
+          );
+          
+          if (!daySchedule) {
+            return false; // スケジュール未登録は忙しい扱い
+          }
+          
+          return timeSlot === 'daytime' ? daySchedule.timeSlots.daytime : daySchedule.timeSlots.evening;
+        });
+        
+        if (isAvailable) {
+          availableTimeSlots.push({
+            date: new Date(d),
+            timeSlot
+          });
+        }
+      }
+    }
+    
+    return availableTimeSlots;
+  }
+
+  /**
+   * 🟢 Green Phase: 連続優先での時間帯選択
+   */
+  private selectConsecutiveTimeSlots(
+    availableTimeSlots: MatchingTimeSlot[],
+    requiredTimeSlots: number,
+    minimumConsecutive: number
+  ): MatchingTimeSlot[] {
+    if (availableTimeSlots.length < requiredTimeSlots) {
+      return availableTimeSlots;
+    }
+
+    // 🟢 Green Phase: 連続性優先の最小限実装
+    // 日付順でソートして、連続した時間帯を優先して選択
+    const sorted = [...availableTimeSlots].sort((a, b) => {
+      const dateDiff = a.date.getTime() - b.date.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      
+      // 同日の場合は昼→夜の順
+      if (a.timeSlot === 'daytime' && b.timeSlot === 'evening') return -1;
+      if (a.timeSlot === 'evening' && b.timeSlot === 'daytime') return 1;
+      return 0;
+    });
+
+    // 連続性を評価してスコア付け
+    const scoredSlots = sorted.map(slot => ({
+      slot,
+      score: this.calculateConsecutiveScore(slot, sorted)
+    }));
+
+    // スコア順でソート（高スコアが優先）
+    scoredSlots.sort((a, b) => b.score - a.score);
+
+    const selected: MatchingTimeSlot[] = [];
+    const usedDates = new Set<string>();
+
+    for (const { slot } of scoredSlots) {
+      if (selected.length >= requiredTimeSlots) break;
+
+      const dateKey = slot.date.toISOString().split('T')[0];
+      const timeSlotKey = `${dateKey}_${slot.timeSlot}`;
+
+      // 重複チェック
+      if (usedDates.has(timeSlotKey)) continue;
+
+      selected.push(slot);
+      usedDates.add(timeSlotKey);
+    }
+
+    return selected.slice(0, requiredTimeSlots);
+  }
+
+  /**
+   * 🟢 Green Phase: 連続性スコア計算
+   */
+  private calculateConsecutiveScore(
+    slot: MatchingTimeSlot,
+    allSlots: MatchingTimeSlot[]
+  ): number {
+    let score = 0;
+    const slotTime = slot.date.getTime();
+
+    // 早い日程ほど高スコア（最大100点）
+    const earliestTime = Math.min(...allSlots.map(s => s.date.getTime()));
+    const latestTime = Math.max(...allSlots.map(s => s.date.getTime()));
+    const timeRange = latestTime - earliestTime;
+    if (timeRange > 0) {
+      score += (1 - (slotTime - earliestTime) / timeRange) * 100;
+    } else {
+      score += 100; // 全て同じ日程の場合
+    }
+
+    // 連続性ボーナス
+    const dateStr = slot.date.toISOString().split('T')[0];
+    const sameDate = allSlots.filter(s => 
+      s.date.toISOString().split('T')[0] === dateStr
+    );
+
+    // 同日に昼・夜両方がある場合の連続性ボーナス
+    if (sameDate.length >= 2) {
+      const hasDaytime = sameDate.some(s => s.timeSlot === 'daytime');
+      const hasEvening = sameDate.some(s => s.timeSlot === 'evening');
+      
+      if (hasDaytime && hasEvening) {
+        // 昼→夜の連続を優先
+        if (slot.timeSlot === 'daytime') {
+          score += 50; // 昼のボーナス
+        } else {
+          score += 30; // 夜のボーナス（昼より低め）
+        }
+      }
+    }
+
+    return score;
+  }
+
+  /**
+   * 🟢 Green Phase: 分散許可での時間帯選択
+   */
+  private selectFlexibleTimeSlots(
+    availableTimeSlots: MatchingTimeSlot[],
+    requiredTimeSlots: number
+  ): MatchingTimeSlot[] {
+    if (availableTimeSlots.length < requiredTimeSlots) {
+      return availableTimeSlots;
+    }
+
+    // 分散許可モードでは早い日程を優先
+    const sorted = [...availableTimeSlots].sort((a, b) => {
+      const dateDiff = a.date.getTime() - b.date.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      
+      // 同日の場合は昼→夜の順
+      if (a.timeSlot === 'daytime' && b.timeSlot === 'evening') return -1;
+      if (a.timeSlot === 'evening' && b.timeSlot === 'daytime') return 1;
+      return 0;
+    });
+
+    return sorted.slice(0, requiredTimeSlots);
+  }
+
+  /**
+   * 🔵 Refactor Phase: 最低連続コマ数の確認
+   */
+  private hasMinimumConsecutiveSlots(
+    timeSlots: MatchingTimeSlot[],
+    minimumConsecutive: number
+  ): boolean {
+    if (minimumConsecutive <= 1) return true;
+    if (timeSlots.length < minimumConsecutive) return false;
+
+    // 日付順でソート
+    const sorted = [...timeSlots].sort((a, b) => {
+      const dateDiff = a.date.getTime() - b.date.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      
+      // 同日の場合は昼→夜の順
+      if (a.timeSlot === 'daytime' && b.timeSlot === 'evening') return -1;
+      if (a.timeSlot === 'evening' && b.timeSlot === 'daytime') return 1;
+      return 0;
+    });
+
+    // 連続するコマをカウント
+    let maxConsecutive = 1;
+    let currentConsecutive = 1;
+
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const current = sorted[i];
+      
+      const isConsecutive = this.areTimeSlotsConsecutive(prev, current);
+      
+      if (isConsecutive) {
+        currentConsecutive++;
+        maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+      } else {
+        currentConsecutive = 1;
+      }
+    }
+
+    return maxConsecutive >= minimumConsecutive;
+  }
+
+  /**
+   * 🔵 Refactor Phase: 2つの時間帯が連続かどうかを判定
+   */
+  private areTimeSlotsConsecutive(
+    slot1: MatchingTimeSlot,
+    slot2: MatchingTimeSlot
+  ): boolean {
+    const date1 = slot1.date;
+    const date2 = slot2.date;
+    
+    // 同日の昼→夜は連続
+    if (date1.getTime() === date2.getTime()) {
+      return slot1.timeSlot === 'daytime' && slot2.timeSlot === 'evening';
+    }
+    
+    // 隣接日は連続
+    const dayDiff = (date2.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24);
+    return dayDiff === 1;
   }
 
 }

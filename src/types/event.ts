@@ -16,11 +16,20 @@ export interface Event {
   periodStart: Date;            // 期間開始
   periodEnd: Date;              // 期間終了
   reservationStatus: ReservationStatus; // 予約ステータス
+  
+  // 🟢 Green Phase: マッチング戦略設定
+  matchingStrategy: MatchingStrategy;      // マッチング戦略
+  timeSlotRestriction: TimeSlotRestriction; // 時間帯制限
+  minimumConsecutive: number;               // 最低連続コマ数
 }
 
 export type EventStatus = 'open' | 'matched' | 'cancelled' | 'expired';
 
 export type ReservationStatus = 'open' | 'tentative' | 'confirmed' | 'expired';
+
+// 🟢 Green Phase: マッチング戦略関連の型定義
+export type MatchingStrategy = 'consecutive' | 'flexible';
+export type TimeSlotRestriction = 'both' | 'daytime_only' | 'evening_only';
 
 export interface CreateEventRequest {
   name: string;
@@ -32,6 +41,11 @@ export interface CreateEventRequest {
   // 期間指定フィールド（必須）
   periodStart: Date;           // 期間開始
   periodEnd: Date;             // 期間終了
+  
+  // 🟢 Green Phase: マッチング戦略設定（オプション）
+  matchingStrategy?: MatchingStrategy;      // マッチング戦略
+  timeSlotRestriction?: TimeSlotRestriction; // 時間帯制限
+  minimumConsecutive?: number;               // 最低連続コマ数
 }
 
 export interface UpdateEventRequest {
@@ -44,6 +58,11 @@ export interface UpdateEventRequest {
   // 期間指定フィールド
   periodStart?: Date;
   periodEnd?: Date;
+  
+  // 🟢 Green Phase: マッチング戦略設定
+  matchingStrategy?: MatchingStrategy;
+  timeSlotRestriction?: TimeSlotRestriction;
+  minimumConsecutive?: number;
 }
 
 export interface EventParticipation {
@@ -72,4 +91,9 @@ export interface EventResponse {
   periodStart: string;
   periodEnd: string;
   reservationStatus: ReservationStatus;
+  
+  // 🟢 Green Phase: マッチング戦略設定
+  matchingStrategy: MatchingStrategy;
+  timeSlotRestriction: TimeSlotRestriction;
+  minimumConsecutive: number;
 }

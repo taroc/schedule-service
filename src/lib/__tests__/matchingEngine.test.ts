@@ -259,7 +259,7 @@ describe('matchingEngine', () => {
 
       // Assert
       expect(result.isMatched).toBe(false);
-      expect(result.reason).toContain('No common available time slots');
+      expect(result.reason).toContain('insufficient time slots');
     });
 
     it('should return true when requirements are met', async () => {
