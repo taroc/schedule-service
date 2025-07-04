@@ -103,8 +103,11 @@ expect.extend({
 
 // 型定義の拡張
 declare module 'vitest' {
-  interface Assertion<T = any> {
-    toHaveConsecutiveTimeSlots(): T;
-    toAllowNonConsecutiveTimeSlots(): T;
+  interface Assertion {
+    toHaveConsecutiveTimeSlots(): Assertion;
+    toAllowNonConsecutiveTimeSlots(): Assertion;
+    toBeSelectedByFirstCome(): Assertion;
+    toBeSelectedByLottery(): Assertion;
+    toMatchOptimalParticipants(optimal: number): Assertion;
   }
 }

@@ -61,23 +61,30 @@ class MatchingEngine {
       };
     }
 
-    // 参加者数チェック（作成者は既にparticipants配列に含まれている）
-    if (event.participants.length < event.requiredParticipants) {
+    // 🟢 Green Phase: 参加者選択戦略に基づく参加者数チェック
+    const participantCheckResult = await this.checkParticipantRequirements(event);
+    if (!participantCheckResult.isValid) {
       return {
         eventId,
         isMatched: false,
         matchedTimeSlots: [],
         participants: event.participants,
         requiredTimeSlots: event.requiredTimeSlots || 0,
-        reason: `Insufficient participants: ${event.participants.length}/${event.requiredParticipants}`
+        reason: participantCheckResult.reason
       };
     }
 
+    // 🟢 Green Phase: 参加者選択戦略に基づく参加者選択
+    const selectedParticipants = await this.selectParticipants(event);
+    
     // 🟢 Green Phase: マッチング戦略に基づくスケジュールマッチングを実行
     const requiredTimeSlots = event.requiredTimeSlots || 1;
+    
+    // 🔵 Refactor Phase: 選択された参加者でマッチングを実行（元のparticipantsを使わない）
+    const eventForMatching = { ...event, participants: selectedParticipants };
     const matchingResult = await this.findMatchingTimeSlotsWithStrategy(
-      event,
-      event.participants,
+      eventForMatching,
+      selectedParticipants,
       requiredTimeSlots
     );
 
@@ -93,7 +100,7 @@ class MatchingEngine {
       eventId,
       isMatched,
       matchedTimeSlots: finalMatchedTimeSlots,
-      participants: event.participants,
+      participants: selectedParticipants, // 🟢 Green Phase: 選択された参加者を返す
       requiredTimeSlots,
       reason: isMatched ? 'Successfully matched' : matchingResult.reason || 'No common available time slots found'
     };
@@ -481,7 +488,8 @@ class MatchingEngine {
   private selectConsecutiveTimeSlots(
     availableTimeSlots: MatchingTimeSlot[],
     requiredTimeSlots: number,
-    minimumConsecutive: number
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _minimumConsecutive: number
   ): MatchingTimeSlot[] {
     if (availableTimeSlots.length < requiredTimeSlots) {
       return availableTimeSlots;
@@ -656,6 +664,188 @@ class MatchingEngine {
     // 隣接日は連続
     const dayDiff = (date2.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24);
     return dayDiff === 1;
+  }
+
+  /**
+   * 🟢 Green Phase: 参加者選択戦略に基づく参加者要件チェック
+   */
+  private async checkParticipantRequirements(event: Event): Promise<{ isValid: boolean; reason?: string }> {
+    const strategy = event.participantSelectionStrategy || 'first_come';
+    const minParticipants = event.minParticipants || event.requiredParticipants;
+    
+    // 最小人数チェック
+    if (event.participants.length < minParticipants) {
+      return {
+        isValid: false,
+        reason: `Insufficient participants: ${event.participants.length}/${minParticipants} (minimum participants)`
+      };
+    }
+
+    // 手動選択の場合の特別チェック
+    if (strategy === 'manual') {
+      const now = new Date();
+      if (event.selectionDeadline && now < event.selectionDeadline) {
+        return {
+          isValid: false,
+          reason: 'manual selection pending'
+        };
+      }
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * 🟢 Green Phase: 参加者選択戦略に基づく参加者選択
+   */
+  private async selectParticipants(event: Event): Promise<string[]> {
+    const strategy = event.participantSelectionStrategy || 'first_come';
+    const minParticipants = event.minParticipants || event.requiredParticipants;
+    const maxParticipants = event.maxParticipants;
+    const optimalParticipants = event.optimalParticipants;
+
+    // 作成者は必ず含む
+    if (!event.participants.includes(event.creatorId)) {
+      throw new Error('Creator must be in participants list');
+    }
+
+    let targetCount: number;
+    
+    // 目標人数を決定
+    if (optimalParticipants && event.participants.length >= optimalParticipants) {
+      targetCount = optimalParticipants;
+    } else if (maxParticipants && event.participants.length > maxParticipants) {
+      targetCount = maxParticipants;
+    } else {
+      targetCount = event.participants.length; // 全員選択
+    }
+
+    // 最小人数を下回らないように調整
+    targetCount = Math.max(targetCount, minParticipants);
+
+    // 参加者全員が対象より少ない場合は全員選択
+    if (event.participants.length <= targetCount) {
+      return event.participants;
+    }
+
+    // 戦略に基づく選択
+    switch (strategy) {
+      case 'first_come':
+        return this.selectByFirstCome(event.participants, event.creatorId, targetCount);
+      
+      case 'lottery':
+        // 🔵 Refactor Phase: 再現性のためにイベントIDベースのシード値を使用
+        const seed = event.lotterySeed || this.generateSeedFromEventId(event.id);
+        return this.selectByLottery(event.participants, event.creatorId, targetCount, seed);
+      
+      case 'manual':
+        // 手動選択期限切れの場合は先着順フォールバック
+        const now = new Date();
+        if (!event.selectionDeadline || now >= event.selectionDeadline) {
+          return this.selectByFirstCome(event.participants, event.creatorId, targetCount);
+        }
+        // 期限内の場合は全員返す（実際の選択は別途実装）
+        return event.participants;
+      
+      default:
+        return this.selectByFirstCome(event.participants, event.creatorId, targetCount);
+    }
+  }
+
+  /**
+   * 🟢 Green Phase: 先着順での参加者選択
+   */
+  private selectByFirstCome(
+    allParticipants: string[],
+    creatorId: string,
+    targetCount: number
+  ): string[] {
+    // 作成者は必ず含む
+    const selected = [creatorId];
+    const others = allParticipants.filter(id => id !== creatorId);
+    
+    // 先着順で残りを選択
+    const remainingSlots = targetCount - 1;
+    selected.push(...others.slice(0, remainingSlots));
+    
+    return selected;
+  }
+
+  /**
+   * 🟢 Green Phase: 抽選での参加者選択
+   */
+  private selectByLottery(
+    allParticipants: string[],
+    creatorId: string,
+    targetCount: number,
+    seed?: number
+  ): string[] {
+    // 作成者は必ず含む
+    const selected = [creatorId];
+    const others = allParticipants.filter(id => id !== creatorId);
+    
+    if (others.length === 0) {
+      return selected;
+    }
+    
+    // 🔵 Refactor Phase: 決定論的なソートベースの選択（シードベース）
+    // 各参加者にシードベースのスコアを付与して決定論的に選択
+    const effectiveSeed = seed || Date.now();
+    const scoredParticipants = others.map(userId => ({
+      userId,
+      score: this.calculateLotteryScore(userId, effectiveSeed)
+    }));
+    
+    // スコア順でソート（高スコアが優先）
+    scoredParticipants.sort((a, b) => b.score - a.score);
+    
+    // 必要な人数分選択
+    const remainingSlots = targetCount - 1;
+    selected.push(...scoredParticipants.slice(0, remainingSlots).map(p => p.userId));
+    
+    return selected;
+  }
+
+  /**
+   * 🟢 Green Phase: シードベースの疑似乱数生成器
+   */
+  private createSeededRandom(seed: number): () => number {
+    let state = seed;
+    return () => {
+      state = (state * 1664525 + 1013904223) % (2 ** 32);
+      return state / (2 ** 32);
+    };
+  }
+
+  /**
+   * 🔵 Refactor Phase: イベントIDからシード値を生成
+   */
+  private generateSeedFromEventId(eventId: string): number {
+    let hash = 0;
+    for (let i = 0; i < eventId.length; i++) {
+      const char = eventId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 32-bit integer conversion
+    }
+    return Math.abs(hash);
+  }
+
+  /**
+   * 🔵 Refactor Phase: 抽選用の決定論的スコア計算
+   */
+  private calculateLotteryScore(userId: string, seed: number): number {
+    // ユーザーIDとシードを組み合わせてハッシュを計算
+    const combined = `${userId}-${seed}`;
+    let hash = 0;
+    
+    for (let i = 0; i < combined.length; i++) {
+      const char = combined.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 32-bit integer conversion
+    }
+    
+    // 正の値に変換して0-1の範囲に正規化
+    return Math.abs(hash) / 2147483647; // 2^31 - 1
   }
 
 }

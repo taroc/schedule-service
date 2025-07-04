@@ -26,6 +26,7 @@ export async function GET(
       deadline: event.deadline ? event.deadline.toISOString() : undefined,
       periodStart: event.periodStart.toISOString(),
       periodEnd: event.periodEnd.toISOString(),
+      selectionDeadline: event.selectionDeadline?.toISOString(),
       matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
         date: ts.date.toISOString(),
         timeSlot: ts.timeSlot
@@ -87,11 +88,14 @@ export async function PUT(
 
     const body = await request.json();
     
-    // deadlineをISO 8601文字列からDateオブジェクトに変換
+    // deadlineとselectionDeadlineをISO 8601文字列からDateオブジェクトに変換
     const updates: UpdateEventRequest = {
       ...body,
       deadline: body.deadline !== undefined ? 
         (body.deadline ? new Date(body.deadline) : undefined) : 
+        undefined,
+      selectionDeadline: body.selectionDeadline !== undefined ?
+        (body.selectionDeadline ? new Date(body.selectionDeadline) : undefined) :
         undefined
     };
     
@@ -135,6 +139,7 @@ export async function PUT(
       deadline: updatedEvent.deadline ? updatedEvent.deadline.toISOString() : undefined,
       periodStart: updatedEvent.periodStart.toISOString(),
       periodEnd: updatedEvent.periodEnd.toISOString(),
+      selectionDeadline: updatedEvent.selectionDeadline?.toISOString(),
       matchedTimeSlots: updatedEvent.matchedTimeSlots ? updatedEvent.matchedTimeSlots.map(ts => ({
         date: ts.date.toISOString(),
         timeSlot: ts.timeSlot

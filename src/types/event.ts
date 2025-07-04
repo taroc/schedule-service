@@ -21,6 +21,14 @@ export interface Event {
   matchingStrategy: MatchingStrategy;      // マッチング戦略
   timeSlotRestriction: TimeSlotRestriction; // 時間帯制限
   minimumConsecutive: number;               // 最低連続コマ数
+  
+  // 🟢 Green Phase: 参加者選択戦略設定
+  participantSelectionStrategy: ParticipantSelectionStrategy; // 参加者選択戦略
+  minParticipants: number;                  // 最小人数
+  maxParticipants?: number;                 // 最大人数（無制限の場合はundefined）
+  optimalParticipants?: number;             // 理想人数
+  selectionDeadline?: Date;                 // 手動選択の締切
+  lotterySeed?: number;                     // 抽選用シード値
 }
 
 export type EventStatus = 'open' | 'matched' | 'cancelled' | 'expired';
@@ -30,6 +38,9 @@ export type ReservationStatus = 'open' | 'tentative' | 'confirmed' | 'expired';
 // 🟢 Green Phase: マッチング戦略関連の型定義
 export type MatchingStrategy = 'consecutive' | 'flexible';
 export type TimeSlotRestriction = 'both' | 'daytime_only' | 'evening_only';
+
+// 🟢 Green Phase: 参加者選択戦略関連の型定義
+export type ParticipantSelectionStrategy = 'first_come' | 'lottery' | 'manual';
 
 export interface CreateEventRequest {
   name: string;
@@ -46,6 +57,14 @@ export interface CreateEventRequest {
   matchingStrategy?: MatchingStrategy;      // マッチング戦略
   timeSlotRestriction?: TimeSlotRestriction; // 時間帯制限
   minimumConsecutive?: number;               // 最低連続コマ数
+  
+  // 🟢 Green Phase: 参加者選択戦略設定（オプション）
+  participantSelectionStrategy?: ParticipantSelectionStrategy; // 参加者選択戦略
+  minParticipants?: number;                 // 最小人数
+  maxParticipants?: number;                 // 最大人数
+  optimalParticipants?: number;             // 理想人数
+  selectionDeadline?: Date;                 // 手動選択の締切
+  lotterySeed?: number;                     // 抽選用シード値
 }
 
 export interface UpdateEventRequest {
@@ -63,6 +82,14 @@ export interface UpdateEventRequest {
   matchingStrategy?: MatchingStrategy;
   timeSlotRestriction?: TimeSlotRestriction;
   minimumConsecutive?: number;
+  
+  // 🟢 Green Phase: 参加者選択戦略設定
+  participantSelectionStrategy?: ParticipantSelectionStrategy;
+  minParticipants?: number;
+  maxParticipants?: number;
+  optimalParticipants?: number;
+  selectionDeadline?: Date;
+  lotterySeed?: number;
 }
 
 export interface EventParticipation {
@@ -96,4 +123,12 @@ export interface EventResponse {
   matchingStrategy: MatchingStrategy;
   timeSlotRestriction: TimeSlotRestriction;
   minimumConsecutive: number;
+  
+  // 🟢 Green Phase: 参加者選択戦略設定
+  participantSelectionStrategy: ParticipantSelectionStrategy;
+  minParticipants: number;
+  maxParticipants?: number;
+  optimalParticipants?: number;
+  selectionDeadline?: string; // API レスポンスではstring
+  lotterySeed?: number;
 }

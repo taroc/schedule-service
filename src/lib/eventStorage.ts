@@ -823,6 +823,19 @@ class EventStorageDB {
       periodStart: new Date(prismaEvent.periodStart!),
       periodEnd: new Date(prismaEvent.periodEnd!),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
+      
+      // 🟢 Green Phase: マッチング戦略フィールド（デフォルト値）
+      matchingStrategy: 'consecutive',
+      timeSlotRestriction: 'both',
+      minimumConsecutive: 1,
+      
+      // 🟢 Green Phase: 参加者選択戦略フィールド（デフォルト値）
+      participantSelectionStrategy: 'first_come',
+      minParticipants: prismaEvent.requiredParticipants,
+      maxParticipants: undefined,
+      optimalParticipants: undefined,
+      selectionDeadline: undefined,
+      lotterySeed: undefined,
     };
   }
 
@@ -869,6 +882,19 @@ class EventStorageDB {
       periodStart: new Date(prismaEvent.periodStart!),
       periodEnd: new Date(prismaEvent.periodEnd!),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
+      
+      // 🟢 Green Phase: マッチング戦略フィールド（デフォルト値）
+      matchingStrategy: 'consecutive',
+      timeSlotRestriction: 'both',
+      minimumConsecutive: 1,
+      
+      // 🟢 Green Phase: 参加者選択戦略フィールド（デフォルト値）
+      participantSelectionStrategy: 'first_come',
+      minParticipants: prismaEvent.requiredParticipants,
+      maxParticipants: undefined,
+      optimalParticipants: undefined,
+      selectionDeadline: undefined,
+      lotterySeed: undefined,
       
       creator: {
         id: prismaEvent.creator?.id || prismaEvent.creatorId,

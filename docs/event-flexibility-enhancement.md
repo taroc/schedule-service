@@ -222,9 +222,71 @@ describe('🔴 Red Phase: マッチング戦略選択', () => {
 
 ## 次のステップ
 
-### Phase 2: 参加者選択戦略（次回実装予定）
-- 先着順/抽選/作成者指定の選択機能
-- 最小/最大人数の範囲指定
+### ✅ Phase 2完了: 参加者選択戦略（2025年7月4日）
+
+#### 実装された機能
+
+1. **選択戦略の種類**
+   - `first_come`: 先着順（作成者を含む参加順で選択）
+   - `lottery`: 抽選（決定論的なハッシュベース、シード値による再現可能な選択）
+   - `manual`: 作成者による手動選択（期限切れ時は先着順フォールバック）
+
+2. **人数設定の柔軟化**
+   - `minParticipants`: 最小人数（後方互換性のためrequiredParticipantsのデフォルト値として使用）
+   - `maxParticipants`: 最大人数（未設定時は無制限）
+   - `optimalParticipants`: 理想人数（設定時は理想人数に近い数を選択）
+
+3. **抽選機能の詳細**
+   - 決定論的ハッシュベースの選択アルゴリズム
+   - イベントIDベースのシード値生成（再現可能）
+   - 外部シード値指定対応（`lotterySeed`フィールド）
+
+4. **手動選択機能**
+   - 選択期限（`selectionDeadline`）の設定
+   - 期限前は成立しない仕組み
+   - 期限切れ時の先着順フォールバック
+
+#### TDD実装結果
+- **テスト数**: 8個（新規）+ 7個（Phase 1）+ 16個（既存）= 31個のテスト
+- **全テスト成功**: 回帰なし
+- **実装方針**: t-wadaさんのTDD方法論（🔴→🟢→🔵）を厳格適用
+
+#### 技術的成果
+- 決定論的抽選アルゴリズムの実装
+- 柔軟な人数制限システムの構築
+- 手動選択フローの基盤実装
+- 後方互換性を保持した型定義拡張
+
+#### データベーススキーマ変更（実装済み）
+```typescript
+// Event インターフェースに追加されたフィールド
+participantSelectionStrategy: ParticipantSelectionStrategy; // 参加者選択戦略
+minParticipants: number;                  // 最小人数
+maxParticipants?: number;                 // 最大人数（無制限の場合はundefined）
+optimalParticipants?: number;             // 理想人数
+selectionDeadline?: Date;                 // 手動選択の締切
+lotterySeed?: number;                     // 抽選用シード値
+```
+
+#### TypeScript型定義（実装済み）
+```typescript
+export type ParticipantSelectionStrategy = 'first_come' | 'lottery' | 'manual';
+
+export interface Event {
+  // Phase 1 フィールド...
+  matchingStrategy: MatchingStrategy;
+  timeSlotRestriction: TimeSlotRestriction;
+  minimumConsecutive: number;
+  
+  // Phase 2 フィールド...
+  participantSelectionStrategy: ParticipantSelectionStrategy;
+  minParticipants: number;
+  maxParticipants?: number;
+  optimalParticipants?: number;
+  selectionDeadline?: Date;
+  lotterySeed?: number;
+}
+```
 
 ### Phase 3以降: 順次実装
 - 成立条件の詳細設定
