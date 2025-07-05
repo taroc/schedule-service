@@ -15,6 +15,8 @@ model User {
   participations EventParticipant[]
   createdEvents  Event[]
   schedules      UserSchedule[]
+  confirmations  EventConfirmation[]
+  triggeredStateChanges EventStateHistory[]
 
   @@map("users")
 }
@@ -37,14 +39,55 @@ model Event {
   periodEnd            DateTime           @map("period_end")
   reservationStatus    String             @default("open") @map("reservation_status")
   
+  // Phase 1: マッチング戦略設定
+  matchingStrategy           String       @default("consecutive") @map("matching_strategy")
+  timeSlotRestriction        String       @default("both") @map("time_slot_restriction")
+  minimumConsecutive         Int          @default(1) @map("minimum_consecutive")
+  
+  // Phase 2: 参加者選択戦略設定
+  participantSelectionStrategy String     @default("first_come") @map("participant_selection_strategy")
+  minParticipants            Int          @map("min_participants")
+  maxParticipants            Int?         @map("max_participants")
+  optimalParticipants        Int?         @map("optimal_participants")
+  selectionDeadline          DateTime?    @map("selection_deadline")
+  lotterySeed                Int?         @map("lottery_seed")
+  
+  // Phase 3: 成立条件詳細設定
+  allowPartialMatching       Boolean      @default(false) @map("allow_partial_matching")
+  minimumTimeSlots           Int?         @map("minimum_time_slots")
+  suggestMultipleOptions     Boolean      @default(false) @map("suggest_multiple_options")
+  maxSuggestions             Int?         @map("max_suggestions")
+  preferredDates             String?      @map("preferred_dates") // JSON配列
+  dateWeights                String?      @map("date_weights") // JSON オブジェクト
+  requireAllParticipants     Boolean      @default(false) @map("require_all_participants")
+  fallbackStrategy           String?      @map("fallback_strategy")
+  
+  // Phase 4: 確認・通知システム設定
+  requireCreatorConfirmation     Boolean      @default(false) @map("require_creator_confirmation")
+  confirmationTimeout            Int          @default(60) @map("confirmation_timeout")
+  requireParticipantConfirmation Boolean      @default(false) @map("require_participant_confirmation")
+  minimumConfirmations           Int          @map("minimum_confirmations")
+  confirmationMode               String       @default("creator_only") @map("confirmation_mode")
+  confirmationDeadline           DateTime?    @map("confirmation_deadline")
+  gracePeriod                    Int          @default(30) @map("grace_period")
+  discordNotificationSettings    String       @map("discord_notification_settings") // JSON オブジェクト
+  reminderSchedule               String       @default("[]") @map("reminder_schedule") // JSON 配列
+  customMessages                 String?      @map("custom_messages") // JSON オブジェクト
+  
   participants         EventParticipant[]
   creator              User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  confirmations        EventConfirmation[]
+  stateHistory         EventStateHistory[]
 
   @@index([creatorId])
   @@index([status])
   @@index([reservationStatus])
   @@index([periodStart])
   @@index([periodEnd])
+  @@index([matchingStrategy])
+  @@index([participantSelectionStrategy])
+  @@index([deadline])
+  @@index([confirmationDeadline])
   @@map("events")
 }
 
@@ -76,4 +119,49 @@ model UserSchedule {
   @@index([date])
   @@index([userId, date])
   @@map("user_schedules")
+}
+
+// Phase 4: イベント確認管理テーブル
+model EventConfirmation {
+  id                String   @id
+  eventId           String   @map("event_id")
+  userId            String   @map("user_id")
+  confirmationType  String   @map("confirmation_type") // 'creator' | 'participant'
+  status            String   @default("pending") // 'pending' | 'confirmed' | 'declined' | 'expired'
+  confirmedAt       DateTime? @map("confirmed_at")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId, confirmationType])
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
+  @@index([confirmationType])
+  @@index([confirmedAt])
+  @@map("event_confirmations")
+}
+
+// Phase 4: イベント状態履歴テーブル
+model EventStateHistory {
+  id              String   @id
+  eventId         String   @map("event_id")
+  previousStatus  String   @map("previous_status")
+  newStatus       String   @map("new_status")
+  triggeredBy     String   @map("triggered_by") // userId
+  reason          String
+  timestamp       DateTime @default(now())
+  additionalData  String?  @map("additional_data") // JSON オブジェクト
+  
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [triggeredBy], references: [id])
+
+  @@index([eventId])
+  @@index([newStatus])
+  @@index([triggeredBy])
+  @@index([timestamp])
+  @@map("event_state_history")
 }
