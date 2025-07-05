@@ -1,5 +1,7 @@
 import { eventStorage } from './eventStorage';
 import { scheduleStorage } from './scheduleStorage';
+import { confirmationService } from './confirmationService';
+import { discordNotificationService } from './discordNotificationService';
 import { Event, MatchingSuggestion } from '@/types/event';
 import { TimeSlot, MatchingTimeSlot, UserSchedule } from '@/types/schedule';
 
@@ -81,6 +83,19 @@ class MatchingEngine {
     // 🟢 Green Phase: 参加者選択戦略に基づく参加者選択
     const selectedParticipants = await this.selectParticipants(event);
     
+    // 🔵 Refactor Phase: 改善された確認システムのチェック
+    const confirmationResult = await confirmationService.checkConfirmationRequirements(event, selectedParticipants);
+    if (!confirmationResult.isValid) {
+      return {
+        eventId,
+        isMatched: false,
+        matchedTimeSlots: [],
+        participants: selectedParticipants,
+        requiredTimeSlots: event.requiredTimeSlots || 0,
+        reason: confirmationResult.reason
+      };
+    }
+
     // 🟢 Green Phase: 高度なマッチング条件チェック
     const advancedMatchingResult = await this.checkAdvancedMatchingConditions(event, selectedParticipants);
     if (!advancedMatchingResult.isValid) {
@@ -152,6 +167,9 @@ class MatchingEngine {
     // マッチした場合は自動的にイベントステータスを更新
     if (isMatched) {
       await eventStorage.updateEventStatus(eventId, 'matched', finalMatchedTimeSlots);
+      
+      // 🔵 Refactor Phase: Discord通知の自動送信
+      await this.sendMatchingNotification(event, finalMatchedTimeSlots);
     }
 
     return {
@@ -1125,6 +1143,28 @@ class MatchingEngine {
       isMatched: true,
       timeSlots: selectedTimeSlots
     };
+  }
+
+  // 🔵 Refactor Phase: 確認ロジックはconfirmationServiceに移行完了
+
+  /**
+   * 🔵 Refactor Phase: マッチング成立時のDiscord通知送信
+   */
+  private async sendMatchingNotification(
+    event: Event,
+    matchedTimeSlots: MatchingTimeSlot[]
+  ): Promise<void> {
+    try {
+      if (event.discordNotificationSettings?.enabled) {
+        const result = await discordNotificationService.sendMatchingNotification(event, matchedTimeSlots);
+        
+        if (!result.success && result.error) {
+          console.warn(`Discord notification failed for event ${event.id}: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error sending Discord notification for event ${event.id}:`, error);
+    }
   }
 
 }

@@ -1,10 +1,18 @@
 import { Event, DiscordNotificationSettings, CustomNotificationMessages } from '@/types/event';
 
+// 🔵 Refactor Phase: 型安全性とエラーハンドリングの改善
 export interface DiscordWebhookPayload {
   content?: string;
   embeds?: DiscordEmbed[];
   username?: string;
   avatar_url?: string;
+}
+
+export interface NotificationResult {
+  success: boolean;
+  error?: string;
+  webhookUrl?: string;
+  timestamp: Date;
 }
 
 export interface DiscordEmbed {
@@ -33,21 +41,30 @@ class DiscordNotificationService {
   }
 
   /**
-   * 🔴 Red Phase: イベント成立時の通知送信
+   * 🔵 Refactor Phase: イベント成立時の通知送信（改善版）
    */
   async sendMatchingNotification(
     event: Event,
     matchedTimeSlots: { date: Date; timeSlot: 'daytime' | 'evening' }[]
-  ): Promise<boolean> {
+  ): Promise<NotificationResult> {
+    const timestamp = new Date();
     const settings = event.discordNotificationSettings;
     
     if (!settings.enabled || !settings.notifyOnMatching) {
-      return false;
+      return {
+        success: false,
+        error: 'Discord notifications disabled',
+        timestamp
+      };
     }
 
     const webhookUrl = this.getWebhookUrl(settings, 'matching');
     if (!webhookUrl) {
-      return false;
+      return {
+        success: false,
+        error: 'No webhook URL configured',
+        timestamp
+      };
     }
 
     const embed = this.createMatchingEmbed(event, matchedTimeSlots);
@@ -56,7 +73,13 @@ class DiscordNotificationService {
       embeds: [embed]
     };
 
-    return await this.sendWebhook(webhookUrl, payload);
+    const result = await this.sendWebhook(webhookUrl, payload);
+    return {
+      success: result,
+      webhookUrl,
+      timestamp,
+      error: result ? undefined : 'Failed to send webhook'
+    };
   }
 
   /**

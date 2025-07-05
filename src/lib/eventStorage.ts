@@ -846,6 +846,28 @@ class EventStorageDB {
       dateWeights: undefined,
       requireAllParticipants: false,
       fallbackStrategy: undefined,
+      
+      // 🟢 Green Phase: Phase 4 確認・通知システムフィールド（デフォルト値）
+      requireCreatorConfirmation: false,
+      confirmationTimeout: 60, // デフォルト60分
+      requireParticipantConfirmation: false,
+      minimumConfirmations: prismaEvent.requiredParticipants,
+      confirmationMode: 'creator_only',
+      confirmationDeadline: undefined,
+      gracePeriod: 30, // デフォルト30分
+      discordNotificationSettings: {
+        enabled: true,
+        webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+        notifyOnMatching: true,
+        notifyOnDeadlineApproaching: true,
+        notifyOnConfirmationRequired: true,
+        notifyOnConfirmationReceived: true,
+        notifyOnCancellation: true,
+        mentionRoles: [],
+        channelOverrides: []
+      },
+      reminderSchedule: [],
+      customMessages: undefined,
     };
   }
 
@@ -915,6 +937,28 @@ class EventStorageDB {
       dateWeights: undefined,
       requireAllParticipants: false,
       fallbackStrategy: undefined,
+      
+      // 🟢 Green Phase: Phase 4 確認・通知システムフィールド（デフォルト値）
+      requireCreatorConfirmation: false,
+      confirmationTimeout: 60, // デフォルト60分
+      requireParticipantConfirmation: false,
+      minimumConfirmations: prismaEvent.requiredParticipants,
+      confirmationMode: 'creator_only',
+      confirmationDeadline: undefined,
+      gracePeriod: 30, // デフォルト30分
+      discordNotificationSettings: {
+        enabled: true,
+        webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+        notifyOnMatching: true,
+        notifyOnDeadlineApproaching: true,
+        notifyOnConfirmationRequired: true,
+        notifyOnConfirmationReceived: true,
+        notifyOnCancellation: true,
+        mentionRoles: [],
+        channelOverrides: []
+      },
+      reminderSchedule: [],
+      customMessages: undefined,
       
       creator: {
         id: prismaEvent.creator?.id || prismaEvent.creatorId,

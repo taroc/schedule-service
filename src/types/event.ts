@@ -127,6 +127,30 @@ export interface EventConfirmation {
   updatedAt: Date;
 }
 
+// 🔵 Refactor Phase: 確認チェック結果の型安全性向上
+export interface ConfirmationCheckResult {
+  isValid: boolean;
+  reason?: string;
+  requiresConfirmation?: boolean;
+  pendingConfirmations?: string[]; // 確認待ちのユーザーID
+  confirmedCount?: number;
+  requiredCount?: number;
+}
+
+export interface CreatorConfirmationResult {
+  isConfirmed: boolean;
+  confirmedAt?: Date;
+  reason?: string;
+}
+
+export interface ParticipantConfirmationResult {
+  hasAllRequired: boolean;
+  confirmedCount: number;
+  requiredCount: number;
+  pendingUsers: string[];
+  confirmationMode: ConfirmationMode;
+}
+
 export interface EventStateHistory {
   id: string;
   eventId: string;
