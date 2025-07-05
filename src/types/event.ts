@@ -39,9 +39,21 @@ export interface Event {
   dateWeights?: Record<string, number>;     // 日程別重み（日付文字列 → スコア）
   requireAllParticipants: boolean;          // 全参加者合意必須
   fallbackStrategy?: FallbackStrategy;      // 代替戦略
+  
+  // 🔴 Red Phase: 確認・通知システム設定
+  requireCreatorConfirmation: boolean;      // 作成者確認必須
+  confirmationTimeout: number;              // 確認タイムアウト（分）
+  requireParticipantConfirmation: boolean;  // 参加者確認必須
+  minimumConfirmations: number;             // 必要確認数
+  confirmationMode: ConfirmationMode;       // 確認モード
+  confirmationDeadline?: Date;              // 確認期限
+  gracePeriod: number;                      // 猶予期間（分）
+  discordNotificationSettings: DiscordNotificationSettings; // Discord通知設定
+  reminderSchedule: ReminderSchedule[];     // リマインダー設定
+  customMessages?: CustomNotificationMessages; // カスタムメッセージ
 }
 
-export type EventStatus = 'open' | 'matched' | 'cancelled' | 'expired';
+export type EventStatus = 'open' | 'matched' | 'pending_confirmation' | 'confirmed' | 'cancelled' | 'expired' | 'rolled_back';
 
 export type ReservationStatus = 'open' | 'tentative' | 'confirmed' | 'expired';
 
@@ -65,6 +77,65 @@ export interface MatchingSuggestion {
   participants: string[];
   score: number;
   completeness: number; // 0.0-1.0 (要求に対する充足率)
+}
+
+// 🔴 Red Phase: 確認・通知システム関連の型定義
+export type ConfirmationMode = 'all' | 'majority' | 'minimum_count' | 'creator_only';
+
+export interface DiscordNotificationSettings {
+  enabled: boolean;
+  webhookUrl?: string;                     // Discord Webhook URL
+  notifyOnMatching: boolean;               // マッチング成立時通知
+  notifyOnDeadlineApproaching: boolean;    // 締切接近時通知
+  notifyOnConfirmationRequired: boolean;   // 確認要求時通知
+  notifyOnConfirmationReceived: boolean;   // 確認受信時通知
+  notifyOnCancellation: boolean;           // キャンセル時通知
+  mentionRoles?: string[];                 // メンション対象ロールID
+  channelOverrides?: DiscordChannelOverride[]; // チャンネル別設定
+}
+
+export interface DiscordChannelOverride {
+  eventType: 'matching' | 'deadline' | 'confirmation' | 'cancellation';
+  webhookUrl: string;
+  mentionRoles?: string[];
+}
+
+export interface ReminderSchedule {
+  triggerBefore: number;  // minutes before deadline
+  message: string;
+  recipients: 'all' | 'creator' | 'participants' | 'unconfirmed';
+  discordMention?: boolean; // Discordでメンションするか
+}
+
+export interface CustomNotificationMessages {
+  matchingNotification?: string;
+  confirmationRequest?: string;
+  reminderMessage?: string;
+  cancellationNotice?: string;
+  discordEmbedColor?: string; // Discord埋め込みの色（hex）
+}
+
+export interface EventConfirmation {
+  id: string;
+  eventId: string;
+  userId: string;
+  confirmationType: 'creator' | 'participant';
+  status: 'pending' | 'confirmed' | 'declined' | 'expired';
+  confirmedAt?: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EventStateHistory {
+  id: string;
+  eventId: string;
+  previousStatus: EventStatus;
+  newStatus: EventStatus;
+  triggeredBy: string;  // userId
+  reason: string;
+  timestamp: Date;
+  additionalData?: Record<string, any>;
 }
 
 export interface CreateEventRequest {
@@ -100,6 +171,18 @@ export interface CreateEventRequest {
   dateWeights?: Record<string, number>;     // 日程別重み（日付文字列 → スコア）
   requireAllParticipants?: boolean;         // 全参加者合意必須
   fallbackStrategy?: FallbackStrategy;      // 代替戦略
+  
+  // 🔴 Red Phase: 確認・通知システム設定（オプション）
+  requireCreatorConfirmation?: boolean;     // 作成者確認必須
+  confirmationTimeout?: number;             // 確認タイムアウト（分）
+  requireParticipantConfirmation?: boolean; // 参加者確認必須
+  minimumConfirmations?: number;            // 必要確認数
+  confirmationMode?: ConfirmationMode;      // 確認モード
+  confirmationDeadline?: Date;              // 確認期限
+  gracePeriod?: number;                     // 猶予期間（分）
+  discordNotificationSettings?: DiscordNotificationSettings; // Discord通知設定
+  reminderSchedule?: ReminderSchedule[];    // リマインダー設定
+  customMessages?: CustomNotificationMessages; // カスタムメッセージ
 }
 
 export interface UpdateEventRequest {
@@ -135,6 +218,18 @@ export interface UpdateEventRequest {
   dateWeights?: Record<string, number>;
   requireAllParticipants?: boolean;
   fallbackStrategy?: FallbackStrategy;
+  
+  // 🔴 Red Phase: 確認・通知システム設定
+  requireCreatorConfirmation?: boolean;
+  confirmationTimeout?: number;
+  requireParticipantConfirmation?: boolean;
+  minimumConfirmations?: number;
+  confirmationMode?: ConfirmationMode;
+  confirmationDeadline?: Date;
+  gracePeriod?: number;
+  discordNotificationSettings?: DiscordNotificationSettings;
+  reminderSchedule?: ReminderSchedule[];
+  customMessages?: CustomNotificationMessages;
 }
 
 export interface EventParticipation {
