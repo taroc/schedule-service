@@ -13,7 +13,7 @@ interface NotificationSectionProps {
     discordNotificationSettings: DiscordNotificationSettings;
   };
   onFieldChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  onDiscordSettingChange: (key: string, value: any) => void;
+  onDiscordSettingChange: (key: string, value: boolean | string) => void;
 }
 
 export const NotificationSection: React.FC<NotificationSectionProps> = ({

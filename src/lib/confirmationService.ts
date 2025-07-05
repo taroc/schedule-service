@@ -26,7 +26,7 @@ export class ConfirmationService {
 
     // 作成者確認が必要な場合
     if (event.requireCreatorConfirmation) {
-      const creatorResult = await this.checkCreatorConfirmation(event.id, event.creatorId);
+      const creatorResult = await this.checkCreatorConfirmation(event.id);
       if (!creatorResult.isConfirmed) {
         return {
           isValid: false,
@@ -74,7 +74,7 @@ export class ConfirmationService {
   /**
    * 作成者の確認状態をチェック
    */
-  async checkCreatorConfirmation(eventId: string, creatorId: string): Promise<CreatorConfirmationResult> {
+  async checkCreatorConfirmation(eventId: string): Promise<CreatorConfirmationResult> {
     try {
       // 🔵 Refactor Phase: より柔軟な確認チェック
       const event = await eventStorage.getEventById(eventId);
@@ -120,7 +120,7 @@ export class ConfirmationService {
     const minimumConfirmations = event.minimumConfirmations || event.requiredParticipants;
 
     // 現在の確認数を取得（🔵 Refactor Phase: より詳細な情報を提供）
-    const confirmedUsers = await this.getConfirmedUsers(event.id, selectedParticipants);
+    const confirmedUsers = await this.getConfirmedUsers();
     const confirmedCount = confirmedUsers.length;
     const pendingUsers = selectedParticipants.filter(userId => !confirmedUsers.includes(userId));
 
@@ -142,7 +142,7 @@ export class ConfirmationService {
   /**
    * 確認済みユーザーのリストを取得
    */
-  private async getConfirmedUsers(eventId: string, participants: string[]): Promise<string[]> {
+  private async getConfirmedUsers(): Promise<string[]> {
     // 🔵 Refactor Phase: 実際のDB確認ロジックのスタブ
     // TODO: 実際の confirmation テーブルからの確認済みユーザー取得
     return [];
@@ -200,8 +200,7 @@ export class ConfirmationService {
   async createConfirmation(
     eventId: string,
     userId: string,
-    type: 'creator' | 'participant',
-    notes?: string
+    type: 'creator' | 'participant'
   ): Promise<boolean> {
     // TODO: 実際のDB操作
     console.log(`🔵 Refactor Phase: Creating confirmation for event ${eventId} by user ${userId} as ${type}`);

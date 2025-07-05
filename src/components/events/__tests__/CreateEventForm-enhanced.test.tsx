@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateEventFormEnhanced from '../CreateEventFormEnhanced';
-import type { CreateEventRequest } from '@/types/event';
 
 // 🔴 Red Phase: Enhanced Create Event Form Tests
 describe('🔴 Red Phase: CreateEventFormEnhanced', () => {

@@ -93,9 +93,9 @@ export default function CreateEventFormEnhanced({
             {/* Phase 1: マッチング戦略設定 */}
             <MatchingStrategySection
               formData={{
-                matchingStrategy: formData.matchingStrategy,
-                timeSlotRestriction: formData.timeSlotRestriction,
-                minimumConsecutive: formData.minimumConsecutive,
+                matchingStrategy: formData.matchingStrategy || 'consecutive',
+                timeSlotRestriction: formData.timeSlotRestriction || 'both',
+                minimumConsecutive: formData.minimumConsecutive || 1,
               }}
               onFieldChange={handleFieldChange}
             />
@@ -103,8 +103,8 @@ export default function CreateEventFormEnhanced({
             {/* Phase 2: 参加者選択戦略設定 */}
             <ParticipantSelectionSection
               formData={{
-                participantSelectionStrategy: formData.participantSelectionStrategy,
-                minParticipants: formData.minParticipants,
+                participantSelectionStrategy: formData.participantSelectionStrategy || 'first_come',
+                minParticipants: formData.minParticipants || 1,
                 maxParticipants: formData.maxParticipants,
                 optimalParticipants: formData.optimalParticipants,
                 lotterySeed: formData.lotterySeed,
@@ -116,11 +116,11 @@ export default function CreateEventFormEnhanced({
             {/* Phase 3: 成立条件詳細設定 */}
             <AdvancedConditionsSection
               formData={{
-                allowPartialMatching: formData.allowPartialMatching,
+                allowPartialMatching: formData.allowPartialMatching || false,
                 minimumTimeSlots: formData.minimumTimeSlots,
-                suggestMultipleOptions: formData.suggestMultipleOptions,
+                suggestMultipleOptions: formData.suggestMultipleOptions || false,
                 maxSuggestions: formData.maxSuggestions,
-                requireAllParticipants: formData.requireAllParticipants,
+                requireAllParticipants: formData.requireAllParticipants || false,
               }}
               validationErrors={validationErrors}
               onFieldChange={handleFieldChange}
@@ -129,13 +129,23 @@ export default function CreateEventFormEnhanced({
             {/* Phase 4: 確認・通知システム設定 */}
             <NotificationSection
               formData={{
-                requireCreatorConfirmation: formData.requireCreatorConfirmation,
-                requireParticipantConfirmation: formData.requireParticipantConfirmation,
-                confirmationMode: formData.confirmationMode,
-                minimumConfirmations: formData.minimumConfirmations,
-                confirmationTimeout: formData.confirmationTimeout,
-                gracePeriod: formData.gracePeriod,
-                discordNotificationSettings: formData.discordNotificationSettings,
+                requireCreatorConfirmation: formData.requireCreatorConfirmation || false,
+                requireParticipantConfirmation: formData.requireParticipantConfirmation || false,
+                confirmationMode: formData.confirmationMode || 'creator_only',
+                minimumConfirmations: formData.minimumConfirmations || 1,
+                confirmationTimeout: formData.confirmationTimeout || 60,
+                gracePeriod: formData.gracePeriod || 30,
+                discordNotificationSettings: formData.discordNotificationSettings || {
+                  enabled: true,
+                  webhookUrl: '',
+                  notifyOnMatching: true,
+                  notifyOnDeadlineApproaching: true,
+                  notifyOnConfirmationRequired: true,
+                  notifyOnConfirmationReceived: true,
+                  notifyOnCancellation: true,
+                  mentionRoles: [],
+                  channelOverrides: []
+                },
               }}
               onFieldChange={handleFieldChange}
               onDiscordSettingChange={handleDiscordSettingChange}

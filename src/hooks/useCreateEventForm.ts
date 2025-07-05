@@ -17,7 +17,7 @@ interface UseCreateEventFormReturn {
   handleDeadlineDateChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handlePeriodStartDateChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handlePeriodEndDateChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleDiscordSettingChange: (key: string, value: any) => void;
+  handleDiscordSettingChange: (key: string, value: boolean | string) => void;
   resetForm: () => void;
 }
 
@@ -173,7 +173,7 @@ export const useCreateEventForm = (): UseCreateEventFormReturn => {
 
   const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    let processedValue: any = value;
+    let processedValue: string | number | boolean = value;
     
     if (type === 'number') {
       processedValue = parseInt(value) || 0;
@@ -199,7 +199,7 @@ export const useCreateEventForm = (): UseCreateEventFormReturn => {
     setDateStrings(prev => ({ ...prev, periodEndDate: e.target.value }));
   }, []);
 
-  const handleDiscordSettingChange = useCallback((key: string, value: any) => {
+  const handleDiscordSettingChange = useCallback((key: string, value: boolean | string) => {
     setFormData(prev => ({
       ...prev,
       discordNotificationSettings: {

@@ -10,7 +10,7 @@ interface StatsResponse {
 }
 
 interface EventSummary {
-  status: 'open' | 'matched' | 'cancelled' | 'expired';
+  status: 'open' | 'matched' | 'cancelled' | 'expired' | 'pending_confirmation' | 'confirmed' | 'rolled_back';
   creatorId: string;
 }
 

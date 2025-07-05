@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
         periodStart: event.periodStart.toISOString(),
         periodEnd: event.periodEnd.toISOString(),
         selectionDeadline: event.selectionDeadline?.toISOString(),
+        confirmationDeadline: event.confirmationDeadline?.toISOString(),
         matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
           date: ts.date.toISOString(),
           timeSlot: ts.timeSlot

@@ -3,7 +3,7 @@ import { matchingEngine } from '../matchingEngine';
 import { eventStorage } from '../eventStorage';
 import { userStorage } from '../userStorage';
 import { scheduleStorage } from '../scheduleStorage';
-import { CreateEventRequest, Event } from '@/types/event';
+import { CreateEventRequest, Event, DiscordNotificationSettings, ReminderSetting, CustomNotificationMessages } from '@/types/event';
 import '../../test/customMatchers';
 
 // Mock the storage modules
@@ -80,7 +80,7 @@ describe('🔴 Red Phase: 確認・通知システム', () => {
         confirmationMode: (request as CreateEventRequest & { confirmationMode?: string }).confirmationMode || 'creator_only',
         confirmationDeadline: (request as CreateEventRequest & { confirmationDeadline?: Date }).confirmationDeadline,
         gracePeriod: (request as CreateEventRequest & { gracePeriod?: number }).gracePeriod || 30, // デフォルト30分
-        discordNotificationSettings: (request as CreateEventRequest & { discordNotificationSettings?: any }).discordNotificationSettings || {
+        discordNotificationSettings: (request as CreateEventRequest & { discordNotificationSettings?: DiscordNotificationSettings }).discordNotificationSettings || {
           enabled: true,
           webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
           notifyOnMatching: true,
@@ -91,8 +91,8 @@ describe('🔴 Red Phase: 確認・通知システム', () => {
           mentionRoles: [],
           channelOverrides: []
         },
-        reminderSchedule: (request as CreateEventRequest & { reminderSchedule?: any[] }).reminderSchedule || [],
-        customMessages: (request as CreateEventRequest & { customMessages?: any }).customMessages
+        reminderSchedule: (request as CreateEventRequest & { reminderSchedule?: ReminderSetting[] }).reminderSchedule || [],
+        customMessages: (request as CreateEventRequest & { customMessages?: CustomNotificationMessages }).customMessages
       } as Event;
       events.set(event.id, event);
       return event;

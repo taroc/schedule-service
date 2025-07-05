@@ -83,6 +83,16 @@ export default function EventList({
         badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
         cardClass: 'border-blue-200 bg-blue-50/30'
       },
+      pending_confirmation: { 
+        text: '確認待ち', 
+        badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        cardClass: 'border-yellow-200 bg-yellow-50/30'
+      },
+      confirmed: { 
+        text: '確認済み', 
+        badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
+        cardClass: 'border-blue-200 bg-blue-50/30'
+      },
       cancelled: { 
         text: 'キャンセル', 
         badgeClass: 'bg-red-100 text-red-800 border-red-200',
@@ -92,6 +102,11 @@ export default function EventList({
         text: '期限切れ', 
         badgeClass: 'bg-gray-100 text-gray-800 border-gray-200',
         cardClass: 'border-gray-200 bg-gray-50/30'
+      },
+      rolled_back: { 
+        text: 'ロールバック', 
+        badgeClass: 'bg-orange-100 text-orange-800 border-orange-200',
+        cardClass: 'border-orange-200 bg-orange-50/30'
       }
     };
 

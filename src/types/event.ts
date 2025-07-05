@@ -159,7 +159,7 @@ export interface EventStateHistory {
   triggeredBy: string;  // userId
   reason: string;
   timestamp: Date;
-  additionalData?: Record<string, any>;
+  additionalData?: Record<string, string | number | boolean>;
 }
 
 export interface CreateEventRequest {
@@ -305,4 +305,16 @@ export interface EventResponse {
   dateWeights?: Record<string, number>;
   requireAllParticipants: boolean;
   fallbackStrategy?: FallbackStrategy;
+  
+  // 🔴 Red Phase: 確認・通知システム設定
+  requireCreatorConfirmation: boolean;
+  confirmationTimeout: number;
+  requireParticipantConfirmation: boolean;
+  minimumConfirmations: number;
+  confirmationMode: ConfirmationMode;
+  confirmationDeadline?: string; // API レスポンスではstring
+  gracePeriod: number;
+  discordNotificationSettings: DiscordNotificationSettings;
+  reminderSchedule: ReminderSchedule[];
+  customMessages?: CustomNotificationMessages;
 }

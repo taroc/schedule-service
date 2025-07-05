@@ -1,4 +1,4 @@
-import { Event, DiscordNotificationSettings, CustomNotificationMessages } from '@/types/event';
+import { Event, DiscordNotificationSettings } from '@/types/event';
 
 // 🔵 Refactor Phase: 型安全性とエラーハンドリングの改善
 export interface DiscordWebhookPayload {

@@ -143,6 +143,7 @@ function DashboardContent() {
             periodStart: new Date(event.periodStart),
             periodEnd: new Date(event.periodEnd),
             selectionDeadline: event.selectionDeadline ? new Date(event.selectionDeadline) : undefined,
+            confirmationDeadline: event.confirmationDeadline ? new Date(event.confirmationDeadline) : undefined,
             matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
               date: new Date(ts.date),
               timeSlot: ts.timeSlot
@@ -209,6 +210,7 @@ function DashboardContent() {
           periodStart: new Date(event.periodStart),
           periodEnd: new Date(event.periodEnd),
           selectionDeadline: event.selectionDeadline ? new Date(event.selectionDeadline) : undefined,
+          confirmationDeadline: event.confirmationDeadline ? new Date(event.confirmationDeadline) : undefined,
           matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
             date: new Date(ts.date),
             timeSlot: ts.timeSlot

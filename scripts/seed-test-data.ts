@@ -101,6 +101,19 @@ async function seedTestData() {
         ]),
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 明日から
         periodEnd: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後まで
+        minParticipants: 2,
+        minimumConfirmations: 2,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -126,6 +139,19 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14日後
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後から
         periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日後まで
+        minParticipants: 3,
+        minimumConfirmations: 3,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -151,6 +177,19 @@ async function seedTestData() {
         ]),
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
         periodEnd: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後まで
+        minParticipants: 2,
+        minimumConfirmations: 2,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -176,6 +215,19 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後
         periodStart: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後から
         periodEnd: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000), // 35日後まで
+        minParticipants: 4,
+        minimumConfirmations: 4,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -197,6 +249,19 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後
         periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から
         periodEnd: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後まで
+        minParticipants: 2,
+        minimumConfirmations: 2,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -217,6 +282,19 @@ async function seedTestData() {
         ]),
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
         periodEnd: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後まで
+        minParticipants: 3,
+        minimumConfirmations: 3,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -250,6 +328,19 @@ async function seedTestData() {
         ]),
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
         periodEnd: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後まで
+        minParticipants: 2,
+        minimumConfirmations: 2,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -280,6 +371,19 @@ async function seedTestData() {
         ]),
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後から
         periodEnd: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後まで
+        minParticipants: 3,
+        minimumConfirmations: 3,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -309,6 +413,19 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 8日後
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
         periodEnd: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後まで
+        minParticipants: 2,
+        minimumConfirmations: 2,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -330,6 +447,19 @@ async function seedTestData() {
         periodStart: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後から
         periodEnd: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後まで
         deadline: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後
+        minParticipants: 3,
+        minimumConfirmations: 3,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -345,6 +475,19 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後（緊急）
         periodStart: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2日後から
         periodEnd: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後まで
+        minParticipants: 4,
+        minimumConfirmations: 4,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -365,6 +508,19 @@ async function seedTestData() {
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
         periodEnd: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
         deadline: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25日後
+        minParticipants: 2,
+        minimumConfirmations: 2,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -380,6 +536,19 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日後
         periodStart: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // 20日後から
         periodEnd: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000), // 40日後まで
+        minParticipants: 5,
+        minimumConfirmations: 5,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 
@@ -405,6 +574,19 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
         periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から
         periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14日後まで
+        minParticipants: 2,
+        minimumConfirmations: 2,
+        discordNotificationSettings: JSON.stringify({
+          enabled: true,
+          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          notifyOnMatching: true,
+          notifyOnDeadlineApproaching: true,
+          notifyOnConfirmationRequired: true,
+          notifyOnConfirmationReceived: true,
+          notifyOnCancellation: true,
+          mentionRoles: [],
+          channelOverrides: []
+        }),
       },
     });
 

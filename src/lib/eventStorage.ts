@@ -1,4 +1,4 @@
-import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, ReservationStatus, EventParticipation } from '@/types/event';
+import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, ReservationStatus, EventParticipation, MatchingStrategy, TimeSlotRestriction, ParticipantSelectionStrategy, FallbackStrategy, ConfirmationMode } from '@/types/event';
 import { MatchingTimeSlot } from '@/types/schedule';
 import { prisma } from './prisma';
 
@@ -898,12 +898,12 @@ class EventStorageDB {
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
       
       // Phase 1: マッチング戦略フィールド（DBから読み取り）
-      matchingStrategy: (prismaEvent.matchingStrategy || 'consecutive') as any,
-      timeSlotRestriction: (prismaEvent.timeSlotRestriction || 'both') as any,
+      matchingStrategy: (prismaEvent.matchingStrategy || 'consecutive') as MatchingStrategy,
+      timeSlotRestriction: (prismaEvent.timeSlotRestriction || 'both') as TimeSlotRestriction,
       minimumConsecutive: prismaEvent.minimumConsecutive || 1,
       
       // Phase 2: 参加者選択戦略フィールド（DBから読み取り）
-      participantSelectionStrategy: (prismaEvent.participantSelectionStrategy || 'first_come') as any,
+      participantSelectionStrategy: (prismaEvent.participantSelectionStrategy || 'first_come') as ParticipantSelectionStrategy,
       minParticipants: prismaEvent.minParticipants || prismaEvent.requiredParticipants,
       maxParticipants: prismaEvent.maxParticipants || undefined,
       optimalParticipants: prismaEvent.optimalParticipants || undefined,
@@ -918,14 +918,14 @@ class EventStorageDB {
       preferredDates: prismaEvent.preferredDates ? JSON.parse(prismaEvent.preferredDates) : undefined,
       dateWeights: prismaEvent.dateWeights ? JSON.parse(prismaEvent.dateWeights) : undefined,
       requireAllParticipants: prismaEvent.requireAllParticipants || false,
-      fallbackStrategy: prismaEvent.fallbackStrategy as any || undefined,
+      fallbackStrategy: prismaEvent.fallbackStrategy as FallbackStrategy || undefined,
       
       // Phase 4: 確認・通知システムフィールド（DBから読み取り）
       requireCreatorConfirmation: prismaEvent.requireCreatorConfirmation || false,
       confirmationTimeout: prismaEvent.confirmationTimeout || 60,
       requireParticipantConfirmation: prismaEvent.requireParticipantConfirmation || false,
       minimumConfirmations: prismaEvent.minimumConfirmations || prismaEvent.requiredParticipants,
-      confirmationMode: (prismaEvent.confirmationMode || 'creator_only') as any,
+      confirmationMode: (prismaEvent.confirmationMode || 'creator_only') as ConfirmationMode,
       confirmationDeadline: prismaEvent.confirmationDeadline ? new Date(prismaEvent.confirmationDeadline) : undefined,
       gracePeriod: prismaEvent.gracePeriod || 30,
       discordNotificationSettings: prismaEvent.discordNotificationSettings ? 

@@ -405,6 +405,11 @@ it('エラー状態が適切にaria属性で伝達されるべき', () => {
    - Write/update test cases first
    - Ensure tests pass before considering implementation complete
    - Maintain high test coverage
+4. **🚨 NEVER DISABLE ESLINT RULES**: ESLintルールを絶対に無効化しない
+   - `// eslint-disable-next-line` や `// eslint-disable` は絶対に使用禁止
+   - 未使用変数は削除するか、実際に使用するように実装を修正する
+   - `any`型は適切な型に置換する
+   - この原則は例外なく厳守すること
 
 ### Type Safety Guidelines
 ```typescript
