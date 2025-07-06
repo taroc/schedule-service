@@ -6,6 +6,15 @@ import { useTheme } from '@/contexts/ThemeContext';
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
 
+  // Don't render on server to avoid hydration mismatch
+  if (typeof window === 'undefined') {
+    return (
+      <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 w-9 h-9">
+        <div className="w-5 h-5 bg-gray-400 dark:bg-gray-500 rounded animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <button
       onClick={toggleTheme}

@@ -18,6 +18,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
+    // Check if we're in the browser environment
+    if (typeof window === 'undefined') {
+      setMounted(true);
+      return;
+    }
+
     const savedTheme = localStorage.getItem('theme') as Theme;
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     const initialTheme = savedTheme || systemTheme;
@@ -28,7 +34,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Apply theme changes to DOM
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || typeof window === 'undefined') return;
     
     const root = window.document.documentElement;
     
@@ -64,6 +70,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
+    // During SSR, provide default values instead of throwing
+    if (typeof window === 'undefined') {
+      return {
+        theme: 'light' as Theme,
+        toggleTheme: () => {},
+        setTheme: () => {}
+      };
+    }
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;

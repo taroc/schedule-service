@@ -7,7 +7,7 @@ import CreateEventFormEnhanced from '@/components/events/CreateEventFormEnhanced
 import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
 import ToastManager from '@/components/ui/ToastManager';
-import ThemeToggle from '@/components/ui/ThemeToggle';
+import ClientThemeToggle from '@/components/ui/ClientThemeToggle';
 import { useNotification } from '@/hooks/useNotification';
 import { CreateEventRequest, EventWithCreator, EventResponse } from '@/types/event';
 
@@ -545,7 +545,7 @@ function DashboardContent() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <ThemeToggle />
+              <ClientThemeToggle />
               <span className="text-gray-700 dark:text-gray-300">こんにちは、{user.id}さん</span>
               <button
                 onClick={logout}

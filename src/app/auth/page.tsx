@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
-import ThemeToggle from '@/components/ui/ThemeToggle';
+import ClientThemeToggle from '@/components/ui/ClientThemeToggle';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -46,7 +46,7 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
       {/* Theme toggle in top right corner */}
       <div className="absolute top-4 right-4">
-        <ThemeToggle />
+        <ClientThemeToggle />
       </div>
       
       <div className="max-w-md w-full">
