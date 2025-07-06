@@ -20,7 +20,7 @@ export const SkeletonBox: React.FC<SkeletonProps> = ({
   'data-testid': testId = 'skeleton-box' 
 }) => (
   <div 
-    className={`bg-gray-300 rounded animate-pulse ${className}`}
+    className={`bg-gray-300 dark:bg-gray-600 rounded animate-pulse ${className}`}
     data-testid={testId}
     aria-label="コンテンツを読み込み中"
   />
@@ -41,7 +41,7 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({
   const textLines = Array.from({ length: lines }, (_, index) => (
     <div
       key={index}
-      className={`h-4 bg-gray-300 rounded animate-pulse ${width} ${className} ${index > 0 ? 'mt-2' : ''}`}
+      className={`h-4 bg-gray-300 dark:bg-gray-600 rounded animate-pulse ${width} ${className} ${index > 0 ? 'mt-2' : ''}`}
       data-testid={testId}
       aria-label="テキストを読み込み中"
     />
@@ -59,36 +59,36 @@ export const EventCardSkeleton: React.FC<CountableSkeletonProps> = ({
   const skeletonCard = (index: number) => (
     <div
       key={index}
-      className={`bg-white shadow-md rounded-lg p-4 sm:p-6 border-2 animate-pulse ${className}`}
+      className={`bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 sm:p-6 border-2 border-gray-200 dark:border-gray-700 animate-pulse ${className}`}
       data-testid={testId}
       aria-label="イベント情報を読み込み中"
     >
       {/* タイトルとステータス */}
       <div className="flex items-center gap-3 mb-4">
         <div 
-          className="h-6 bg-gray-300 rounded w-48"
+          className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-48"
           data-testid="event-title-skeleton"
         />
         <div 
-          className="h-8 bg-gray-300 rounded-full w-20"
+          className="h-8 bg-gray-300 dark:bg-gray-600 rounded-full w-20"
           data-testid="event-status-skeleton"
         />
       </div>
       
       {/* 説明文 */}
       <div className="space-y-2 mb-4" data-testid="event-description-skeleton">
-        <div className="h-4 bg-gray-300 rounded w-full" />
-        <div className="h-4 bg-gray-300 rounded w-3/4" />
+        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full" />
+        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4" />
       </div>
       
       {/* メタ情報 */}
       <div className="flex gap-4 mb-3">
-        <div className="h-4 bg-gray-300 rounded w-24" />
-        <div className="h-4 bg-gray-300 rounded w-32" />
+        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24" />
+        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32" />
       </div>
       
       {/* ボタン */}
-      <div className="h-10 bg-gray-300 rounded w-32" />
+      <div className="h-10 bg-gray-300 dark:bg-gray-600 rounded w-32" />
     </div>
   );
 
@@ -126,7 +126,7 @@ export const CalendarSkeleton: React.FC<CalendarSkeletonProps> = ({
   
   return (
     <div 
-      className={`bg-white rounded-lg shadow p-6 animate-pulse ${className}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow p-6 animate-pulse ${className}`}
       data-testid={testId}
       aria-label="カレンダーを読み込み中"
     >
@@ -134,7 +134,7 @@ export const CalendarSkeleton: React.FC<CalendarSkeletonProps> = ({
         {Array.from({ length: totalCells }, (_, index) => (
           <div
             key={index}
-            className="h-10 bg-gray-300 rounded"
+            className="h-10 bg-gray-300 dark:bg-gray-600 rounded"
             data-testid="calendar-day-skeleton"
           />
         ))}
@@ -152,24 +152,24 @@ export const StatsCardSkeleton: React.FC<CountableSkeletonProps> = ({
   const skeletonCard = (index: number) => (
     <div
       key={index}
-      className={`bg-white rounded-lg p-6 shadow-sm border animate-pulse ${className}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse ${className}`}
       data-testid={testId}
       aria-label="統計情報を読み込み中"
     >
       <div className="flex items-center">
         <div 
-          className="p-2 rounded-full bg-gray-100"
+          className="p-2 rounded-full bg-gray-100 dark:bg-gray-700"
           data-testid="stats-icon-skeleton"
         >
-          <div className="w-6 h-6 bg-gray-300 rounded" />
+          <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded" />
         </div>
         <div className="ml-4">
           <div 
-            className="w-24 h-4 bg-gray-300 rounded mb-2"
+            className="w-24 h-4 bg-gray-300 dark:bg-gray-600 rounded mb-2"
             data-testid="stats-label-skeleton"
           />
           <div 
-            className="w-8 h-8 bg-gray-300 rounded"
+            className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded"
             data-testid="stats-value-skeleton"
           />
         </div>

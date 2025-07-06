@@ -65,7 +65,7 @@ export default function EventList({
 
   if (events.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
         {emptyMessage}
       </div>
     );
@@ -75,38 +75,38 @@ export default function EventList({
     const statusConfig = {
       open: { 
         text: '募集中', 
-        badgeClass: 'bg-green-100 text-green-800 border-green-200',
-        cardClass: 'border-green-200 bg-green-50/30'
+        badgeClass: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700',
+        cardClass: 'border-green-200 dark:border-green-700 bg-green-50/30 dark:bg-green-900/20'
       },
       matched: { 
         text: '成立済み', 
-        badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
-        cardClass: 'border-blue-200 bg-blue-50/30'
+        badgeClass: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700',
+        cardClass: 'border-blue-200 dark:border-blue-700 bg-blue-50/30 dark:bg-blue-900/20'
       },
       pending_confirmation: { 
         text: '確認待ち', 
-        badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        cardClass: 'border-yellow-200 bg-yellow-50/30'
+        badgeClass: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700',
+        cardClass: 'border-yellow-200 dark:border-yellow-700 bg-yellow-50/30 dark:bg-yellow-900/20'
       },
       confirmed: { 
         text: '確認済み', 
-        badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
-        cardClass: 'border-blue-200 bg-blue-50/30'
+        badgeClass: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700',
+        cardClass: 'border-blue-200 dark:border-blue-700 bg-blue-50/30 dark:bg-blue-900/20'
       },
       cancelled: { 
         text: 'キャンセル', 
-        badgeClass: 'bg-red-100 text-red-800 border-red-200',
-        cardClass: 'border-red-200 bg-red-50/30'
+        badgeClass: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700',
+        cardClass: 'border-red-200 dark:border-red-700 bg-red-50/30 dark:bg-red-900/20'
       },
       expired: { 
         text: '期限切れ', 
-        badgeClass: 'bg-gray-100 text-gray-800 border-gray-200',
-        cardClass: 'border-gray-200 bg-gray-50/30'
+        badgeClass: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600',
+        cardClass: 'border-gray-200 dark:border-gray-600 bg-gray-50/30 dark:bg-gray-800/30'
       },
       rolled_back: { 
         text: 'ロールバック', 
-        badgeClass: 'bg-orange-100 text-orange-800 border-orange-200',
-        cardClass: 'border-orange-200 bg-orange-50/30'
+        badgeClass: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-700',
+        cardClass: 'border-orange-200 dark:border-orange-700 bg-orange-50/30 dark:bg-orange-900/20'
       }
     };
 
@@ -255,7 +255,7 @@ export default function EventList({
         <div className="space-y-2">
           {/* イベント名（常に優先度1） */}
           <div className="flex items-center gap-3 mb-2">
-            <h3 className={`text-xl font-bold text-gray-900 ${onEventClick ? 'cursor-pointer hover:text-blue-600' : ''}`}
+            <h3 className={`text-xl font-bold text-gray-900 dark:text-white ${onEventClick ? 'cursor-pointer hover:text-blue-600 dark:hover:text-blue-400' : ''}`}
                 onClick={() => onEventClick?.(event)}>
               {event.name}
             </h3>
@@ -265,8 +265,8 @@ export default function EventList({
           {/* displayModeに応じた優先度1情報 */}
           {displayMode === 'created' && (
             <div className="flex items-center gap-4 text-lg">
-              <span className="font-semibold text-gray-700">
-                参加状況: <span className="text-blue-600">{getParticipantStatusText(event)}</span>
+              <span className="font-semibold text-gray-700 dark:text-gray-300">
+                参加状況: <span className="text-blue-600 dark:text-blue-400">{getParticipantStatusText(event)}</span>
               </span>
               {successProb.urgent && (
                 <span className={`font-semibold ${successProb.color}`}>{successProb.text}</span>
@@ -277,26 +277,26 @@ export default function EventList({
           {displayMode === 'participating' && (
             <div className="space-y-3">
               {/* 概要 */}
-              <p className="text-gray-700 text-lg leading-relaxed font-medium">{event.description}</p>
+              <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed font-medium">{event.description}</p>
               
               {/* 参加済み表示と実施期間（目立たせる） */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span className="font-semibold text-green-700">参加済み</span>
+                  <span className="font-semibold text-green-700 dark:text-green-300">参加済み</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">実施期間:</span>
-                  <span className="text-lg font-bold text-blue-600">
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-300">実施期間:</span>
+                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                     {formatDate(event.periodStart)} 〜 {formatDate(event.periodEnd)}
                   </span>
                 </div>
               </div>
               
               {/* その他の情報 */}
-              <div className="flex items-center gap-6 flex-wrap text-sm text-gray-600">
+              <div className="flex items-center gap-6 flex-wrap text-sm text-gray-600 dark:text-gray-400">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">必要コマ数:</span>
                   <span className="font-semibold">{event.requiredTimeSlots}コマ</span>
@@ -312,8 +312,8 @@ export default function EventList({
           )}
 
           {displayMode === 'completed' && event.matchedTimeSlots && event.matchedTimeSlots.length > 0 && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-green-700">
+            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -328,44 +328,44 @@ export default function EventList({
           {(displayMode === 'available' || displayMode === 'allEvents') && (
             <div className="space-y-3">
               {/* 概要（優先度2） */}
-              <p className="text-gray-700 text-lg leading-relaxed font-medium">{event.description}</p>
+              <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed font-medium">{event.description}</p>
               
               {/* 第1列: 締切、必要日数、参加状況（条件付き表示） */}
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">締切:</span>
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-300">締切:</span>
                   <span className={`text-base font-bold ${urgentDeadline.color}`}>
                     {urgentDeadline.text}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">必要コマ数:</span>
-                  <span className="text-base font-bold text-blue-600">{event.requiredTimeSlots}コマ</span>
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-300">必要コマ数:</span>
+                  <span className="text-base font-bold text-blue-600 dark:text-blue-400">{event.requiredTimeSlots}コマ</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">募集人数:</span>
-                  <span className="text-base font-bold text-purple-600">{event.requiredParticipants}人</span>
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-300">募集人数:</span>
+                  <span className="text-base font-bold text-purple-600 dark:text-purple-400">{event.requiredParticipants}人</span>
                 </div>
               </div>
 
               {/* 第2列: 実施期間、作成日 */}
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">実施期間:</span>
-                  <span className="text-base font-bold text-gray-600">
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-300">実施期間:</span>
+                  <span className="text-base font-bold text-gray-600 dark:text-gray-400">
                     {formatDate(event.periodStart)} 〜 {formatDate(event.periodEnd)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">作成日:</span>
-                  <span className="text-base font-bold text-gray-600">{formatDate(event.createdAt)}</span>
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-300">作成日:</span>
+                  <span className="text-base font-bold text-gray-600 dark:text-gray-400">{formatDate(event.createdAt)}</span>
                 </div>
               </div>
 
               {/* 全イベント表示時：自分の参加ステータス */}
               {displayMode === 'allEvents' && (
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-gray-700">あなたの状況:</span>
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-300">あなたの状況:</span>
                   {(() => {
                     const status = getParticipationStatus(event);
                     const statusColors: Record<string, string> = {
@@ -389,7 +389,7 @@ export default function EventList({
         </div>
 
         {/* 優先度2: 重要情報（タブレット以上で表示） */}
-        <div className="hidden md:block space-y-2 text-sm text-gray-600">
+        <div className="hidden md:block space-y-2 text-sm text-gray-600 dark:text-gray-400">
           {displayMode === 'created' && (
             <div className="flex items-center gap-4">
               <span>締切: <span className={urgentDeadline.color}>{urgentDeadline.text}</span></span>
@@ -404,11 +404,11 @@ export default function EventList({
         {(displayMode === 'completed' || displayMode === 'created') && (
           <div className="hidden md:block">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-medium text-gray-700">参加メンバー:</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">参加メンバー:</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {/* 作成者表示 */}
-              <span className="px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 border-2 border-purple-200">
+              <span className="px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border-2 border-purple-200 dark:border-purple-700">
                 {event.creatorId}
                 <span className="ml-1 text-xs">👑</span>
                 {event.creatorId === currentUserId && ' (あなた)'}
@@ -423,8 +423,8 @@ export default function EventList({
                       key={participantId}
                       className={`px-3 py-1 rounded-full text-sm ${
                         participantId === currentUserId 
-                          ? 'bg-green-200 text-green-800 font-semibold border-2 border-green-400' 
-                          : 'bg-gray-100 text-gray-700'
+                          ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 font-semibold border-2 border-green-400 dark:border-green-600' 
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                       }`}
                     >
                       {participantId}
@@ -437,7 +437,7 @@ export default function EventList({
         )}
 
         {/* 優先度3: 補助情報（デスクトップのみ） */}
-        <div className="hidden lg:block text-xs text-gray-500 space-y-1">
+        <div className="hidden lg:block text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <div className="flex items-center gap-4">
             {displayMode !== 'available' && displayMode !== 'allEvents' && displayMode !== 'participating' && (
               <span>作成日: {formatDate(event.createdAt)}</span>
@@ -450,11 +450,11 @@ export default function EventList({
 
         {/* 参加ボタン（availableモードと全イベントモード） */}
         {(displayMode === 'available' || displayMode === 'allEvents') && showJoinButton && canJoin(event) && (
-          <div className="pt-3 border-t border-gray-200">
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={() => handleJoinButtonClick(event)}
               disabled={loadingEventIds.has(event.id)}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed cursor-pointer text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              className="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800 disabled:cursor-not-allowed cursor-pointer text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
             >
               {loadingEventIds.has(event.id) ? (
                 <>
@@ -491,7 +491,7 @@ export default function EventList({
     return (
       <div
         key={event.id}
-        className={`bg-white shadow-md rounded-lg p-6 border-2 hover:shadow-lg transition-all duration-200 ${statusConfig.cardClass}`}
+        className={`bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 border-2 hover:shadow-lg dark:hover:shadow-xl transition-all duration-200 ${statusConfig.cardClass}`}
       >
         {renderPriorityInfo(event)}
       </div>

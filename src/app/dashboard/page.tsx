@@ -7,6 +7,7 @@ import CreateEventFormEnhanced from '@/components/events/CreateEventFormEnhanced
 import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
 import ToastManager from '@/components/ui/ToastManager';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import { useNotification } from '@/hooks/useNotification';
 import { CreateEventRequest, EventWithCreator, EventResponse } from '@/types/event';
 
@@ -308,10 +309,10 @@ function DashboardContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">読み込み中...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">読み込み中...</p>
         </div>
       </div>
     );
@@ -333,14 +334,14 @@ function DashboardContent() {
       {isLoadingStats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-lg p-6 shadow-sm border">
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
-                <div className="p-2 rounded-full bg-gray-100 animate-pulse">
-                  <div className="w-6 h-6 bg-gray-300 rounded"></div>
+                <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 animate-pulse">
+                  <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded"></div>
                 </div>
                 <div className="ml-4">
-                  <div className="w-24 h-4 bg-gray-300 rounded animate-pulse mb-2"></div>
-                  <div className="w-8 h-8 bg-gray-300 rounded animate-pulse"></div>
+                  <div className="w-24 h-4 bg-gray-300 dark:bg-gray-600 rounded animate-pulse mb-2"></div>
+                  <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
                 </div>
               </div>
             </div>
@@ -349,52 +350,52 @@ function DashboardContent() {
       ) : dashboardStats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
-            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md dark:hover:shadow-lg transition-shadow"
             onClick={() => openModal('myEvents')}
           >
             <div className="flex items-center">
-              <div className="p-2 rounded-full bg-blue-100">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">作成したイベント</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardStats.createdEvents}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">作成したイベント</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{dashboardStats.createdEvents}</p>
               </div>
             </div>
           </div>
 
           <div
-            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md dark:hover:shadow-lg transition-shadow"
             onClick={() => openModal('participatingEvents')}
           >
             <div className="flex items-center">
-              <div className="p-2 rounded-full bg-green-100">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 rounded-full bg-green-100 dark:bg-green-900">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">参加表明したイベント</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardStats.participatingEvents}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">参加表明したイベント</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{dashboardStats.participatingEvents}</p>
               </div>
             </div>
           </div>
 
           <div
-            className="bg-white rounded-lg p-6 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md dark:hover:shadow-lg transition-shadow"
             onClick={() => openModal('completedEvents')}
           >
             <div className="flex items-center">
-              <div className="p-2 rounded-full bg-emerald-100">
-                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-900">
+                <svg className="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">参加が決まったイベント</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardStats.matchedEvents}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">参加が決まったイベント</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{dashboardStats.matchedEvents}</p>
               </div>
             </div>
           </div>
@@ -405,18 +406,18 @@ function DashboardContent() {
       {/* メインアクション */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* イベント作成 */}
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <svg className="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+              <svg className="w-5 h-5 text-blue-500 dark:text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               新しいイベントを作成
             </h3>
-            <p className="text-gray-600 mb-4">日程調整が必要なイベントを作成しましょう</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">日程調整が必要なイベントを作成しましょう</p>
             <button
               onClick={() => changeTab('createEvent')}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
+              className="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               イベントを作成する
             </button>
@@ -424,18 +425,18 @@ function DashboardContent() {
         </div>
 
         {/* 予定管理 */}
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+              <svg className="w-5 h-5 text-green-500 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
               </svg>
               予定を管理
             </h3>
-            <p className="text-gray-600 mb-4">空き時間を登録して日程調整に参加しましょう</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">空き時間を登録して日程調整に参加しましょう</p>
             <button
               onClick={() => changeTab('availability')}
-              className="w-full border border-green-500 text-green-600 hover:bg-green-50 font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
+              className="w-full border border-green-500 dark:border-green-400 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900 font-medium py-3 px-4 rounded-lg transition-colors hover:cursor-pointer"
             >
               予定を更新する
             </button>
@@ -445,15 +446,15 @@ function DashboardContent() {
       </div>
 
       {/* 参加できるイベント一覧 */}
-      <div className="bg-white rounded-lg shadow-sm border">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-            <svg className="w-5 h-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+            <svg className="w-5 h-5 text-purple-500 dark:text-purple-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             参加できるイベント
             {availableEvents.length > 0 && (
-              <span className="ml-2 bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+              <span className="ml-2 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full text-xs font-medium">
                 {availableEvents.length}件
               </span>
             )}
@@ -494,12 +495,12 @@ function DashboardContent() {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-2xl">
-          <div className="flex items-center justify-between p-6 border-b bg-gray-50">
-            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-2xl">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h2>
             <button
               onClick={closeModal}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100 cursor-pointer"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
             >
               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -531,23 +532,24 @@ function DashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* 通知トースト */}
       <ToastManager />
 
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                 スケジュール調整サービス
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">こんにちは、{user.id}さん</span>
+              <ThemeToggle />
+              <span className="text-gray-700 dark:text-gray-300">こんにちは、{user.id}さん</span>
               <button
                 onClick={logout}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
+                className="bg-red-500 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer transition-colors"
               >
                 ログアウト
               </button>
@@ -559,7 +561,7 @@ function DashboardContent() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-6">
               {error}
               <button
                 onClick={() => setError('')}
@@ -575,7 +577,7 @@ function DashboardContent() {
             <div className="mb-6">
               <button
                 onClick={() => changeTab('dashboard')}
-                className="flex items-center text-blue-600 hover:text-blue-800 font-medium hover:cursor-pointer"
+                className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium hover:cursor-pointer"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -586,13 +588,13 @@ function DashboardContent() {
           )}
 
           {/* コンテンツ */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="p-6">
               {activeTab === 'dashboard' && renderDashboard()}
 
               {activeTab === 'createEvent' && (
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">新しいイベントを作成</h2>
+                  <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">新しいイベントを作成</h2>
                   <CreateEventFormEnhanced
                     onSubmit={handleCreateEvent}
                     onCancel={() => changeTab('dashboard')}
@@ -603,7 +605,7 @@ function DashboardContent() {
 
               {activeTab === 'availability' && (
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">予定管理</h2>
+                  <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">予定管理</h2>
                   <AvailabilityManager />
                 </div>
               )}
@@ -622,10 +624,10 @@ function DashboardContent() {
 export default function Dashboard() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">読み込み中...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">読み込み中...</p>
         </div>
       </div>
     }>
