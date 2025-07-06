@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import CreateEventForm from '@/components/events/CreateEventForm';
+import CreateEventFormEnhanced from '@/components/events/CreateEventFormEnhanced';
 import EventList from '@/components/events/EventList';
 import AvailabilityManager from '@/components/schedule/AvailabilityManager';
 import ToastManager from '@/components/ui/ToastManager';
@@ -593,7 +593,7 @@ function DashboardContent() {
               {activeTab === 'createEvent' && (
                 <div>
                   <h2 className="text-lg font-medium text-gray-900 mb-6">新しいイベントを作成</h2>
-                  <CreateEventForm
+                  <CreateEventFormEnhanced
                     onSubmit={handleCreateEvent}
                     onCancel={() => changeTab('dashboard')}
                     error={error}
