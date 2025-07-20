@@ -20,7 +20,8 @@ class EventStorageDB {
         name: request.name,
         description: request.description,
         requiredParticipants: request.requiredParticipants,
-        requiredTimeSlots: request.requiredTimeSlots,
+        requiredTimeSlots: request.requiredHours, // Temporary backwards compatibility
+        requiredHours: request.requiredHours,
         creatorId,
         status: 'open',
         deadline: request.deadline || null,
@@ -780,7 +781,7 @@ class EventStorageDB {
       }
 
       // 必要日数分の空きがあるかチェック
-      return availableDates.length >= event.requiredTimeSlots;
+      return availableDates.length >= event.requiredHours;
     } catch {
       return false;
     }
@@ -815,7 +816,7 @@ class EventStorageDB {
       name: string;
       description: string;
       requiredParticipants: number;
-      requiredTimeSlots?: number | null;
+      requiredHours?: number | null;
       creatorId: string;
       status: string;
       matchedTimeSlots?: string | null;
@@ -861,7 +862,7 @@ class EventStorageDB {
       name: prismaEvent.name,
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
-      requiredTimeSlots: prismaEvent.requiredTimeSlots || 1,
+      requiredHours: prismaEvent.requiredHours || 1,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],
@@ -889,7 +890,7 @@ class EventStorageDB {
       name: string;
       description: string;
       requiredParticipants: number;
-      requiredTimeSlots?: number | null;
+      requiredHours?: number | null;
       creatorId: string;
       status: string;
       matchedTimeSlots?: string | null;
@@ -908,7 +909,7 @@ class EventStorageDB {
       name: prismaEvent.name,
       description: prismaEvent.description,
       requiredParticipants: prismaEvent.requiredParticipants,
-      requiredTimeSlots: prismaEvent.requiredTimeSlots || 1,
+      requiredHours: prismaEvent.requiredHours || 1,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
       participants: prismaEvent.participants?.map((p) => p.userId) || [],

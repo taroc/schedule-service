@@ -38,16 +38,16 @@ export async function POST(request: NextRequest) {
     
     // バリデーション
     if (!eventRequest.name || !eventRequest.description || 
-        !eventRequest.requiredParticipants || !eventRequest.requiredTimeSlots || !eventRequest.deadline) {
+        !eventRequest.requiredParticipants || !eventRequest.requiredHours || !eventRequest.deadline) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
       );
     }
 
-    if (eventRequest.requiredParticipants < 1 || eventRequest.requiredTimeSlots < 1) {
+    if (eventRequest.requiredParticipants < 1 || eventRequest.requiredHours < 1) {
       return NextResponse.json(
-        { error: 'Required participants and time slots must be greater than 0' },
+        { error: 'Required participants and hours must be greater than 0' },
         { status: 400 }
       );
     }

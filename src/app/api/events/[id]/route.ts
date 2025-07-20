@@ -106,9 +106,9 @@ export async function PUT(
       );
     }
 
-    if (updates.requiredTimeSlots && updates.requiredTimeSlots < 1) {
+    if (updates.requiredHours && updates.requiredHours < 1) {
       return NextResponse.json(
-        { error: 'Required time slots must be greater than 0' },
+        { error: 'Required hours must be greater than 0' },
         { status: 400 }
       );
     }

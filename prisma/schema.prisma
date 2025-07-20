@@ -27,6 +27,7 @@ model Event {
   description          String
   requiredParticipants Int                @map("required_participants")
   requiredTimeSlots    Int                @map("required_time_slots")
+  requiredHours        Int                @map("required_hours")
   creatorId            String             @map("creator_id")
   status               String             @default("open")
   matchedTimeSlots     String?            @map("matched_time_slots")

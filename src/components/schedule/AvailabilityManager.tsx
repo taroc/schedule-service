@@ -322,7 +322,7 @@ export default function AvailabilityManager() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500">
+        <div className="text-gray-500 dark:text-gray-400">
           {authLoading ? '認証確認中...' : '予定を読み込み中...'}
         </div>
       </div>
@@ -332,18 +332,18 @@ export default function AvailabilityManager() {
   if (!token) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500">認証が必要です</div>
+        <div className="text-gray-500 dark:text-gray-400">認証が必要です</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           予定管理
         </h2>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 dark:text-gray-300">
           {operationMode === 'add' 
             ? '曜日と日付を個別に選択して一括登録'
             : '削除したい日を選択'
@@ -352,8 +352,8 @@ export default function AvailabilityManager() {
       </div>
 
       {/* モード切り替え */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">操作モード</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">操作モード</h3>
         <div className="flex gap-4">
           <label className="flex items-center cursor-pointer">
             <input
@@ -364,7 +364,7 @@ export default function AvailabilityManager() {
               onChange={(e) => handleModeChange(e.target.value as 'add' | 'delete')}
               className="mr-2 text-blue-500"
             />
-            <span className="text-gray-900">予定を追加・更新</span>
+            <span className="text-gray-900 dark:text-gray-100">予定を追加・更新</span>
           </label>
           <label className="flex items-center cursor-pointer">
             <input
@@ -375,7 +375,7 @@ export default function AvailabilityManager() {
               onChange={(e) => handleModeChange(e.target.value as 'add' | 'delete')}
               className="mr-2 text-red-500"
             />
-            <span className="text-gray-900">予定を削除</span>
+            <span className="text-gray-900 dark:text-gray-100">予定を削除</span>
           </label>
         </div>
 
@@ -383,10 +383,10 @@ export default function AvailabilityManager() {
 
       {/* 時間帯選択（追加モード時のみ表示） */}
       {operationMode === 'add' && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">時間帯を選択</h3>
+        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">時間帯を選択</h3>
           <div className="grid grid-cols-2 gap-4">
-            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+            <label className="flex items-center p-3 border dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <input
                 type="radio"
                 name="timeSlot"
@@ -397,11 +397,11 @@ export default function AvailabilityManager() {
               />
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-purple-100 border-2 border-purple-400 rounded mr-2"></div>
-                <span className="text-gray-900">夜のみ（3時間）</span>
+                <span className="text-gray-900 dark:text-gray-100">夜のみ（3時間）</span>
               </div>
             </label>
 
-            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+            <label className="flex items-center p-3 border dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <input
                 type="radio"
                 name="timeSlot"
@@ -412,7 +412,7 @@ export default function AvailabilityManager() {
               />
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
-                <span className="text-gray-900">終日（10時間）</span>
+                <span className="text-gray-900 dark:text-gray-100">終日（10時間）</span>
               </div>
             </label>
           </div>
@@ -454,13 +454,13 @@ export default function AvailabilityManager() {
 
       {/* 統合登録ボタン */}
       {operationMode === 'add' && selectedDates.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 空き時間を登録・更新
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 選択した{selectedDates.length}日に空き時間を設定します（既存の予定は上書きされます）
               </p>
             </div>
@@ -477,13 +477,13 @@ export default function AvailabilityManager() {
 
       {/* 削除ボタン */}
       {operationMode === 'delete' && selectedSchedulesToDelete.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 予定を未登録に戻す
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 選択した{selectedSchedulesToDelete.length}日の予定を削除します
               </p>
             </div>
@@ -500,13 +500,13 @@ export default function AvailabilityManager() {
 
       {/* 全削除ボタン */}
       {operationMode === 'delete' && schedules.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 全ての予定をリセット
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 登録済みの全ての予定を未登録状態に戻します
               </p>
             </div>

@@ -93,6 +93,7 @@ async function seedTestData() {
         creatorId: 'alice',
         requiredParticipants: 2,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'matched',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
         matchedTimeSlots: JSON.stringify([
@@ -135,6 +136,7 @@ async function seedTestData() {
         creatorId: 'alice',
         requiredParticipants: 3,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'open',
         deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14日後
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後から
@@ -169,6 +171,7 @@ async function seedTestData() {
         creatorId: 'bob',
         requiredParticipants: 2,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'matched',
         deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後
         matchedTimeSlots: JSON.stringify([
@@ -211,6 +214,7 @@ async function seedTestData() {
         creatorId: 'bob',
         requiredParticipants: 4,
         requiredTimeSlots: 4,
+        requiredHours: 12,
         status: 'open',
         deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後
         periodStart: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15日後から
@@ -245,6 +249,7 @@ async function seedTestData() {
         creatorId: 'charlie',
         requiredParticipants: 2,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'open',
         deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後
         periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から
@@ -274,6 +279,7 @@ async function seedTestData() {
         creatorId: 'diana',
         requiredParticipants: 3,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'matched',
         deadline: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // 12日後
         matchedTimeSlots: JSON.stringify([
@@ -320,6 +326,7 @@ async function seedTestData() {
         creatorId: 'taro',
         requiredParticipants: 2,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'matched',
         deadline: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // 6日後
         matchedTimeSlots: JSON.stringify([
@@ -363,6 +370,7 @@ async function seedTestData() {
         creatorId: 'alice',
         requiredParticipants: 3,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'matched',
         deadline: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), // 9日後
         matchedTimeSlots: JSON.stringify([
@@ -409,6 +417,7 @@ async function seedTestData() {
         creatorId: 'charlie',
         requiredParticipants: 2,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'open',
         deadline: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 8日後
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
@@ -443,6 +452,7 @@ async function seedTestData() {
         creatorId: 'diana',
         requiredParticipants: 3,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'open',
         periodStart: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後から
         periodEnd: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21日後まで
@@ -471,6 +481,7 @@ async function seedTestData() {
         creatorId: 'bob',
         requiredParticipants: 4,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'open',
         deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後（緊急）
         periodStart: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2日後から
@@ -504,6 +515,7 @@ async function seedTestData() {
         creatorId: 'alice',
         requiredParticipants: 2,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'open',
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
         periodEnd: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
@@ -532,6 +544,7 @@ async function seedTestData() {
         creatorId: 'charlie',
         requiredParticipants: 5,
         requiredTimeSlots: 6,
+        requiredHours: 18,
         status: 'open',
         deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日後
         periodStart: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // 20日後から
@@ -570,6 +583,7 @@ async function seedTestData() {
         creatorId: 'diana',
         requiredParticipants: 2,
         requiredTimeSlots: 2,
+        requiredHours: 6,
         status: 'open',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
         periodStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後から

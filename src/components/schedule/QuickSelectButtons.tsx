@@ -120,39 +120,39 @@ export default function QuickSelectButtons({
     {
       label: '今週末',
       action: () => onQuickSelect(getThisWeekend()),
-      color: 'bg-blue-500 hover:bg-blue-600'
+      color: 'bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700'
     },
     {
       label: '来週末',
       action: () => onQuickSelect(getNextWeekend()),
-      color: 'bg-blue-500 hover:bg-blue-600'
+      color: 'bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700'
     },
     {
       label: '今月末の週末',
       action: () => onQuickSelect(getEndOfMonthWeekends()),
-      color: 'bg-blue-500 hover:bg-blue-600'
+      color: 'bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700'
     },
     {
       label: '平日全て',
       action: () => onQuickSelect(getWeekdaysInRange(startDate, endDate)),
-      color: 'bg-green-500 hover:bg-green-600'
+      color: 'bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700'
     },
     {
       label: '週末全て',
       action: () => onQuickSelect(getWeekendsInRange(startDate, endDate)),
-      color: 'bg-purple-500 hover:bg-purple-600'
+      color: 'bg-purple-500 hover:bg-purple-600 dark:bg-purple-600 dark:hover:bg-purple-700'
     },
     {
       label: '全ての日',
       action: () => onQuickSelect(getAllDatesInRange(startDate, endDate)),
-      color: 'bg-gray-500 hover:bg-gray-600'
+      color: 'bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-700'
     }
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">クイック選択</h3>
-      <p className="text-sm text-gray-600 mb-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">クイック選択</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
         よく使う日付パターンを一括選択できます
       </p>
       

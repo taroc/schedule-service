@@ -192,7 +192,7 @@ export default function MultiSelectCalendar({
   };
 
   const getDayClassName = (day: ScheduleCalendarDay) => {
-    let className = 'w-10 h-10 flex items-center justify-center text-sm rounded-lg transition-colors font-medium border-2 relative ';
+    let className = 'w-6 h-6 flex items-center justify-center text-xs rounded transition-colors border relative ';
     const isSelectedForDelete = selectedSchedulesToDelete.some(d => d.toDateString() === day.date.toDateString());
     const hasSchedule = day.hasSchedule && day.timeSlots;
     const hasMatchedEvents = day.matchedEvents && day.matchedEvents.length > 0;
@@ -263,25 +263,25 @@ export default function MultiSelectCalendar({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
       {/* カレンダーヘッダー */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => navigateMonth('prev')}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors hover:cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
         </h2>
 
         <button
           onClick={() => navigateMonth('next')}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors hover:cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -291,14 +291,14 @@ export default function MultiSelectCalendar({
 
       {/* 選択状況 */}
       {selectedDates.length > 0 && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+        <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-700">
+            <span className="text-sm text-blue-700 dark:text-blue-300">
               {selectedDates.length}日選択中（新規登録）
             </span>
             <button
               onClick={clearSelection}
-              className="text-xs text-blue-600 hover:text-blue-800 underline hover:cursor-pointer"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline hover:cursor-pointer"
             >
               選択解除
             </button>
@@ -308,14 +308,14 @@ export default function MultiSelectCalendar({
 
       {/* 削除選択状況 */}
       {selectedSchedulesToDelete.length > 0 && (
-        <div className="mb-4 p-3 bg-red-50 rounded-lg">
+        <div className="mb-2 p-2 bg-red-50 dark:bg-red-900/20 rounded">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-red-700">
+            <span className="text-sm text-red-700 dark:text-red-300">
               {selectedSchedulesToDelete.length}日選択中（削除対象）
             </span>
             <button
               onClick={clearDeleteSelection}
-              className="text-xs text-red-600 hover:text-red-800 underline hover:cursor-pointer"
+              className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline hover:cursor-pointer"
             >
               選択解除
             </button>
@@ -324,9 +324,9 @@ export default function MultiSelectCalendar({
       )}
 
       {/* 曜日ヘッダー */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
         {dayNames.map((day, index) => (
-          <div key={day} className="w-10 h-8 flex items-center justify-center text-sm font-medium text-gray-600">
+          <div key={day} className="w-6 h-6 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300">
             <span className={index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : ''}>
               {day}
             </span>
@@ -335,7 +335,7 @@ export default function MultiSelectCalendar({
       </div>
 
       {/* カレンダーグリッド */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {calendarDays.map((day, index) => (
           <div
             key={index}
@@ -347,47 +347,45 @@ export default function MultiSelectCalendar({
           >
             {day.date.getDate()}
             {day.matchedEvents && day.matchedEvents.length > 0 && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white text-xs flex items-center justify-center">
-                {day.matchedEvents.length}
-              </div>
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-400 rounded-full border border-white"></div>
             )}
           </div>
         ))}
       </div>
 
       {/* 凡例 */}
-      <div className="mt-6 space-y-3 text-sm">
-        <h3 className="font-medium text-gray-900">カレンダーの見方</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-transparent text-blue-600 border-2 border-blue-600 rounded-lg flex items-center justify-center text-xs font-bold ring-1 ring-blue-300">15</div>
-            <span className="text-gray-700">選択中（新規登録）</span>
+      <div className="mt-3 space-y-1 text-sm">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">カレンダーの見方</h3>
+        <div className="grid grid-cols-2 gap-1">
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 bg-transparent text-blue-600 border border-blue-600 rounded flex items-center justify-center text-xs font-bold ring-1 ring-blue-300">8</div>
+            <span className="text-xs text-gray-700 dark:text-gray-300">選択中（新規登録）</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-red-100 text-red-700 border-2 border-red-500 rounded-lg flex items-center justify-center text-xs font-bold ring-1 ring-red-300">15</div>
-            <span className="text-gray-700">選択中（削除対象）</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 bg-red-100 text-red-700 border border-red-500 rounded flex items-center justify-center text-xs font-bold ring-1 ring-red-300">8</div>
+            <span className="text-xs text-gray-700 dark:text-gray-300">選択中（削除対象）</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-orange-500 text-white border-2 border-orange-500 rounded-lg flex items-center justify-center text-xs font-bold relative">
-              15
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 bg-orange-500 text-white border border-orange-500 rounded flex items-center justify-center text-xs font-bold relative">
+              8
+              <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
             </div>
-            <span className="text-gray-700">成立イベントあり</span>
+            <span className="text-xs text-gray-700 dark:text-gray-300">成立イベントあり</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-400 text-white border-2 border-blue-400 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">終日（10時間）</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 bg-blue-400 text-white border border-blue-400 rounded flex items-center justify-center text-xs font-bold">8</div>
+            <span className="text-xs text-gray-700 dark:text-gray-300">終日（10時間）</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-purple-500 text-white border-2 border-purple-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">夜のみ（3時間）</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 bg-purple-500 text-white border border-purple-500 rounded flex items-center justify-center text-xs font-bold">8</div>
+            <span className="text-xs text-gray-700 dark:text-gray-300">夜のみ（3時間）</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-gray-100 text-gray-600 border-2 border-gray-200 rounded-lg flex items-center justify-center text-xs font-medium">15</div>
-            <span className="text-gray-700">未登録（忙しい）</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 bg-gray-100 text-gray-600 border border-gray-200 rounded flex items-center justify-center text-xs font-medium">8</div>
+            <span className="text-xs text-gray-700 dark:text-gray-300">未登録（忙しい）</span>
           </div>
         </div>
-        <div className="text-xs text-gray-500 mt-2 p-2 bg-yellow-50 rounded-lg">
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
           💡 <strong>ヒント:</strong> {operationMode === 'add' ? '空き時間の登録・更新ができます。既存の予定は上書きされます。' : '登録済みの予定のみ削除できます。未登録の日付は選択できません。'}
         </div>
       </div>

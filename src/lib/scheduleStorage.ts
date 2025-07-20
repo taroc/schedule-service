@@ -88,7 +88,7 @@ class ScheduleStorage {
     const schedules = await this.getUserSchedulesByDateRange(userId, startDate, endDate);
     
     return schedules
-      .filter(s => s.timeSlots.daytime || s.timeSlots.evening)
+      .filter(s => s.timeSlots.fullday || s.timeSlots.evening)
       .map(s => s.date);
   }
 
@@ -99,7 +99,7 @@ class ScheduleStorage {
     userIds: string[],
     startDate: Date,
     endDate: Date
-  ): Promise<Array<{ userId: string; date: Date; daytime: boolean; evening: boolean }>> {
+  ): Promise<UserSchedule[]> {
     const schedules = await prisma.userSchedule.findMany({
       where: {
         userId: { in: userIds },
@@ -115,10 +115,15 @@ class ScheduleStorage {
     });
 
     return schedules.map(schedule => ({
+      id: schedule.id,
       userId: schedule.userId,
       date: schedule.date,
-      daytime: schedule.timeSlotsDaytime,
-      evening: schedule.timeSlotsEvening
+      timeSlots: {
+        evening: schedule.timeSlotsEvening,
+        fullday: schedule.timeSlotsDaytime // Map daytime to fullday
+      },
+      createdAt: schedule.createdAt,
+      updatedAt: schedule.updatedAt
     }));
   }
 
@@ -393,8 +398,8 @@ class ScheduleStorage {
     
     // 指定された時間帯が空いているかチェック
     switch (timeSlot) {
-      case 'daytime':
-        return schedule.timeSlots.daytime;
+      case 'fullday':
+        return schedule.timeSlots.fullday;
       case 'evening':
         return schedule.timeSlots.evening;
       default:
@@ -408,15 +413,15 @@ class ScheduleStorage {
   async isUserAvailableOnDate(
     userId: string,
     date: Date
-  ): Promise<{ daytime: boolean; evening: boolean }> {
+  ): Promise<{ fullday: boolean; evening: boolean }> {
     const schedule = await this.getScheduleByUserAndDate(userId, date);
     
     if (!schedule) {
-      return { daytime: false, evening: false };
+      return { fullday: false, evening: false };
     }
     
     return {
-      daytime: schedule.timeSlots.daytime,
+      fullday: schedule.timeSlots.fullday,
       evening: schedule.timeSlots.evening
     };
   }
@@ -427,7 +432,7 @@ class ScheduleStorage {
       userId: prismaSchedule.userId,
       date: prismaSchedule.date,
       timeSlots: {
-        daytime: Boolean(prismaSchedule.timeSlotsDaytime),
+        fullday: Boolean(prismaSchedule.timeSlotsDaytime),
         evening: Boolean(prismaSchedule.timeSlotsEvening),
       },
       createdAt: prismaSchedule.createdAt,

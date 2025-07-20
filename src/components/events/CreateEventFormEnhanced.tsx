@@ -41,11 +41,11 @@ export default function CreateEventFormEnhanced({
   };
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-center mb-6">イベント作成</h2>
+    <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">イベント作成</h2>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
@@ -57,7 +57,7 @@ export default function CreateEventFormEnhanced({
             name: formData.name,
             description: formData.description,
             requiredParticipants: formData.requiredParticipants,
-            requiredTimeSlots: formData.requiredTimeSlots,
+            requiredHours: formData.requiredHours,
           }}
           deadlineDate={deadlineDate}
           periodStartDate={periodStartDate}
@@ -75,7 +75,7 @@ export default function CreateEventFormEnhanced({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer disabled:cursor-not-allowed transition-colors"
+            className="flex-1 bg-gray-500 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-800 text-white font-bold py-2 px-4 rounded cursor-pointer disabled:cursor-not-allowed transition-colors"
             disabled={isLoading}
           >
             キャンセル
@@ -83,7 +83,7 @@ export default function CreateEventFormEnhanced({
           <button
             type="submit"
             disabled={isLoading || !isFormValid}
-            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition-colors"
+            className="flex-1 bg-blue-500 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-800 text-white font-bold py-2 px-4 rounded disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? '作成中...' : 'イベント作成'}
           </button>

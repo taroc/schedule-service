@@ -130,8 +130,8 @@ export default function EventList({
     return new Date(date).toLocaleString('ja-JP');
   };
 
-  const formatTimeSlot = (timeSlot: 'daytime' | 'evening') => {
-    return timeSlot === 'daytime' ? '昼' : '夜';
+  const formatTimeSlot = (timeSlot: 'evening' | 'fullday') => {
+    return timeSlot === 'evening' ? '夜' : '終日';
   };
 
   const formatMatchedSchedule = (event: EventWithCreator) => {

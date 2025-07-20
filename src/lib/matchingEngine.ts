@@ -8,7 +8,7 @@
 import { eventStorage } from '@/lib/eventStorage';
 import { scheduleStorage } from '@/lib/scheduleStorage';
 import type { Event } from '@/types/event';
-import { getTimeSlotHours, type TimeSlot as TimeSlotType } from '@/types/schedule';
+import { getTimeSlotHours, type TimeSlot as TimeSlotType, type UserSchedule } from '@/types/schedule';
 
 // 型定義
 export interface TimeSlot {
@@ -22,14 +22,7 @@ export interface MatchingResult {
   matchedTimeSlots?: TimeSlot[];
 }
 
-// Event型は@/types/eventからインポート済み
-
-interface UserSchedule {
-  userId: string;
-  date: Date;
-  evening: boolean;  // 3時間
-  fullday: boolean;  // 10時間
-}
+// Event型とUserSchedule型は@/types/からインポート済み
 
 /**
  * マッチングエンジンクラス
@@ -167,7 +160,7 @@ class MatchingEngine {
         return false; // スケジュールが登録されていない場合は利用不可
       }
 
-      return timeSlot === 'evening' ? userSchedule.evening : userSchedule.fullday;
+      return timeSlot === 'evening' ? userSchedule.timeSlots.evening : userSchedule.timeSlots.fullday;
     });
   }
 

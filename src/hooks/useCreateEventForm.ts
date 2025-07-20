@@ -30,7 +30,7 @@ const createInitialFormData = (): CreateEventRequest => {
     name: '',
     description: '',
     requiredParticipants: 1,
-    requiredTimeSlots: 1,
+    requiredHours: 1,
     deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     periodStart: tomorrow,
     periodEnd: twoWeeksLater,
@@ -93,7 +93,7 @@ export const useCreateEventForm = (): UseCreateEventFormReturn => {
     setValidationErrors(errors);
   }, [
     formData.requiredParticipants,
-    formData.requiredTimeSlots
+    formData.requiredHours
   ]);
 
   const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

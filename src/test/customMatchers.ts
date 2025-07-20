@@ -26,7 +26,7 @@ expect.extend({
       
       // 同日の昼→夜
       if (currentDate.getTime() === nextDate.getTime()) {
-        if (current.timeSlot === 'daytime' && next.timeSlot === 'evening') {
+        if (current.timeSlot === 'fullday' && next.timeSlot === 'evening') {
           hasConsecutive = true;
           break;
         }
@@ -71,7 +71,7 @@ expect.extend({
       
       // 同日の昼→夜は連続
       if (currentDate.getTime() === nextDate.getTime()) {
-        if (current.timeSlot === 'daytime' && next.timeSlot === 'evening') {
+        if (current.timeSlot === 'fullday' && next.timeSlot === 'evening') {
           continue; // 連続
         } else {
           allConsecutive = false;
