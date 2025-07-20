@@ -34,13 +34,18 @@ export async function GET(request: NextRequest) {
         
         if (matchingResult.isMatched) {
           // マッチング成功時はステータスを更新
-          const updateSuccess = await eventStorage.updateEventStatus(event.id, 'matched', matchingResult.matchedTimeSlots);
+          const timeSlots = matchingResult.matchedTimeSlots?.map(slot => ({
+            date: slot.date,
+            timeSlot: slot.timeSlot
+          })) || [];
+          
+          const updateSuccess = await eventStorage.updateEventStatus(event.id, 'matched', timeSlots);
           processedEvents.push({
             eventId: event.id,
             eventName: event.name,
             isMatched: true,
             finalStatus: 'matched',
-            matchedTimeSlots: matchingResult.matchedTimeSlots,
+            matchedTimeSlots: timeSlots,
             reason: updateSuccess ? (matchingResult.reason || 'マッチング成功') : 'マッチング成功したが状態更新に失敗'
           });
           console.log(`✅ Event ${event.id} matched successfully`);

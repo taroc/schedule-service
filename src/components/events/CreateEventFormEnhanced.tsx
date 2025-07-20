@@ -1,14 +1,10 @@
 // 🔵 Refactor Phase: Improved Create Event Form with Component Separation
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CreateEventRequest } from '@/types/event';
 import { useCreateEventForm } from '@/hooks/useCreateEventForm';
 import { BasicSettingsSection } from './form-sections/BasicSettingsSection';
-import { MatchingStrategySection } from './form-sections/MatchingStrategySection';
-import { ParticipantSelectionSection } from './form-sections/ParticipantSelectionSection';
-import { AdvancedConditionsSection } from './form-sections/AdvancedConditionsSection';
-import { NotificationSection } from './form-sections/NotificationSection';
 
 interface CreateEventFormEnhancedProps {
   onSubmit: (event: CreateEventRequest) => Promise<void>;
@@ -23,20 +19,17 @@ export default function CreateEventFormEnhanced({
   isLoading = false,
   error
 }: CreateEventFormEnhancedProps) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
   
   const {
     formData,
     deadlineDate,
     periodStartDate,
     periodEndDate,
-    validationErrors,
     isFormValid,
     handleFieldChange,
     handleDeadlineDateChange,
     handlePeriodStartDateChange,
     handlePeriodEndDateChange,
-    handleDiscordSettingChange,
   } = useCreateEventForm();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,83 +68,7 @@ export default function CreateEventFormEnhanced({
           onPeriodEndDateChange={handlePeriodEndDateChange}
         />
 
-        {/* 詳細設定の折りたたみボタン */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded border cursor-pointer transition-colors"
-            aria-expanded={showAdvanced}
-          >
-            {showAdvanced ? '詳細設定を非表示' : '詳細設定を表示'}
-          </button>
-        </div>
 
-        {/* 詳細設定セクション */}
-        {showAdvanced && (
-          <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
-            {/* Phase 1: マッチング戦略設定 */}
-            <MatchingStrategySection
-              formData={{
-                matchingStrategy: formData.matchingStrategy || 'consecutive',
-                timeSlotRestriction: formData.timeSlotRestriction || 'both',
-                minimumConsecutive: formData.minimumConsecutive || 1,
-              }}
-              onFieldChange={handleFieldChange}
-            />
-
-            {/* Phase 2: 参加者選択戦略設定 */}
-            <ParticipantSelectionSection
-              formData={{
-                participantSelectionStrategy: formData.participantSelectionStrategy || 'first_come',
-                minParticipants: formData.minParticipants || 1,
-                maxParticipants: formData.maxParticipants,
-                optimalParticipants: formData.optimalParticipants,
-                lotterySeed: formData.lotterySeed,
-              }}
-              validationErrors={validationErrors}
-              onFieldChange={handleFieldChange}
-            />
-
-            {/* Phase 3: 成立条件詳細設定 */}
-            <AdvancedConditionsSection
-              formData={{
-                allowPartialMatching: formData.allowPartialMatching || false,
-                minimumTimeSlots: formData.minimumTimeSlots,
-                suggestMultipleOptions: formData.suggestMultipleOptions || false,
-                maxSuggestions: formData.maxSuggestions,
-                requireAllParticipants: formData.requireAllParticipants || false,
-              }}
-              validationErrors={validationErrors}
-              onFieldChange={handleFieldChange}
-            />
-
-            {/* Phase 4: 確認・通知システム設定 */}
-            <NotificationSection
-              formData={{
-                requireCreatorConfirmation: formData.requireCreatorConfirmation || false,
-                requireParticipantConfirmation: formData.requireParticipantConfirmation || false,
-                confirmationMode: formData.confirmationMode || 'creator_only',
-                minimumConfirmations: formData.minimumConfirmations || 1,
-                confirmationTimeout: formData.confirmationTimeout || 60,
-                gracePeriod: formData.gracePeriod || 30,
-                discordNotificationSettings: formData.discordNotificationSettings || {
-                  enabled: true,
-                  webhookUrl: '',
-                  notifyOnMatching: true,
-                  notifyOnDeadlineApproaching: true,
-                  notifyOnConfirmationRequired: true,
-                  notifyOnConfirmationReceived: true,
-                  notifyOnCancellation: true,
-                  mentionRoles: [],
-                  channelOverrides: []
-                },
-              }}
-              onFieldChange={handleFieldChange}
-              onDiscordSettingChange={handleDiscordSettingChange}
-            />
-          </div>
-        )}
 
         {/* フォーム送信ボタン */}
         <div className="flex gap-3 mt-6">

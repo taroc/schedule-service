@@ -1,4 +1,4 @@
-import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, ReservationStatus, EventParticipation, MatchingStrategy, TimeSlotRestriction, ParticipantSelectionStrategy, FallbackStrategy, ConfirmationMode } from '@/types/event';
+import { Event, CreateEventRequest, UpdateEventRequest, EventStatus, ReservationStatus, EventParticipation } from '@/types/event';
 import { MatchingTimeSlot } from '@/types/schedule';
 import { prisma } from './prisma';
 
@@ -30,40 +30,24 @@ class EventStorageDB {
         periodEnd: request.periodEnd,
         reservationStatus: 'open',
         
-        // Phase 1: マッチング戦略設定
-        matchingStrategy: request.matchingStrategy || 'consecutive',
-        timeSlotRestriction: request.timeSlotRestriction || 'both',
-        minimumConsecutive: request.minimumConsecutive || 1,
-        
-        // Phase 2: 参加者選択戦略設定
-        participantSelectionStrategy: request.participantSelectionStrategy || 'first_come',
-        minParticipants: request.minParticipants || request.requiredParticipants,
-        maxParticipants: request.maxParticipants,
-        optimalParticipants: request.optimalParticipants,
-        selectionDeadline: request.selectionDeadline,
-        lotterySeed: request.lotterySeed,
-        
-        // Phase 3: 成立条件詳細設定
-        allowPartialMatching: request.allowPartialMatching || false,
-        minimumTimeSlots: request.minimumTimeSlots,
-        suggestMultipleOptions: request.suggestMultipleOptions || false,
-        maxSuggestions: request.maxSuggestions,
-        preferredDates: request.preferredDates ? JSON.stringify(request.preferredDates) : null,
-        dateWeights: request.dateWeights ? JSON.stringify(request.dateWeights) : null,
-        requireAllParticipants: request.requireAllParticipants || false,
-        fallbackStrategy: request.fallbackStrategy,
-        
-        // Phase 4: 確認・通知システム設定
-        requireCreatorConfirmation: request.requireCreatorConfirmation || false,
-        confirmationTimeout: request.confirmationTimeout || 60,
-        requireParticipantConfirmation: request.requireParticipantConfirmation || false,
-        minimumConfirmations: request.minimumConfirmations || request.requiredParticipants,
-        confirmationMode: request.confirmationMode || 'creator_only',
-        confirmationDeadline: request.confirmationDeadline,
-        gracePeriod: request.gracePeriod || 30,
-        discordNotificationSettings: JSON.stringify(request.discordNotificationSettings || {
+        // 削除されたフィールドにデフォルト値を設定
+        matchingStrategy: 'consecutive',
+        timeSlotRestriction: 'both',
+        minimumConsecutive: 1,
+        participantSelectionStrategy: 'first_come',
+        minParticipants: request.requiredParticipants,
+        allowPartialMatching: false,
+        suggestMultipleOptions: false,
+        requireAllParticipants: false,
+        requireCreatorConfirmation: false,
+        confirmationTimeout: 60,
+        requireParticipantConfirmation: false,
+        minimumConfirmations: request.requiredParticipants,
+        confirmationMode: 'creator_only',
+        gracePeriod: 30,
+        discordNotificationSettings: JSON.stringify({
           enabled: true,
-          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
+          webhookUrl: '',
           notifyOnMatching: true,
           notifyOnDeadlineApproaching: true,
           notifyOnConfirmationRequired: true,
@@ -72,8 +56,7 @@ class EventStorageDB {
           mentionRoles: [],
           channelOverrides: []
         }),
-        reminderSchedule: JSON.stringify(request.reminderSchedule || []),
-        customMessages: request.customMessages ? JSON.stringify(request.customMessages) : null,
+        reminderSchedule: JSON.stringify([]),
         
         // 作成者を最初から参加者として追加
         participants: {
@@ -897,51 +880,6 @@ class EventStorageDB {
       periodEnd: new Date(prismaEvent.periodEnd!),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
       
-      // Phase 1: マッチング戦略フィールド（DBから読み取り）
-      matchingStrategy: (prismaEvent.matchingStrategy || 'consecutive') as MatchingStrategy,
-      timeSlotRestriction: (prismaEvent.timeSlotRestriction || 'both') as TimeSlotRestriction,
-      minimumConsecutive: prismaEvent.minimumConsecutive || 1,
-      
-      // Phase 2: 参加者選択戦略フィールド（DBから読み取り）
-      participantSelectionStrategy: (prismaEvent.participantSelectionStrategy || 'first_come') as ParticipantSelectionStrategy,
-      minParticipants: prismaEvent.minParticipants || prismaEvent.requiredParticipants,
-      maxParticipants: prismaEvent.maxParticipants || undefined,
-      optimalParticipants: prismaEvent.optimalParticipants || undefined,
-      selectionDeadline: prismaEvent.selectionDeadline ? new Date(prismaEvent.selectionDeadline) : undefined,
-      lotterySeed: prismaEvent.lotterySeed || undefined,
-      
-      // Phase 3: 成立条件詳細設定フィールド（DBから読み取り）
-      allowPartialMatching: prismaEvent.allowPartialMatching || false,
-      minimumTimeSlots: prismaEvent.minimumTimeSlots || undefined,
-      suggestMultipleOptions: prismaEvent.suggestMultipleOptions || false,
-      maxSuggestions: prismaEvent.maxSuggestions || undefined,
-      preferredDates: prismaEvent.preferredDates ? JSON.parse(prismaEvent.preferredDates) : undefined,
-      dateWeights: prismaEvent.dateWeights ? JSON.parse(prismaEvent.dateWeights) : undefined,
-      requireAllParticipants: prismaEvent.requireAllParticipants || false,
-      fallbackStrategy: prismaEvent.fallbackStrategy as FallbackStrategy || undefined,
-      
-      // Phase 4: 確認・通知システムフィールド（DBから読み取り）
-      requireCreatorConfirmation: prismaEvent.requireCreatorConfirmation || false,
-      confirmationTimeout: prismaEvent.confirmationTimeout || 60,
-      requireParticipantConfirmation: prismaEvent.requireParticipantConfirmation || false,
-      minimumConfirmations: prismaEvent.minimumConfirmations || prismaEvent.requiredParticipants,
-      confirmationMode: (prismaEvent.confirmationMode || 'creator_only') as ConfirmationMode,
-      confirmationDeadline: prismaEvent.confirmationDeadline ? new Date(prismaEvent.confirmationDeadline) : undefined,
-      gracePeriod: prismaEvent.gracePeriod || 30,
-      discordNotificationSettings: prismaEvent.discordNotificationSettings ? 
-        JSON.parse(prismaEvent.discordNotificationSettings) : {
-          enabled: true,
-          webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
-          notifyOnMatching: true,
-          notifyOnDeadlineApproaching: true,
-          notifyOnConfirmationRequired: true,
-          notifyOnConfirmationReceived: true,
-          notifyOnCancellation: true,
-          mentionRoles: [],
-          channelOverrides: []
-        },
-      reminderSchedule: prismaEvent.reminderSchedule ? JSON.parse(prismaEvent.reminderSchedule) : [],
-      customMessages: prismaEvent.customMessages ? JSON.parse(prismaEvent.customMessages) : undefined,
     };
   }
 
@@ -988,51 +926,6 @@ class EventStorageDB {
       periodStart: new Date(prismaEvent.periodStart!),
       periodEnd: new Date(prismaEvent.periodEnd!),
       reservationStatus: prismaEvent.reservationStatus as ReservationStatus,
-      
-      // 🟢 Green Phase: マッチング戦略フィールド（デフォルト値）
-      matchingStrategy: 'consecutive',
-      timeSlotRestriction: 'both',
-      minimumConsecutive: 1,
-      
-      // 🟢 Green Phase: 参加者選択戦略フィールド（デフォルト値）
-      participantSelectionStrategy: 'first_come',
-      minParticipants: prismaEvent.requiredParticipants,
-      maxParticipants: undefined,
-      optimalParticipants: undefined,
-      selectionDeadline: undefined,
-      lotterySeed: undefined,
-      
-      // 🟢 Green Phase: 成立条件詳細設定フィールド（デフォルト値）
-      allowPartialMatching: false,
-      minimumTimeSlots: undefined,
-      suggestMultipleOptions: false,
-      maxSuggestions: undefined,
-      preferredDates: undefined,
-      dateWeights: undefined,
-      requireAllParticipants: false,
-      fallbackStrategy: undefined,
-      
-      // 🟢 Green Phase: Phase 4 確認・通知システムフィールド（デフォルト値）
-      requireCreatorConfirmation: false,
-      confirmationTimeout: 60, // デフォルト60分
-      requireParticipantConfirmation: false,
-      minimumConfirmations: prismaEvent.requiredParticipants,
-      confirmationMode: 'creator_only',
-      confirmationDeadline: undefined,
-      gracePeriod: 30, // デフォルト30分
-      discordNotificationSettings: {
-        enabled: true,
-        webhookUrl: 'https://discord.com/api/webhooks/test/webhook',
-        notifyOnMatching: true,
-        notifyOnDeadlineApproaching: true,
-        notifyOnConfirmationRequired: true,
-        notifyOnConfirmationReceived: true,
-        notifyOnCancellation: true,
-        mentionRoles: [],
-        channelOverrides: []
-      },
-      reminderSchedule: [],
-      customMessages: undefined,
       
       creator: {
         id: prismaEvent.creator?.id || prismaEvent.creatorId,

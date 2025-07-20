@@ -26,7 +26,6 @@ export async function GET(
       deadline: event.deadline ? event.deadline.toISOString() : undefined,
       periodStart: event.periodStart.toISOString(),
       periodEnd: event.periodEnd.toISOString(),
-      selectionDeadline: event.selectionDeadline?.toISOString(),
       matchedTimeSlots: event.matchedTimeSlots ? event.matchedTimeSlots.map(ts => ({
         date: ts.date.toISOString(),
         timeSlot: ts.timeSlot
@@ -139,7 +138,6 @@ export async function PUT(
       deadline: updatedEvent.deadline ? updatedEvent.deadline.toISOString() : undefined,
       periodStart: updatedEvent.periodStart.toISOString(),
       periodEnd: updatedEvent.periodEnd.toISOString(),
-      selectionDeadline: updatedEvent.selectionDeadline?.toISOString(),
       matchedTimeSlots: updatedEvent.matchedTimeSlots ? updatedEvent.matchedTimeSlots.map(ts => ({
         date: ts.date.toISOString(),
         timeSlot: ts.timeSlot

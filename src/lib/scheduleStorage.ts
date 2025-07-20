@@ -92,6 +92,36 @@ class ScheduleStorage {
       .map(s => s.date);
   }
 
+  /**
+   * 複数ユーザーのスケジュールを取得（マッチングエンジン用）
+   */
+  async getSchedulesByUserIds(
+    userIds: string[],
+    startDate: Date,
+    endDate: Date
+  ): Promise<Array<{ userId: string; date: Date; daytime: boolean; evening: boolean }>> {
+    const schedules = await prisma.userSchedule.findMany({
+      where: {
+        userId: { in: userIds },
+        date: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      orderBy: [
+        { userId: 'asc' },
+        { date: 'asc' }
+      ]
+    });
+
+    return schedules.map(schedule => ({
+      userId: schedule.userId,
+      date: schedule.date,
+      daytime: schedule.timeSlotsDaytime,
+      evening: schedule.timeSlotsEvening
+    }));
+  }
+
   async getCommonAvailableDates(
     userIds: string[],
     startDate: Date,
