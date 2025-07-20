@@ -226,15 +226,12 @@ export default function MultiSelectCalendar({
       // 成立したイベントがある日はオレンジ系
       className += 'bg-orange-500 text-white border-orange-500 shadow-md ';
     } else if (hasSchedule) {
-      // 時間帯別の色分け（昼・夜ベース）
-      if (day.timeSlots!.daytime && day.timeSlots!.evening) {
-        // 昼と夜両方空き - 緑系（一日空きと同等）
-        className += 'bg-green-500 text-white border-green-500 ';
-      } else if (day.timeSlots!.daytime && !day.timeSlots!.evening) {
-        // 昼のみ空き - 青系
+      // 時間帯別の色分け（夜・終日ベース）
+      if (day.timeSlots!.fullday) {
+        // 終日空き - 青系（10時間）
         className += 'bg-blue-400 text-white border-blue-400 ';
-      } else if (day.timeSlots!.evening && !day.timeSlots!.daytime) {
-        // 夜のみ空き - 紫系
+      } else if (day.timeSlots!.evening) {
+        // 夜のみ空き - 紫系（3時間）
         className += 'bg-purple-500 text-white border-purple-500 ';
       } else {
         // エラー状態（両方false）
@@ -378,16 +375,12 @@ export default function MultiSelectCalendar({
             <span className="text-gray-700">成立イベントあり</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-green-500 text-white border-2 border-green-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">一日空き（全体または昼夜）</span>
-          </div>
-          <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-blue-400 text-white border-2 border-blue-400 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">昼のみ空き</span>
+            <span className="text-gray-700">終日（10時間）</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-purple-500 text-white border-2 border-purple-500 rounded-lg flex items-center justify-center text-xs font-bold">15</div>
-            <span className="text-gray-700">夜のみ空き</span>
+            <span className="text-gray-700">夜のみ（3時間）</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-gray-100 text-gray-600 border-2 border-gray-200 rounded-lg flex items-center justify-center text-xs font-medium">15</div>

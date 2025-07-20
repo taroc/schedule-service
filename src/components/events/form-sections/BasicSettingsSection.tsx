@@ -6,7 +6,7 @@ interface BasicSettingsSectionProps {
     name: string;
     description: string;
     requiredParticipants: number;
-    requiredTimeSlots: number;
+    requiredHours: number;
   };
   deadlineDate: string;
   periodStartDate: string;
@@ -83,19 +83,23 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div>
-          <label htmlFor="requiredTimeSlots" className="block text-gray-700 text-sm font-bold mb-2">
-            必要コマ数 *
+          <label htmlFor="requiredHours" className="block text-gray-700 text-sm font-bold mb-2">
+            必要時間数 *
           </label>
           <input
-            id="requiredTimeSlots"
+            id="requiredHours"
             type="number"
-            name="requiredTimeSlots"
-            value={formData.requiredTimeSlots}
+            name="requiredHours"
+            value={formData.requiredHours}
             onChange={onFieldChange}
             min="1"
+            step="1"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             required
           />
+          <div className="text-xs text-gray-500 mt-1">
+            夜: 3時間、終日: 10時間（例: 6時間 = 夜×2日）
+          </div>
         </div>
 
         <div>

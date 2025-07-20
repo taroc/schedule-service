@@ -13,7 +13,7 @@ export default function AvailabilityManager() {
   const [schedules, setSchedules] = useState<UserSchedule[]>([]);
   const [matchedEvents, setMatchedEvents] = useState<MatchedEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState<'both' | 'daytime' | 'evening'>('both');
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<'evening' | 'fullday'>('evening');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSchedulesToDelete, setSelectedSchedulesToDelete] = useState<Date[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -96,8 +96,8 @@ export default function AvailabilityManager() {
           updatedAt: new Date(schedule.updatedAt),
           // timeSlotsがない場合はデフォルト値を設定
           timeSlots: schedule.timeSlots || {
-            daytime: false,
-            evening: false
+            evening: false,
+            fullday: false
           }
         }));
 
@@ -143,7 +143,7 @@ export default function AvailabilityManager() {
     }
   };
 
-  const handleTimeSlotChange = (value: 'both' | 'daytime' | 'evening') => {
+  const handleTimeSlotChange = (value: 'evening' | 'fullday') => {
     setSelectedTimeSlots(value);
   };
 
@@ -222,8 +222,8 @@ export default function AvailabilityManager() {
         body: JSON.stringify({
           dates: dateStrings,
           timeSlots: {
-            daytime: selectedTimeSlots === 'both' || selectedTimeSlots === 'daytime',
-            evening: selectedTimeSlots === 'both' || selectedTimeSlots === 'evening'
+            evening: selectedTimeSlots === 'evening',
+            fullday: selectedTimeSlots === 'fullday'
           }
         })
       });
@@ -385,49 +385,34 @@ export default function AvailabilityManager() {
       {operationMode === 'add' && (
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">時間帯を選択</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-              <input
-                type="radio"
-                name="timeSlot"
-                value="both"
-                checked={selectedTimeSlots === 'both'}
-                onChange={(e) => handleTimeSlotChange(e.target.value as 'both' | 'daytime' | 'evening')}
-                className="mr-3 text-green-500"
-              />
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-green-100 border-2 border-green-500 rounded mr-2"></div>
-                <span className="text-gray-900">一日空き</span>
-              </div>
-            </label>
-
-            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-              <input
-                type="radio"
-                name="timeSlot"
-                value="daytime"
-                checked={selectedTimeSlots === 'daytime'}
-                onChange={(e) => handleTimeSlotChange(e.target.value as 'both' | 'daytime' | 'evening')}
-                className="mr-3 text-blue-500"
-              />
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
-                <span className="text-gray-900">昼のみ</span>
-              </div>
-            </label>
-
+          <div className="grid grid-cols-2 gap-4">
             <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
               <input
                 type="radio"
                 name="timeSlot"
                 value="evening"
                 checked={selectedTimeSlots === 'evening'}
-                onChange={(e) => handleTimeSlotChange(e.target.value as 'both' | 'daytime' | 'evening')}
+                onChange={(e) => handleTimeSlotChange(e.target.value as 'evening' | 'fullday')}
                 className="mr-3 text-purple-500"
               />
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-purple-100 border-2 border-purple-400 rounded mr-2"></div>
-                <span className="text-gray-900">夜のみ</span>
+                <span className="text-gray-900">夜のみ（3時間）</span>
+              </div>
+            </label>
+
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="radio"
+                name="timeSlot"
+                value="fullday"
+                checked={selectedTimeSlots === 'fullday'}
+                onChange={(e) => handleTimeSlotChange(e.target.value as 'evening' | 'fullday')}
+                className="mr-3 text-blue-500"
+              />
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
+                <span className="text-gray-900">終日（10時間）</span>
               </div>
             </label>
           </div>

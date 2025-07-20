@@ -9,7 +9,7 @@ describe('EventList', () => {
     name: 'Test Event',
     description: 'Test Description',
     requiredParticipants: 3,
-    requiredTimeSlots: 2,
+    requiredHours: 2,
     deadline: new Date('2025-01-08'),
     periodStart: new Date('2025-01-02'),
     periodEnd: new Date('2025-01-09'),
@@ -26,7 +26,7 @@ describe('EventList', () => {
     name: 'Empty Event',
     description: 'No participants yet',
     requiredParticipants: 5,
-    requiredTimeSlots: 3,
+    requiredHours: 3,
     deadline: new Date('2025-01-08'),
     periodStart: new Date('2025-01-02'),
     periodEnd: new Date('2025-01-09'),
@@ -73,8 +73,8 @@ describe('EventList', () => {
     expect(screen.getByText('Test Description')).toBeInTheDocument()
     expect(screen.getByText('募集人数:')).toBeInTheDocument()
     expect(screen.getByText('3人')).toBeInTheDocument()
-    expect(screen.getByText('必要コマ数:')).toBeInTheDocument()
-    expect(screen.getByText('2コマ')).toBeInTheDocument()
+    expect(screen.getByText('必要時間:')).toBeInTheDocument()
+    expect(screen.getByText('2時間')).toBeInTheDocument()
   })
 
   it('should show loading state', () => {

@@ -130,14 +130,14 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント3',
         description: 'テスト用のイベントです',
         requiredParticipants: 2,
-        requiredTimeSlots: 3, // 3コマ必要
+        requiredTimeSlots: 3, // 3時間スロット必要
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
         participants: ['user1', 'user2'],
         deadline: new Date('2024-01-20'),
         periodStart: new Date('2024-01-21'),
-        periodEnd: new Date('2024-01-22'), // 2日間のみ = 最大4コマ
+        periodEnd: new Date('2024-01-22'), // 2日間のみ = 最大4時間スロット
         status: 'open',
         reservationStatus: 'open',
       };
@@ -232,7 +232,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
     });
 
     it('連続した時間スロットが必要な場合、適切に検出できるべき', () => {
-      // Arrange: 連続3コマが必要なイベント
+      // Arrange: 連続3時間スロットが必要なイベント
       const event: Event = {
         id: 'event-1',
         name: 'テストイベント5',
@@ -251,7 +251,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
       };
 
       const schedules: UserSchedule[] = [
-        // 連続3コマ可用: 21日午前 → 21日午後 → 22日午前
+        // 連続3時間スロット可用: 21日午前 → 21日午後 → 22日午前
         { userId: 'user1', date: new Date('2024-01-21'), daytime: true, evening: true },
         { userId: 'user2', date: new Date('2024-01-21'), daytime: true, evening: true },
         { userId: 'user1', date: new Date('2024-01-22'), daytime: true, evening: false },
@@ -263,7 +263,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
       // Act: 利用可能な時間スロットを検索
       const availableSlots = matchingEngine.findAvailableTimeSlots(event, schedules);
 
-      // Assert: 連続3コマが検出されることを期待
+      // Assert: 連続3時間スロットが検出されることを期待
       expect(availableSlots).toHaveLength(3);
       expect(availableSlots).toContainEqual({ date: new Date('2024-01-21'), timeSlot: 'daytime' });
       expect(availableSlots).toContainEqual({ date: new Date('2024-01-21'), timeSlot: 'evening' });

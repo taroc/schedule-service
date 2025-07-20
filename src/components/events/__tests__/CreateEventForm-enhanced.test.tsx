@@ -25,7 +25,7 @@ describe('🔴 Red Phase: CreateEventFormEnhanced', () => {
       expect(screen.getByLabelText(/イベント名/)).toBeInTheDocument();
       expect(screen.getByLabelText(/イベント概要/)).toBeInTheDocument();
       expect(screen.getByLabelText(/必要人数/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/必要コマ数/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/必要時間数/)).toBeInTheDocument();
     });
 
     it('Phase 1: 詳細設定展開後にマッチング戦略設定セクションが表示されるべき', async () => {
@@ -44,7 +44,7 @@ describe('🔴 Red Phase: CreateEventFormEnhanced', () => {
         expect(screen.getByText('マッチング戦略設定')).toBeInTheDocument();
         expect(screen.getByLabelText(/マッチング方法/)).toBeInTheDocument();
         expect(screen.getByLabelText(/時間帯制限/)).toBeInTheDocument();
-        expect(screen.getByLabelText(/連続必要コマ数/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/連続必要時間数/)).toBeInTheDocument();
       });
     });
 
@@ -84,7 +84,7 @@ describe('🔴 Red Phase: CreateEventFormEnhanced', () => {
         expect(screen.getByText('成立条件詳細設定')).toBeInTheDocument();
         expect(screen.getByLabelText(/部分成立を許可/)).toBeInTheDocument();
         expect(screen.getByLabelText(/複数候補提示/)).toBeInTheDocument();
-        expect(screen.getByLabelText(/最小必要コマ数/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/最小必要時間数/)).toBeInTheDocument();
       });
     });
 
@@ -366,7 +366,7 @@ describe('🔴 Red Phase: CreateEventFormEnhanced', () => {
       });
     });
 
-    it('最小必要コマ数が必要コマ数より大きい場合エラーを表示すべき', async () => {
+    it('最小必要時間数が必要時間数より大きい場合エラーを表示すべき', async () => {
       render(
         <CreateEventFormEnhanced 
           onSubmit={mockOnSubmit} 
@@ -379,22 +379,22 @@ describe('🔴 Red Phase: CreateEventFormEnhanced', () => {
       fireEvent.click(detailsButton);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/最小必要コマ数/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/最小必要時間数/)).toBeInTheDocument();
       });
 
-      // 必要コマ数を2に設定
+      // 必要時間数を2に設定
       const requiredTimeSlotsField = document.getElementById('requiredTimeSlots');
       fireEvent.change(requiredTimeSlotsField!, {
         target: { value: '2' }
       });
 
-      // 最小必要コマ数を3に設定（エラー条件）
-      fireEvent.change(screen.getByLabelText(/最小必要コマ数/), {
+      // 最小必要時間数を3に設定（エラー条件）
+      fireEvent.change(screen.getByLabelText(/最小必要時間数/), {
         target: { value: '3' }
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/最小必要コマ数は必要コマ数以下である必要があります/)).toBeInTheDocument();
+        expect(screen.getByText(/最小必要時間数は必要時間数以下である必要があります/)).toBeInTheDocument();
       });
     });
   });
