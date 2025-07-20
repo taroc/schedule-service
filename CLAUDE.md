@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `yarn build` - Build production application (includes Prisma Client generation)
 - `yarn start` - Start production server
 - `yarn lint` - Run ESLint checks
-- `yarn test` - Run all tests (Vitest framework configured)
+- `yarn test` - Run all tests in watch mode (Vitest framework configured)
 - `yarn test <path>` - Run specific test file
 - `yarn test:ui` - Run tests with Vitest UI
 - `yarn test:run` - Run tests once and exit
@@ -28,6 +28,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `yarn migration-prod:deploy` - Deploy migrations to production database
 - `yarn seed:prod` - Seed production database with admin user
 - `yarn deploy:prod` - Full production deployment (migrate + seed)
+
+**Note**: The `deploy:prod` script has a typo in package.json (uses `npm run` instead of `yarn`). Use individual commands for production deployment.
 
 ### Critical Build Requirements
 - **ALWAYS run `yarn lint` before committing** - Build will fail if ESLint errors exist
@@ -117,6 +119,7 @@ This pattern is critical for components like `MultiSelectCalendar` that receive 
 - **Migration tooling**: Uses `dotenv-cli` for environment separation
 - **Turbopack**: Enabled for fast development builds
 - **Japanese locale**: UI is in Japanese, HTML lang="ja"
+- **Dark mode**: Class-based dark mode implementation with CSS variables for theming
 
 ## Database Migration System
 The project uses a comprehensive environment-separated migration system:
@@ -156,7 +159,8 @@ The project uses a comprehensive environment-separated migration system:
 - 🚧 Performance optimizations for initial page loads
 
 ## Deadline-Based Matching System
-**IMPORTANT**: The system has been refactored from immediate matching to deadline-based matching:
+**IMPORTANT**: The system has been refactored from immediate matching to deadline-based matching.
+**NOTE**: The README.md still describes the old immediate matching system but should be ignored - the actual implementation uses deadline-based matching as described below:
 
 ### Current Behavior (Post-Refactor)
 - Users create events requiring specific numbers of participants and **time-slot units** (NOT days)
@@ -390,7 +394,8 @@ it('エラー状態が適切にaria属性で伝達されるべき', () => {
 - **Purpose**: Ensures events past their deadline are marked as expired without manual intervention
 
 ## Documentation
-- **README.md**: Main project documentation with setup instructions and feature overview
+- **README.md**: Main project documentation with setup instructions and feature overview (Note: README describes immediate matching but system actually uses deadline-based matching)
+- **DOMAIN_GLOSSARY.md**: Domain terminology and business logic definitions 
 - **prisma/schema.prisma**: Database schema definitions
 - **src/types/**: TypeScript type definitions for the application
 
@@ -499,3 +504,9 @@ function isSomeType(obj: unknown): obj is SomeType {
 ### Development Workflow Issues
 - **Port conflicts**: Use `pkill -f "yarn dev"` to stop existing development servers
 - **Cache issues**: Clear browser cache and restart development server if seeing stale data
+- **package.json script issues**: The `deploy:prod` script incorrectly uses `npm run` instead of `yarn` - use individual production commands instead
+
+### Package Manager Consistency
+- **Always use yarn**: This project uses yarn@1.22.19 as specified in packageManager field
+- **Never use npm**: All scripts and installations should use yarn for consistency
+- **Script execution**: All package.json scripts assume yarn usage
