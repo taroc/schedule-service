@@ -393,13 +393,13 @@ describe('🔴 Red Phase: MatchingEngine', () => {
       expect(result.selectedParticipants).toEqual(['user1', 'user2', 'user3']);
     });
 
-    it('複数の時間スロット組み合わせから、最も多くの参加者が参加できる組み合わせを選ぶべき', async () => {
-      // Arrange: 異なる時間スロットで異なる参加者数が可能な場合
+    it('複数の時間スロット候補から、先着順で必要人数ちょうど選ぶべき', async () => {
+      // Arrange: 異なる時間スロットで同じ必要人数が可能、先着順で選択されることを確認
       const eventId = 'event-optimal-2';
       const mockEvent: Event = {
         id: eventId,
-        name: '最大参加者組み合わせテスト',
-        description: '最も多くの参加者が参加できる時間スロットを選ぶテスト',
+        name: '先着順選択テスト',
+        description: '同じ必要人数でも参加登録順で選ばれることを確認するテスト',
         requiredParticipants: 2,
         requiredHours: 10, // 10時間必要（終日）
         creatorId: 'creator1',
@@ -414,16 +414,16 @@ describe('🔴 Red Phase: MatchingEngine', () => {
       };
 
       const mockSchedules: MockUserSchedule[] = [
-        // 21日終日: user1, user2のみ可用（2人）
-        { id: '29', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        // 21日終日: user2, user3が可用（必要人数2人、登録順では user1, user2 だが user1は不可用）
+        { id: '29', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
         { id: '30', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
-        { id: '31', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
-        { id: '32', userId: 'user4', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
-        // 22日終日: user1, user2, user3が可用（3人）- より多い参加者
+        { id: '31', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '32', userId: 'user4', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        // 22日終日: user1, user4が可用（必要人数2人、登録順では user1が先）  
         { id: '33', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
-        { id: '34', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
-        { id: '35', userId: 'user3', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
-        { id: '36', userId: 'user4', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '34', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '35', userId: 'user3', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '36', userId: 'user4', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');
@@ -435,14 +435,12 @@ describe('🔴 Red Phase: MatchingEngine', () => {
       // Act: マッチング判定実行
       const result = await matchingEngine.checkEventMatching(eventId);
 
-      // Assert: 22日終日で3人が選ばれることを期待（2人必要だが、より多い参加者の組み合わせを優先）
+      // Assert: 21日終日でuser2, user3が選ばれることを期待（必要人数2人ちょうど、先着順でuser2, user3が優先）
       expect(result.isMatched).toBe(true);
-      expect(result.matchedTimeSlots![0].date).toEqual(new Date('2024-01-22'));
+      expect(result.matchedTimeSlots![0].date).toEqual(new Date('2024-01-21'));
       expect(result.matchedTimeSlots![0].timeSlot).toBe('fullday');
-      expect(result.selectedParticipants).toHaveLength(3);
-      expect(result.selectedParticipants).toContain('user1');
-      expect(result.selectedParticipants).toContain('user2');
-      expect(result.selectedParticipants).toContain('user3');
+      expect(result.selectedParticipants).toHaveLength(2); // 必要人数ちょうど
+      expect(result.selectedParticipants).toEqual(['user2', 'user3']); // 先着順（user1は不可用、user2とuser3が先着）
     });
 
     it('必要時間数を満たせる参加者が十分いない場合、マッチング失敗すべき', async () => {

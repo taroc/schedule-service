@@ -66,7 +66,8 @@ class MatchingEngine {
       const bestMatch = this.findOptimalParticipantCombination(
         availableSlotCombinations,
         event.requiredHours,
-        event.requiredParticipants
+        event.requiredParticipants,
+        event.participants
       );
 
       if (!bestMatch) {
@@ -186,7 +187,8 @@ class MatchingEngine {
   /**
    * 最適な参加者組み合わせを選択
    * 1. 必要時間数を満たせる組み合わせ
-   * 2. より多くの参加者が参加できる組み合わせを優先
+   * 2. 必要人数ちょうどを選択
+   * 3. 複数候補がある場合は先着順（参加登録順）
    */
   private findOptimalParticipantCombination(
     availableSlotCombinations: Array<{
@@ -194,21 +196,22 @@ class MatchingEngine {
       availableParticipants: string[];
     }>,
     requiredHours: number,
-    requiredParticipants: number
+    requiredParticipants: number,
+    eventParticipants: string[] // 参加登録順の配列
   ): { timeSlots: TimeSlot[]; participants: string[] } | null {
-    // 参加者数が多い順、時間数が多い順でソート
-    const sortedCombinations = [...availableSlotCombinations].sort((a, b) => {
-      // 参加者数で比較（多い順）
-      const participantDiff = b.availableParticipants.length - a.availableParticipants.length;
-      if (participantDiff !== 0) return participantDiff;
-      
-      // 時間数で比較（多い順）
+    // 必要人数を満たせる組み合わせを優先、時間数が多い順、日付が早い順でソート
+    const validCombinations = availableSlotCombinations.filter(
+      combination => combination.availableParticipants.length >= requiredParticipants
+    );
+    
+    const sortedCombinations = [...validCombinations].sort((a, b) => {
+      // 時間数で比較（多い順）- より長い時間スロットを優先
       const hoursA = getTimeSlotHours(a.slot.timeSlot);
       const hoursB = getTimeSlotHours(b.slot.timeSlot);
       const hoursDiff = hoursB - hoursA;
       if (hoursDiff !== 0) return hoursDiff;
       
-      // 日付で比較（早い順）
+      // 日付で比較（早い順）- より早い日付を優先
       return a.slot.date.getTime() - b.slot.date.getTime();
     });
 
@@ -218,9 +221,16 @@ class MatchingEngine {
       
       // 単一の時間スロットで必要時間数を満たす場合
       if (slotHours >= requiredHours && combination.availableParticipants.length >= requiredParticipants) {
+        // 先着順（参加登録順）で必要人数ちょうど選択
+        const selectedParticipants = this.selectParticipantsInRegistrationOrder(
+          combination.availableParticipants,
+          eventParticipants,
+          requiredParticipants
+        );
+        
         return {
           timeSlots: [combination.slot],
-          participants: combination.availableParticipants.slice(0, Math.max(requiredParticipants, combination.availableParticipants.length))
+          participants: selectedParticipants
         };
       }
     }
@@ -229,6 +239,25 @@ class MatchingEngine {
     // 現在は単一時間スロットでのマッチングのみ対応
     
     return null;
+  }
+
+  /**
+   * 参加登録順で必要人数ちょうど選択
+   */
+  private selectParticipantsInRegistrationOrder(
+    availableParticipants: string[],
+    eventParticipants: string[],
+    requiredCount: number
+  ): string[] {
+    // 参加登録順でソート
+    const sortedAvailableParticipants = availableParticipants.sort((a, b) => {
+      const indexA = eventParticipants.indexOf(a);
+      const indexB = eventParticipants.indexOf(b);
+      return indexA - indexB;
+    });
+
+    // 必要人数ちょうど選択
+    return sortedAvailableParticipants.slice(0, requiredCount);
   }
 
 }
