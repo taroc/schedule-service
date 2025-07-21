@@ -490,4 +490,137 @@ describe('🔴 Red Phase: MatchingEngine', () => {
       expect(result.reason).toContain('参加者数が不足');
     });
   });
+
+  describe('🔴 Red Phase: 新優先順位マッチング', () => {
+    it('終日スロットが優先されるべき（夜間より終日を選択）', async () => {
+      // Arrange: 同じ日に夜間3時間と終日10時間の両方が利用可能な場合
+      const eventId = 'event-fullday-priority';
+      const mockEvent: Event = {
+        id: eventId,
+        name: '終日優先テスト',
+        description: '終日スロットが夜間スロットより優先されることを確認',
+        requiredParticipants: 2,
+        requiredHours: 3, // 3時間必要（夜間でも終日でも満たせる）
+        creatorId: 'creator1',
+        createdAt: new Date('2024-01-19'),
+        updatedAt: new Date('2024-01-19'),
+        participants: ['user1', 'user2', 'user3'],
+        deadline: new Date('2024-01-20'),
+        periodStart: new Date('2024-01-21'),
+        periodEnd: new Date('2024-01-21'), // 1日のみ
+        status: 'open',
+        reservationStatus: 'open',
+      };
+
+      const mockSchedules: MockUserSchedule[] = [
+        // 21日: user1, user2, user3全員が夜間と終日両方可用
+        { id: '100', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '101', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '102', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+      ];
+
+      const { eventStorage } = await import('@/lib/eventStorage');
+      const { scheduleStorage } = await import('@/lib/scheduleStorage');
+      
+      vi.mocked(eventStorage.getEventById).mockResolvedValue(mockEvent);
+      vi.mocked(scheduleStorage.getSchedulesByUserIds).mockResolvedValue(mockSchedules);
+
+      // Act: マッチング判定実行
+      const result = await matchingEngine.checkEventMatching(eventId);
+
+      // Assert: 終日スロットが選ばれることを期待
+      expect(result.isMatched).toBe(true);
+      expect(result.matchedTimeSlots![0].timeSlot).toBe('fullday'); // 夜間ではなく終日
+      expect(result.selectedParticipants).toHaveLength(2);
+    });
+
+    it('連続する日程が優先されるべき（バラバラの日より連続日程を選択）', async () => {
+      // Arrange: 複数日にわたる日程で、連続日程と飛び石日程が選択可能な場合
+      const eventId = 'event-consecutive-priority';
+      const mockEvent: Event = {
+        id: eventId,
+        name: '連続日程優先テスト',
+        description: '連続する日程がバラバラの日程より優先されることを確認',
+        requiredParticipants: 2,
+        requiredHours: 6, // 6時間必要（夜間2日分）
+        creatorId: 'creator1',
+        createdAt: new Date('2024-01-19'),
+        updatedAt: new Date('2024-01-19'),
+        participants: ['user1', 'user2', 'user3'],
+        deadline: new Date('2024-01-20'),
+        periodStart: new Date('2024-01-21'),
+        periodEnd: new Date('2024-01-25'),
+        status: 'open',
+        reservationStatus: 'open',
+      };
+
+      const mockSchedules: MockUserSchedule[] = [
+        // パターン1: 21日, 22日連続（user1, user2）
+        { id: '200', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '201', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '202', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '203', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // パターン2: 21日, 25日飛び石（user1, user3）
+        { id: '204', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '205', userId: 'user3', date: new Date('2024-01-25'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+      ];
+
+      const { eventStorage } = await import('@/lib/eventStorage');
+      const { scheduleStorage } = await import('@/lib/scheduleStorage');
+      
+      vi.mocked(eventStorage.getEventById).mockResolvedValue(mockEvent);
+      vi.mocked(scheduleStorage.getSchedulesByUserIds).mockResolvedValue(mockSchedules);
+
+      // Act: マッチング判定実行
+      const result = await matchingEngine.checkEventMatching(eventId);
+
+      // Assert: 連続日程（21-22日）が選ばれることを期待
+      expect(result.isMatched).toBe(true);
+      expect(result.matchedTimeSlots).toHaveLength(2);
+      expect(result.matchedTimeSlots![0].date).toEqual(new Date('2024-01-21'));
+      expect(result.matchedTimeSlots![1].date).toEqual(new Date('2024-01-22'));
+      expect(result.selectedParticipants).toEqual(['user1', 'user2']);
+    });
+
+    it('参加表明の早いユーザーが優先されるべき', async () => {
+      // Arrange: 参加登録時刻が異なるユーザーで選択する場合
+      const eventId = 'event-early-registration-priority';
+      const mockEvent: Event = {
+        id: eventId,
+        name: '早期参加表明優先テスト',
+        description: '参加表明の早いユーザーが優先されることを確認',
+        requiredParticipants: 2,
+        requiredHours: 3,
+        creatorId: 'creator1',
+        createdAt: new Date('2024-01-19'),
+        updatedAt: new Date('2024-01-19'),
+        participants: ['user3', 'user1', 'user2'], // user3が最初に参加表明
+        deadline: new Date('2024-01-20'),
+        periodStart: new Date('2024-01-21'),
+        periodEnd: new Date('2024-01-21'),
+        status: 'open',
+        reservationStatus: 'open',
+      };
+
+      const mockSchedules: MockUserSchedule[] = [
+        // 全員が同じ条件で利用可能
+        { id: '300', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '301', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '302', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+      ];
+
+      const { eventStorage } = await import('@/lib/eventStorage');
+      const { scheduleStorage } = await import('@/lib/scheduleStorage');
+      
+      vi.mocked(eventStorage.getEventById).mockResolvedValue(mockEvent);
+      vi.mocked(scheduleStorage.getSchedulesByUserIds).mockResolvedValue(mockSchedules);
+
+      // Act: マッチング判定実行
+      const result = await matchingEngine.checkEventMatching(eventId);
+
+      // Assert: 参加表明順（user3, user1）が選ばれることを期待
+      expect(result.isMatched).toBe(true);
+      expect(result.selectedParticipants).toEqual(['user3', 'user1']); // 早期参加表明順
+    });
+  });
 });
