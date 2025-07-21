@@ -263,7 +263,7 @@ export default function MultiSelectCalendar({
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
+    <div className="bg-blue-50 dark:bg-blue-900 rounded border border-blue-200 dark:border-blue-700 p-1">
       {/* カレンダーヘッダー */}
       <div className="flex items-center justify-between mb-2">
         <button
@@ -276,7 +276,7 @@ export default function MultiSelectCalendar({
         </button>
 
         <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
+          📅 {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]} (コンパクト版)
         </h2>
 
         <button
