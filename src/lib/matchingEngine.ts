@@ -167,6 +167,16 @@ class MatchingEngine {
    * 参加者検証
    */
   async validateParticipants(event: Event): Promise<boolean> {
+    // 必要参加者数は1人以上である必要がある
+    if (event.requiredParticipants < 1) {
+      return false;
+    }
+    
+    // 必要時間数は1時間以上である必要がある
+    if (event.requiredHours < 1) {
+      return false;
+    }
+    
     return event.participants.length >= event.requiredParticipants;
   }
 
@@ -182,14 +192,19 @@ class MatchingEngine {
     return participants.filter(participantId => {
       const userSchedule = schedules.find(
         s => s.userId === participantId && 
-        s.date.toDateString() === date.toDateString()
+        this.isSameDate(s.date, date)
       );
       
       if (!userSchedule) {
         return false; // スケジュールが登録されていない場合は利用不可
       }
 
-      return timeSlot === 'evening' ? userSchedule.timeSlots.evening : userSchedule.timeSlots.fullday;
+      // 終日空いている場合は、evening時間帯も含めて利用可能
+      if (timeSlot === 'evening') {
+        return userSchedule.timeSlots.evening || userSchedule.timeSlots.fullday;
+      }
+      
+      return userSchedule.timeSlots.fullday;
     });
   }
 
@@ -383,6 +398,16 @@ class MatchingEngine {
     }
 
     return null;
+  }
+
+  /**
+   * タイムゾーンに依存しない日付比較
+   * toDateString()ではなく年月日を直接比較してタイムゾーン問題を回避
+   */
+  private isSameDate(date1: Date, date2: Date): boolean {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
   }
 
 }
