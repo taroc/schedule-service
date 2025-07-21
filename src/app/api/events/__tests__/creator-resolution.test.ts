@@ -99,7 +99,7 @@ describe('Event Creator Resolution Integration Test', () => {
       name: 'Test Event',
       description: 'Test Description',
       requiredParticipants: 3,
-      requiredTimeSlots: 2,
+      requiredHours: 6,
       deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
@@ -110,7 +110,7 @@ describe('Event Creator Resolution Integration Test', () => {
       name: string;
       description: string;
       requiredParticipants: number;
-      requiredTimeSlots: number;
+      requiredHours: number;
       creatorId: string;
       status: string;
       participants: unknown[];
@@ -175,7 +175,7 @@ describe('Event Creator Resolution Integration Test', () => {
         name: 'Corrupted Event',
         description: 'Event with missing creator',
         requiredParticipants: 2,
-        requiredTimeSlots: 1
+        requiredHours: 3
       }, nonExistentUserId)
       // このテストは失敗するはず（外部キー制約のため）
       expect.fail('Should not reach here - foreign key constraint should prevent this')
@@ -199,7 +199,7 @@ describe('Event Creator Resolution Integration Test', () => {
         name: 'Event 1',
         description: 'First event',
         requiredParticipants: 2,
-        requiredTimeSlots: 1,
+        requiredHours: 3,
         creatorId: user1Id,
         status: 'open',
         participants: [],
@@ -215,7 +215,7 @@ describe('Event Creator Resolution Integration Test', () => {
         name: 'Event 2',
         description: 'Second event',
         requiredParticipants: 3,
-        requiredTimeSlots: 2,
+        requiredHours: 6,
         creatorId: user2Id,
         status: 'open',
         participants: [],
@@ -268,7 +268,7 @@ describe('Event Creator Resolution Integration Test', () => {
       name: 'Invalid Event',
       description: 'Event with non-existent creator',
       requiredParticipants: 1,
-      requiredTimeSlots: 1,
+      requiredHours: 3,
       deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       periodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()

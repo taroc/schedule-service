@@ -775,7 +775,7 @@ class EventStorageDB {
         const schedule = userSchedules.find(s => s.date.toDateString() === dateStr);
         
         // その日にスケジュールが登録されている（= 空いている）場合
-        if (schedule && (schedule.timeSlotsDaytime || schedule.timeSlotsEvening)) {
+        if (schedule && (schedule.timeSlotsFullday || schedule.timeSlotsEvening)) {
           availableDates.push(date);
         }
       }
@@ -869,7 +869,7 @@ class EventStorageDB {
       matchedTimeSlots: prismaEvent.matchedTimeSlots ? 
         JSON.parse(prismaEvent.matchedTimeSlots).map((ts: { date: string; timeSlot: string }) => ({
           date: new Date(ts.date),
-          timeSlot: ts.timeSlot as 'daytime' | 'evening'
+          timeSlot: ts.timeSlot as 'fullday' | 'evening'
         })) : 
         undefined,
       deadline: new Date(prismaEvent.deadline),
@@ -916,7 +916,7 @@ class EventStorageDB {
       matchedTimeSlots: prismaEvent.matchedTimeSlots ? 
         JSON.parse(prismaEvent.matchedTimeSlots).map((ts: { date: string; timeSlot: string }) => ({
           date: new Date(ts.date),
-          timeSlot: ts.timeSlot as 'daytime' | 'evening'
+          timeSlot: ts.timeSlot as 'fullday' | 'evening'
         })) : 
         undefined,
       deadline: new Date(prismaEvent.deadline),

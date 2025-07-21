@@ -12,11 +12,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // 実際の型をインポート
 import type { Event } from '@/types/event';
 
-interface UserSchedule {
+interface MockUserSchedule {
+  id: string;
   userId: string;
   date: Date;
-  daytime: boolean;
-  evening: boolean;
+  timeSlots: {
+    evening: boolean;
+    fullday: boolean;
+  };
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // マッチングエンジンのインターフェースは実装から使用
@@ -55,7 +60,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント',
         description: 'テスト用のイベントです',
         requiredParticipants: 2,
-        requiredTimeSlots: 1,
+        requiredHours: 3, // 3時間必要
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
@@ -67,9 +72,9 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         reservationStatus: 'open',
       };
 
-      const mockSchedules: UserSchedule[] = [
-        { userId: 'user1', date: new Date('2024-01-21'), daytime: true, evening: true },
-        { userId: 'user2', date: new Date('2024-01-21'), daytime: true, evening: true },
+      const mockSchedules: MockUserSchedule[] = [
+        { id: '1', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');
@@ -87,7 +92,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
       expect(result.matchedTimeSlots).toBeDefined();
       expect(result.matchedTimeSlots).toHaveLength(1);
       expect(result.matchedTimeSlots![0].date).toEqual(new Date('2024-01-21'));
-      expect(['daytime', 'evening']).toContain(result.matchedTimeSlots![0].timeSlot);
+      expect(['evening', 'fullday']).toContain(result.matchedTimeSlots![0].timeSlot);
     });
 
     it('参加者数が不足している場合、マッチング失敗すべき', async () => {
@@ -98,7 +103,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント2',
         description: 'テスト用のイベントです',
         requiredParticipants: 3,
-        requiredTimeSlots: 1,
+        requiredHours: 3, // 3時間必要
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
@@ -130,7 +135,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント3',
         description: 'テスト用のイベントです',
         requiredParticipants: 2,
-        requiredTimeSlots: 3, // 3時間スロット必要
+        requiredHours: 10, // 10時間必要
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
@@ -142,13 +147,13 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         reservationStatus: 'open',
       };
 
-      const mockSchedules: UserSchedule[] = [
-        // user1は1日目の午前のみ可用
-        { userId: 'user1', date: new Date('2024-01-21'), daytime: true, evening: false },
-        { userId: 'user1', date: new Date('2024-01-22'), daytime: false, evening: false },
-        // user2は2日目の午後のみ可用
-        { userId: 'user2', date: new Date('2024-01-21'), daytime: false, evening: false },
-        { userId: 'user2', date: new Date('2024-01-22'), daytime: false, evening: true },
+      const mockSchedules: MockUserSchedule[] = [
+        // user1は1日目の夜のみ可用
+        { id: '3', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '4', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // user2は2日目の夜のみ可用
+        { id: '5', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '6', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');
@@ -162,7 +167,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
 
       // Assert: マッチング失敗を期待
       expect(result.isMatched).toBe(false);
-      expect(result.reason).toContain('時間スロット不足');
+      expect(result.reason).toContain('参加者数が不足');
       expect(result.matchedTimeSlots).toBeUndefined();
     });
 
@@ -190,7 +195,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント4',
         description: 'テスト用のイベントです',
         requiredParticipants: 2,
-        requiredTimeSlots: 2,
+        requiredHours: 10, // 10時間必要
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
@@ -202,28 +207,28 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         reservationStatus: 'open',
       };
 
-      const schedules: UserSchedule[] = [
-        // 2024-01-21: 両方とも午前・午後可用
-        { userId: 'user1', date: new Date('2024-01-21'), daytime: true, evening: true },
-        { userId: 'user2', date: new Date('2024-01-21'), daytime: true, evening: true },
-        // 2024-01-22: user1のみ午前可用
-        { userId: 'user1', date: new Date('2024-01-22'), daytime: true, evening: false },
-        { userId: 'user2', date: new Date('2024-01-22'), daytime: false, evening: false },
-        // 2024-01-23: 両方とも午後可用
-        { userId: 'user1', date: new Date('2024-01-23'), daytime: false, evening: true },
-        { userId: 'user2', date: new Date('2024-01-23'), daytime: false, evening: true },
+      const schedules: MockUserSchedule[] = [
+        // 2024-01-21: 両方とも夜・終日可用
+        { id: '7', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '8', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        // 2024-01-22: user1のみ夜可用（終日不可）
+        { id: '9', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '10', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // 2024-01-23: 両方とも夜可用
+        { id: '11', userId: 'user1', date: new Date('2024-01-23'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '12', userId: 'user2', date: new Date('2024-01-23'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       // Act: 利用可能な時間スロットを検索
       const availableSlots = matchingEngine.findAvailableTimeSlots(event, schedules);
 
-      // Assert: 期待される時間スロット
-      expect(availableSlots).toHaveLength(3); // 21日午前・21日午後・23日午後
+      // Assert: 期待される時間スロット組み合わせ（新しい実装では参加者情報も含む）
+      expect(availableSlots).toHaveLength(3); // 21日夜・21日終日・23日夜
       
       const expectedSlots = [
-        { date: new Date('2024-01-21'), timeSlot: 'daytime' },
-        { date: new Date('2024-01-21'), timeSlot: 'evening' },
-        { date: new Date('2024-01-23'), timeSlot: 'evening' },
+        { slot: { date: new Date('2024-01-21'), timeSlot: 'evening' }, availableParticipants: ['user1', 'user2'] },
+        { slot: { date: new Date('2024-01-21'), timeSlot: 'fullday' }, availableParticipants: ['user1', 'user2'] },
+        { slot: { date: new Date('2024-01-23'), timeSlot: 'evening' }, availableParticipants: ['user1', 'user2'] },
       ];
 
       expectedSlots.forEach(expectedSlot => {
@@ -238,7 +243,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント5',
         description: 'テスト用のイベントです',
         requiredParticipants: 2,
-        requiredTimeSlots: 3,
+        requiredHours: 9,
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
@@ -250,24 +255,29 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         reservationStatus: 'open',
       };
 
-      const schedules: UserSchedule[] = [
-        // 連続3時間スロット可用: 21日午前 → 21日午後 → 22日午前
-        { userId: 'user1', date: new Date('2024-01-21'), daytime: true, evening: true },
-        { userId: 'user2', date: new Date('2024-01-21'), daytime: true, evening: true },
-        { userId: 'user1', date: new Date('2024-01-22'), daytime: true, evening: false },
-        { userId: 'user2', date: new Date('2024-01-22'), daytime: true, evening: false },
-        { userId: 'user1', date: new Date('2024-01-23'), daytime: false, evening: false },
-        { userId: 'user2', date: new Date('2024-01-23'), daytime: false, evening: false },
+      const schedules: MockUserSchedule[] = [
+        // 単一の終日スロットで3時間を満たす: 21日終日（10時間）
+        { id: '13', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '14', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '15', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '16', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '17', userId: 'user1', date: new Date('2024-01-23'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '18', userId: 'user2', date: new Date('2024-01-23'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       // Act: 利用可能な時間スロットを検索
       const availableSlots = matchingEngine.findAvailableTimeSlots(event, schedules);
 
-      // Assert: 連続3時間スロットが検出されることを期待
-      expect(availableSlots).toHaveLength(3);
-      expect(availableSlots).toContainEqual({ date: new Date('2024-01-21'), timeSlot: 'daytime' });
-      expect(availableSlots).toContainEqual({ date: new Date('2024-01-21'), timeSlot: 'evening' });
-      expect(availableSlots).toContainEqual({ date: new Date('2024-01-22'), timeSlot: 'daytime' });
+      // Assert: 必要時間数（3時間）を満たす組み合わせが検出されることを期待
+      expect(availableSlots).toHaveLength(2); // 21日夜・21日終日
+      expect(availableSlots).toContainEqual({ 
+        slot: { date: new Date('2024-01-21'), timeSlot: 'evening' }, 
+        availableParticipants: ['user1', 'user2'] 
+      });
+      expect(availableSlots).toContainEqual({ 
+        slot: { date: new Date('2024-01-21'), timeSlot: 'fullday' }, 
+        availableParticipants: ['user1', 'user2'] 
+      });
     });
   });
 
@@ -279,7 +289,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント6',
         description: 'テスト用のイベントです',
         requiredParticipants: 2,
-        requiredTimeSlots: 1,
+        requiredHours: 3, // 3時間必要
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
@@ -305,7 +315,7 @@ describe('🔴 Red Phase: MatchingEngine', () => {
         name: 'テストイベント7',
         description: 'テスト用のイベントです',
         requiredParticipants: 3,
-        requiredTimeSlots: 1,
+        requiredHours: 3, // 3時間必要
         creatorId: 'creator1',
         createdAt: new Date('2024-01-19'),
         updatedAt: new Date('2024-01-19'),
@@ -322,6 +332,164 @@ describe('🔴 Red Phase: MatchingEngine', () => {
 
       // Assert: 無効であることを期待
       expect(isValid).toBe(false);
+    });
+  });
+
+  describe('🔴 Red Phase: 最適参加者組み合わせマッチング', () => {
+    it('全参加者が空いていなくても、必要人数分の最適な組み合わせでマッチングすべき', async () => {
+      // Arrange: 5人登録、3人必要、うち3人だけが時間スロットで重複している場合
+      const eventId = 'event-optimal-1';
+      const mockEvent: Event = {
+        id: eventId,
+        name: '最適組み合わせテスト',
+        description: '必要人数分の最適な参加者組み合わせを探すテスト',
+        requiredParticipants: 3,
+        requiredHours: 3, // 3時間必要
+        creatorId: 'creator1',
+        createdAt: new Date('2024-01-19'),
+        updatedAt: new Date('2024-01-19'),
+        participants: ['user1', 'user2', 'user3', 'user4', 'user5'], // 5人登録
+        deadline: new Date('2024-01-20'),
+        periodStart: new Date('2024-01-21'),
+        periodEnd: new Date('2024-01-23'),
+        status: 'open',
+        reservationStatus: 'open',
+      };
+
+      const mockSchedules: MockUserSchedule[] = [
+        // user1: 21日夜のみ可用（3時間）
+        { id: '19', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '20', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // user2: 21日夜のみ可用（3時間）
+        { id: '21', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '22', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // user3: 21日夜のみ可用（3時間）
+        { id: '23', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '24', userId: 'user3', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // user4: 22日終日のみ可用（10時間）
+        { id: '25', userId: 'user4', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '26', userId: 'user4', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        // user5: どの日も不可用
+        { id: '27', userId: 'user5', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '28', userId: 'user5', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+      ];
+
+      const { eventStorage } = await import('@/lib/eventStorage');
+      const { scheduleStorage } = await import('@/lib/scheduleStorage');
+      
+      vi.mocked(eventStorage.getEventById).mockResolvedValue(mockEvent);
+      vi.mocked(scheduleStorage.getSchedulesByUserIds).mockResolvedValue(mockSchedules);
+
+      // Act: マッチング判定実行
+      const result = await matchingEngine.checkEventMatching(eventId);
+
+      // Assert: user1, user2, user3の組み合わせで21日夜（3時間）がマッチしたことを期待
+      expect(result.isMatched).toBe(true);
+      expect(result.reason).toContain('マッチング成功');
+      expect(result.matchedTimeSlots).toBeDefined();
+      expect(result.matchedTimeSlots).toHaveLength(1);
+      expect(result.matchedTimeSlots![0].date).toEqual(new Date('2024-01-21'));
+      expect(result.matchedTimeSlots![0].timeSlot).toBe('evening');
+      expect(result.selectedParticipants).toEqual(['user1', 'user2', 'user3']);
+    });
+
+    it('複数の時間スロット組み合わせから、最も多くの参加者が参加できる組み合わせを選ぶべき', async () => {
+      // Arrange: 異なる時間スロットで異なる参加者数が可能な場合
+      const eventId = 'event-optimal-2';
+      const mockEvent: Event = {
+        id: eventId,
+        name: '最大参加者組み合わせテスト',
+        description: '最も多くの参加者が参加できる時間スロットを選ぶテスト',
+        requiredParticipants: 2,
+        requiredHours: 10, // 10時間必要（終日）
+        creatorId: 'creator1',
+        createdAt: new Date('2024-01-19'),
+        updatedAt: new Date('2024-01-19'),
+        participants: ['user1', 'user2', 'user3', 'user4'],
+        deadline: new Date('2024-01-20'),
+        periodStart: new Date('2024-01-21'),
+        periodEnd: new Date('2024-01-23'),
+        status: 'open',
+        reservationStatus: 'open',
+      };
+
+      const mockSchedules: MockUserSchedule[] = [
+        // 21日終日: user1, user2のみ可用（2人）
+        { id: '29', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '30', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '31', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '32', userId: 'user4', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // 22日終日: user1, user2, user3が可用（3人）- より多い参加者
+        { id: '33', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '34', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '35', userId: 'user3', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '36', userId: 'user4', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+      ];
+
+      const { eventStorage } = await import('@/lib/eventStorage');
+      const { scheduleStorage } = await import('@/lib/scheduleStorage');
+      
+      vi.mocked(eventStorage.getEventById).mockResolvedValue(mockEvent);
+      vi.mocked(scheduleStorage.getSchedulesByUserIds).mockResolvedValue(mockSchedules);
+
+      // Act: マッチング判定実行
+      const result = await matchingEngine.checkEventMatching(eventId);
+
+      // Assert: 22日終日で3人が選ばれることを期待（2人必要だが、より多い参加者の組み合わせを優先）
+      expect(result.isMatched).toBe(true);
+      expect(result.matchedTimeSlots![0].date).toEqual(new Date('2024-01-22'));
+      expect(result.matchedTimeSlots![0].timeSlot).toBe('fullday');
+      expect(result.selectedParticipants).toHaveLength(3);
+      expect(result.selectedParticipants).toContain('user1');
+      expect(result.selectedParticipants).toContain('user2');
+      expect(result.selectedParticipants).toContain('user3');
+    });
+
+    it('必要時間数を満たせる参加者が十分いない場合、マッチング失敗すべき', async () => {
+      // Arrange: どの時間スロット組み合わせでも必要人数に達しない場合
+      const eventId = 'event-optimal-3';
+      const mockEvent: Event = {
+        id: eventId,
+        name: '参加者不足テスト',
+        description: '必要人数を満たせない場合のテスト',
+        requiredParticipants: 3,
+        requiredHours: 3, // 3時間必要
+        creatorId: 'creator1',
+        createdAt: new Date('2024-01-19'),
+        updatedAt: new Date('2024-01-19'),
+        participants: ['user1', 'user2', 'user3', 'user4'],
+        deadline: new Date('2024-01-20'),
+        periodStart: new Date('2024-01-21'),
+        periodEnd: new Date('2024-01-22'),
+        status: 'open',
+        reservationStatus: 'open',
+      };
+
+      const mockSchedules: MockUserSchedule[] = [
+        // 21日夜: user1のみ（1人）
+        { id: '37', userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '38', userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '39', userId: 'user3', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '40', userId: 'user4', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        // 22日終日: user2, user3のみ（2人）- 3人必要だが不足
+        { id: '41', userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '42', userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '43', userId: 'user3', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: true }, createdAt: new Date(), updatedAt: new Date() },
+        { id: '44', userId: 'user4', date: new Date('2024-01-22'), timeSlots: { evening: false, fullday: false }, createdAt: new Date(), updatedAt: new Date() },
+      ];
+
+      const { eventStorage } = await import('@/lib/eventStorage');
+      const { scheduleStorage } = await import('@/lib/scheduleStorage');
+      
+      vi.mocked(eventStorage.getEventById).mockResolvedValue(mockEvent);
+      vi.mocked(scheduleStorage.getSchedulesByUserIds).mockResolvedValue(mockSchedules);
+
+      // Act: マッチング判定実行
+      const result = await matchingEngine.checkEventMatching(eventId);
+
+      // Assert: マッチング失敗を期待
+      expect(result.isMatched).toBe(false);
+      expect(result.reason).toContain('参加者数が不足');
     });
   });
 });

@@ -97,7 +97,7 @@ async function seedTestData() {
         status: 'matched',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日後
         matchedTimeSlots: JSON.stringify([
-          { date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), timeSlot: 'daytime' },
+          { date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), timeSlot: 'fullday' },
           { date: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), timeSlot: 'evening' }
         ]),
         periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 明日から
@@ -175,7 +175,7 @@ async function seedTestData() {
         status: 'matched',
         deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後
         matchedTimeSlots: JSON.stringify([
-          { date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), timeSlot: 'daytime' },
+          { date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), timeSlot: 'fullday' },
           { date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), timeSlot: 'evening' }
         ]),
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
@@ -283,7 +283,7 @@ async function seedTestData() {
         status: 'matched',
         deadline: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // 12日後
         matchedTimeSlots: JSON.stringify([
-          { date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), timeSlot: 'daytime' },
+          { date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), timeSlot: 'fullday' },
           { date: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000), timeSlot: 'evening' }
         ]),
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
@@ -331,7 +331,7 @@ async function seedTestData() {
         deadline: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // 6日後
         matchedTimeSlots: JSON.stringify([
           { date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), timeSlot: 'evening' },
-          { date: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), timeSlot: 'daytime' }
+          { date: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), timeSlot: 'fullday' }
         ]),
         periodStart: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5日後から
         periodEnd: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後まで
@@ -374,7 +374,7 @@ async function seedTestData() {
         status: 'matched',
         deadline: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000), // 9日後
         matchedTimeSlots: JSON.stringify([
-          { date: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000), timeSlot: 'daytime' },
+          { date: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000), timeSlot: 'fullday' },
           { date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), timeSlot: 'evening' }
         ]),
         periodStart: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10日後から
@@ -617,7 +617,7 @@ async function seedTestData() {
           id: 'alice-schedule-1',
           userId: 'alice',
           date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -626,7 +626,7 @@ async function seedTestData() {
           id: 'alice-schedule-2',
           userId: 'alice',
           date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -635,7 +635,7 @@ async function seedTestData() {
           id: 'alice-schedule-3',
           userId: 'alice',
           date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -646,7 +646,7 @@ async function seedTestData() {
           id: 'bob-schedule-1',
           userId: 'bob',
           date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -655,7 +655,7 @@ async function seedTestData() {
           id: 'bob-schedule-2',
           userId: 'bob',
           date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -664,7 +664,7 @@ async function seedTestData() {
           id: 'bob-schedule-3',
           userId: 'bob',
           date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -675,7 +675,7 @@ async function seedTestData() {
           id: 'charlie-schedule-1',
           userId: 'charlie',
           date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -684,7 +684,7 @@ async function seedTestData() {
           id: 'charlie-schedule-2',
           userId: 'charlie',
           date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -695,7 +695,7 @@ async function seedTestData() {
           id: 'diana-schedule-1',
           userId: 'diana',
           date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -704,7 +704,7 @@ async function seedTestData() {
           id: 'diana-schedule-2',
           userId: 'diana',
           date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -715,7 +715,7 @@ async function seedTestData() {
           id: 'taro-schedule-1',
           userId: 'taro',
           date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),
@@ -724,7 +724,7 @@ async function seedTestData() {
           id: 'taro-schedule-2',
           userId: 'taro',
           date: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000),
-          timeSlotsDaytime: true,
+          timeSlotsFullday: true,
           timeSlotsEvening: true,
         },
       }),

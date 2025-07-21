@@ -6,7 +6,7 @@ class ScheduleStorage {
   async setAvailability(
     userId: string,
     dates: string[],
-    timeSlots: { daytime: boolean; evening: boolean }
+    timeSlots: { fullday: boolean; evening: boolean }
   ): Promise<void> {
     // 各日付に対して空き時間を設定
     for (const dateStr of dates) {
@@ -23,11 +23,11 @@ class ScheduleStorage {
           id: `${userId}-${dateStr}`,
           userId,
           date,
-          timeSlotsDaytime: timeSlots.daytime,
+          timeSlotsFullday: timeSlots.fullday,
           timeSlotsEvening: timeSlots.evening
         },
         update: {
-          timeSlotsDaytime: timeSlots.daytime,
+          timeSlotsFullday: timeSlots.fullday,
           timeSlotsEvening: timeSlots.evening,
           updatedAt: new Date()
         }
@@ -120,7 +120,7 @@ class ScheduleStorage {
       date: schedule.date,
       timeSlots: {
         evening: schedule.timeSlotsEvening,
-        fullday: schedule.timeSlotsDaytime // Map daytime to fullday
+        fullday: schedule.timeSlotsFullday // Map fullday field correctly
       },
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt
@@ -178,7 +178,7 @@ class ScheduleStorage {
         }
         
         // いずれかの時間帯が空いていればtrue
-        return daySchedule.timeSlotsDaytime || 
+        return daySchedule.timeSlotsFullday || 
                daySchedule.timeSlotsEvening;
       });
       
@@ -272,7 +272,7 @@ class ScheduleStorage {
         }
         
         // いずれかの時間帯が空いていればtrue
-        return daySchedule.timeSlotsDaytime || 
+        return daySchedule.timeSlotsFullday || 
                daySchedule.timeSlotsEvening;
       });
       
@@ -432,7 +432,7 @@ class ScheduleStorage {
       userId: prismaSchedule.userId,
       date: prismaSchedule.date,
       timeSlots: {
-        fullday: Boolean(prismaSchedule.timeSlotsDaytime),
+        fullday: Boolean(prismaSchedule.timeSlotsFullday),
         evening: Boolean(prismaSchedule.timeSlotsEvening),
       },
       createdAt: prismaSchedule.createdAt,

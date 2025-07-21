@@ -14,7 +14,7 @@ describe('eventStorage', () => {
     name: 'Test Event',
     description: 'Test Description',
     requiredParticipants: 3,
-    requiredTimeSlots: 2,
+    requiredHours: 6,
     deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3日後
     periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 明日から
     periodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 1週間後まで
@@ -24,7 +24,7 @@ describe('eventStorage', () => {
     name: 'Test Event with Deadline',
     description: 'Test Description',
     requiredParticipants: 3,
-    requiredTimeSlots: 2,
+    requiredHours: 6,
     periodStart: new Date(Date.now() + 24 * 60 * 60 * 1000), // 明日から
     periodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1週間後まで
     deadline: new Date(Date.now() + 24 * 60 * 60 * 1000) // 明日
@@ -64,7 +64,7 @@ describe('eventStorage', () => {
       name: string;
       description: string;
       requiredParticipants: number;
-      requiredTimeSlots: number;
+      requiredHours: number;
       creatorId: string;
       status: string;
       participants: { userId: string }[];
@@ -90,7 +90,7 @@ describe('eventStorage', () => {
         name: args.data.name,
         description: args.data.description,
         requiredParticipants: args.data.requiredParticipants,
-        requiredTimeSlots: args.data.requiredTimeSlots || 1,
+        requiredHours: args.data.requiredHours || 3,
         creatorId: args.data.creatorId,
         status: 'open',
         participants: [{ userId: args.data.creatorId }],
@@ -305,7 +305,7 @@ describe('eventStorage', () => {
     const userSchedules = new Map<string, {
       userId: string;
       date: string;
-      timeSlotsDaytime: boolean;
+      timeSlotsFullday: boolean;
       timeSlotsEvening: boolean;
       createdAt: Date;
       updatedAt: Date;
@@ -323,7 +323,7 @@ describe('eventStorage', () => {
       const schedule = {
         userId: args.where.userId_date.userId,
         date: args.where.userId_date.date,
-        timeSlotsDaytime: args.update.timeSlotsDaytime,
+        timeSlotsFullday: args.update.timeSlotsFullday,
         timeSlotsEvening: args.update.timeSlotsEvening,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -344,7 +344,7 @@ describe('eventStorage', () => {
       expect(event.name).toBe(mockEventRequest.name)
       expect(event.description).toBe(mockEventRequest.description)
       expect(event.requiredParticipants).toBe(mockEventRequest.requiredParticipants)
-      expect(event.requiredTimeSlots).toBe(mockEventRequest.requiredTimeSlots)
+      expect(event.requiredHours).toBe(mockEventRequest.requiredHours)
       expect(event.periodStart).toBeInstanceOf(Date)
       expect(event.periodEnd).toBeInstanceOf(Date)
       expect(event.creatorId).toBe(mockCreatorId)
@@ -519,7 +519,7 @@ describe('eventStorage', () => {
       // Arrange
       const event = await eventStorage.createEvent(mockEventRequest, mockCreatorId)
       const matchedTimeSlots = [
-        { date: new Date(Date.now() + 24 * 60 * 60 * 1000), timeSlot: 'daytime' as const },
+        { date: new Date(Date.now() + 24 * 60 * 60 * 1000), timeSlot: 'fullday' as const },
         { date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), timeSlot: 'evening' as const }
       ]
       
@@ -589,8 +589,8 @@ describe('eventStorage', () => {
       // 共通で空いている時間帯を設定
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
       const commonDate = tomorrow.toISOString().split('T')[0]
-      await scheduleStorage.setAvailability(user1, [commonDate], { daytime: true, evening: false })
-      await scheduleStorage.setAvailability(user2, [commonDate], { daytime: true, evening: false })
+      await scheduleStorage.setAvailability(user1, [commonDate], { fullday: true, evening: false })
+      await scheduleStorage.setAvailability(user2, [commonDate], { fullday: true, evening: false })
       
       // Act - 取得したイベントを確認
       const retrievedEvent = await eventStorage.getEventById(event.id)
@@ -598,7 +598,7 @@ describe('eventStorage', () => {
       // Assert
       expect(retrievedEvent).toBeDefined()
       expect(retrievedEvent?.participants).toContain(user2)
-      expect(retrievedEvent?.requiredTimeSlots).toBe(2)
+      expect(retrievedEvent?.requiredHours).toBe(6)
     })
   })
 
@@ -692,7 +692,7 @@ describe('eventStorage', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7); // 7日後
       const matchedTimeSlots = [
-        { date: futureDate, timeSlot: 'daytime' as const }
+        { date: futureDate, timeSlot: 'fullday' as const }
       ]
       await eventStorage.updateEventStatus(matchedEvent.id, 'matched', matchedTimeSlots)
       

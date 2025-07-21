@@ -109,7 +109,7 @@ model UserSchedule {
   id                 String   @id
   userId             String   @map("user_id")
   date               DateTime
-  timeSlotsDaytime   Boolean  @default(false) @map("time_slots_daytime")
+  timeSlotsFullday   Boolean  @default(false) @map("time_slots_fullday")
   timeSlotsEvening   Boolean  @default(false) @map("time_slots_evening")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")

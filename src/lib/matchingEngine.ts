@@ -20,6 +20,7 @@ export interface MatchingResult {
   isMatched: boolean;
   reason: string;
   matchedTimeSlots?: TimeSlot[];
+  selectedParticipants?: string[]; // 最適な参加者組み合わせ
 }
 
 // Event型とUserSchedule型は@/types/からインポート済み
@@ -58,19 +59,20 @@ class MatchingEngine {
         event.periodEnd
       );
 
-      // 利用可能な時間スロットを検索
-      const availableTimeSlots = this.findAvailableTimeSlots(event, schedules);
+      // 利用可能な時間スロットと参加者組み合わせを検索
+      const availableSlotCombinations = this.findAvailableTimeSlots(event, schedules);
 
-      // 必要時間数をチェック
-      const matchedSlots = this.findBestTimeSlotCombination(
-        availableTimeSlots,
-        event.requiredHours
+      // 最適な時間スロット組み合わせと参加者を選択
+      const bestMatch = this.findOptimalParticipantCombination(
+        availableSlotCombinations,
+        event.requiredHours,
+        event.requiredParticipants
       );
 
-      if (matchedSlots.length === 0) {
+      if (!bestMatch) {
         return {
           isMatched: false,
-          reason: '時間数が不足しています'
+          reason: '参加者数が不足しています'
         };
       }
 
@@ -78,7 +80,8 @@ class MatchingEngine {
       return {
         isMatched: true,
         reason: 'マッチング成功',
-        matchedTimeSlots: matchedSlots
+        matchedTimeSlots: bestMatch.timeSlots,
+        selectedParticipants: bestMatch.participants
       };
 
     } catch (error) {
@@ -91,39 +94,55 @@ class MatchingEngine {
   }
 
   /**
-   * 利用可能な時間スロットを検索
+   * 各時間スロットで利用可能な参加者組み合わせを検索
    */
-  findAvailableTimeSlots(event: Event, schedules: UserSchedule[]): TimeSlot[] {
-    const availableSlots: TimeSlot[] = [];
+  findAvailableTimeSlots(event: Event, schedules: UserSchedule[]): Array<{
+    slot: TimeSlot;
+    availableParticipants: string[];
+  }> {
+    const availableSlots: Array<{
+      slot: TimeSlot;
+      availableParticipants: string[];
+    }> = [];
     
     // 期間内の各日をチェック
     const currentDate = new Date(event.periodStart);
     const endDate = new Date(event.periodEnd);
 
     while (currentDate <= endDate) {
-      // 夜の時間スロットをチェック（3時間）
-      if (this.isTimeSlotAvailableForAllParticipants(
+      // 夜の時間スロットで利用可能な参加者を探す（3時間）
+      const eveningParticipants = this.getAvailableParticipantsForTimeSlot(
         currentDate,
         'evening',
         event.participants,
         schedules
-      )) {
+      );
+      
+      if (eveningParticipants.length >= event.requiredParticipants) {
         availableSlots.push({
-          date: new Date(currentDate),
-          timeSlot: 'evening'
+          slot: {
+            date: new Date(currentDate),
+            timeSlot: 'evening'
+          },
+          availableParticipants: eveningParticipants
         });
       }
 
-      // 終日の時間スロットをチェック（10時間）
-      if (this.isTimeSlotAvailableForAllParticipants(
+      // 終日の時間スロットで利用可能な参加者を探す（10時間）
+      const fulldayParticipants = this.getAvailableParticipantsForTimeSlot(
         currentDate,
         'fullday',
         event.participants,
         schedules
-      )) {
+      );
+      
+      if (fulldayParticipants.length >= event.requiredParticipants) {
         availableSlots.push({
-          date: new Date(currentDate),
-          timeSlot: 'fullday'
+          slot: {
+            date: new Date(currentDate),
+            timeSlot: 'fullday'
+          },
+          availableParticipants: fulldayParticipants
         });
       }
 
@@ -142,15 +161,15 @@ class MatchingEngine {
   }
 
   /**
-   * 特定の時間スロットがすべての参加者で利用可能かチェック
+   * 特定の時間スロットで利用可能な参加者のリストを取得
    */
-  private isTimeSlotAvailableForAllParticipants(
+  private getAvailableParticipantsForTimeSlot(
     date: Date,
     timeSlot: TimeSlotType,
     participants: string[],
     schedules: UserSchedule[]
-  ): boolean {
-    return participants.every(participantId => {
+  ): string[] {
+    return participants.filter(participantId => {
       const userSchedule = schedules.find(
         s => s.userId === participantId && 
         s.date.toDateString() === date.toDateString()
@@ -165,42 +184,51 @@ class MatchingEngine {
   }
 
   /**
-   * 必要時間数に合う最適な時間スロット組み合わせを検索
+   * 最適な参加者組み合わせを選択
+   * 1. 必要時間数を満たせる組み合わせ
+   * 2. より多くの参加者が参加できる組み合わせを優先
    */
-  private findBestTimeSlotCombination(
-    availableSlots: TimeSlot[],
-    requiredHours: number
-  ): TimeSlot[] {
-    // 時間スロットを効率的に組み合わせるため、長い時間スロットから優先
-    const sortedSlots = [...availableSlots].sort((a, b) => {
-      const hoursA = getTimeSlotHours(a.timeSlot);
-      const hoursB = getTimeSlotHours(b.timeSlot);
+  private findOptimalParticipantCombination(
+    availableSlotCombinations: Array<{
+      slot: TimeSlot;
+      availableParticipants: string[];
+    }>,
+    requiredHours: number,
+    requiredParticipants: number
+  ): { timeSlots: TimeSlot[]; participants: string[] } | null {
+    // 参加者数が多い順、時間数が多い順でソート
+    const sortedCombinations = [...availableSlotCombinations].sort((a, b) => {
+      // 参加者数で比較（多い順）
+      const participantDiff = b.availableParticipants.length - a.availableParticipants.length;
+      if (participantDiff !== 0) return participantDiff;
       
-      // 時間数が多い順、同じ時間数なら日付順
-      if (hoursA !== hoursB) {
-        return hoursB - hoursA;
-      }
-      return a.date.getTime() - b.date.getTime();
+      // 時間数で比較（多い順）
+      const hoursA = getTimeSlotHours(a.slot.timeSlot);
+      const hoursB = getTimeSlotHours(b.slot.timeSlot);
+      const hoursDiff = hoursB - hoursA;
+      if (hoursDiff !== 0) return hoursDiff;
+      
+      // 日付で比較（早い順）
+      return a.slot.date.getTime() - b.slot.date.getTime();
     });
 
-    // 動的プログラミングで最適な組み合わせを探索
-    const result: TimeSlot[] = [];
-    let totalHours = 0;
-    
-    for (const slot of sortedSlots) {
-      const slotHours = getTimeSlotHours(slot.timeSlot);
-      if (totalHours + slotHours <= requiredHours || result.length === 0) {
-        result.push(slot);
-        totalHours += slotHours;
-        
-        if (totalHours >= requiredHours) {
-          break;
-        }
+    // 最適な組み合わせを探索
+    for (const combination of sortedCombinations) {
+      const slotHours = getTimeSlotHours(combination.slot.timeSlot);
+      
+      // 単一の時間スロットで必要時間数を満たす場合
+      if (slotHours >= requiredHours && combination.availableParticipants.length >= requiredParticipants) {
+        return {
+          timeSlots: [combination.slot],
+          participants: combination.availableParticipants.slice(0, Math.max(requiredParticipants, combination.availableParticipants.length))
+        };
       }
     }
 
-    // 必要時間数に達していない場合は空配列を返す
-    return totalHours >= requiredHours ? result : [];
+    // TODO: 複数の時間スロット組み合わせによるマッチング（将来拡張）
+    // 現在は単一時間スロットでのマッチングのみ対応
+    
+    return null;
   }
 
 }

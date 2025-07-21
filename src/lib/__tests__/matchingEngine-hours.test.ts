@@ -13,8 +13,10 @@ import type { Event } from '@/types/event';
 interface HourBasedUserSchedule {
   userId: string;
   date: Date;
-  evening: boolean;  // 3時間
-  fullday: boolean;  // 10時間
+  timeSlots: {
+    evening: boolean;  // 3時間
+    fullday: boolean;  // 10時間
+  };
 }
 
 // モック設定
@@ -62,8 +64,8 @@ describe('🔴 Red Phase: 時間単位マッチングエンジン', () => {
       };
 
       const mockSchedules: HourBasedUserSchedule[] = [
-        { userId: 'user1', date: new Date('2024-01-21'), evening: true, fullday: false },
-        { userId: 'user2', date: new Date('2024-01-21'), evening: true, fullday: false },
+        { userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false } },
+        { userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false } },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');
@@ -105,8 +107,8 @@ describe('🔴 Red Phase: 時間単位マッチングエンジン', () => {
       };
 
       const mockSchedules: HourBasedUserSchedule[] = [
-        { userId: 'user1', date: new Date('2024-01-21'), evening: false, fullday: true },
-        { userId: 'user2', date: new Date('2024-01-21'), evening: false, fullday: true },
+        { userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true } },
+        { userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true } },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');
@@ -148,10 +150,10 @@ describe('🔴 Red Phase: 時間単位マッチングエンジン', () => {
       };
 
       const mockSchedules: HourBasedUserSchedule[] = [
-        { userId: 'user1', date: new Date('2024-01-21'), evening: true, fullday: false },
-        { userId: 'user1', date: new Date('2024-01-22'), evening: true, fullday: false },
-        { userId: 'user2', date: new Date('2024-01-21'), evening: true, fullday: false },
-        { userId: 'user2', date: new Date('2024-01-22'), evening: true, fullday: false },
+        { userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false } },
+        { userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false } },
+        { userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false } },
+        { userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false } },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');
@@ -193,10 +195,10 @@ describe('🔴 Red Phase: 時間単位マッチングエンジン', () => {
       };
 
       const mockSchedules: HourBasedUserSchedule[] = [
-        { userId: 'user1', date: new Date('2024-01-21'), evening: false, fullday: true },
-        { userId: 'user1', date: new Date('2024-01-22'), evening: true, fullday: false },
-        { userId: 'user2', date: new Date('2024-01-21'), evening: false, fullday: true },
-        { userId: 'user2', date: new Date('2024-01-22'), evening: true, fullday: false },
+        { userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true } },
+        { userId: 'user1', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false } },
+        { userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: false, fullday: true } },
+        { userId: 'user2', date: new Date('2024-01-22'), timeSlots: { evening: true, fullday: false } },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');
@@ -242,8 +244,8 @@ describe('🔴 Red Phase: 時間単位マッチングエンジン', () => {
       };
 
       const mockSchedules: HourBasedUserSchedule[] = [
-        { userId: 'user1', date: new Date('2024-01-21'), evening: true, fullday: false },
-        { userId: 'user2', date: new Date('2024-01-21'), evening: true, fullday: false },
+        { userId: 'user1', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false } },
+        { userId: 'user2', date: new Date('2024-01-21'), timeSlots: { evening: true, fullday: false } },
       ];
 
       const { eventStorage } = await import('@/lib/eventStorage');

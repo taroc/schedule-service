@@ -20,7 +20,10 @@ describe('/api/auth/verify', () => {
   const mockUser = {
     id: 'user-123',
     email: 'test@example.com',
-    name: 'Test User'
+    name: 'Test User',
+    password: 'hashed-password',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
   }
 
   beforeEach(() => {
