@@ -2,7 +2,9 @@ export interface Event {
   id: string;
   name: string;
   description: string;
-  requiredParticipants: number;  // 必要人数
+  requiredParticipants: number;  // 必要人数（下位互換性のために残す）
+  minParticipants: number;       // 最小参加人数（必須）
+  maxParticipants: number | null; // 最大参加人数（null = 無制限）
   requiredHours: number;         // 必要時間数
   creatorId: string;
   createdAt: Date;
@@ -25,7 +27,9 @@ export type ReservationStatus = 'open' | 'tentative' | 'confirmed' | 'expired';
 export interface CreateEventRequest {
   name: string;
   description: string;
-  requiredParticipants: number;
+  requiredParticipants: number;  // 下位互換性のために残す
+  minParticipants: number;       // 最小参加人数（必須）
+  maxParticipants: number | null; // 最大参加人数（null = 無制限）
   requiredHours: number;         // 必要時間数
   deadline: Date;
   
@@ -37,7 +41,9 @@ export interface CreateEventRequest {
 export interface UpdateEventRequest {
   name?: string;
   description?: string;
-  requiredParticipants?: number;
+  requiredParticipants?: number; // 下位互換性のために残す
+  minParticipants?: number;      // 最小参加人数
+  maxParticipants?: number | null; // 最大参加人数（null = 無制限）
   requiredHours?: number;        // 必要時間数
   deadline?: Date;
   
@@ -60,7 +66,9 @@ export interface EventResponse {
   id: string;
   name: string;
   description: string;
-  requiredParticipants: number;
+  requiredParticipants: number;  // 下位互換性のために残す
+  minParticipants: number;       // 最小参加人数
+  maxParticipants: number | null; // 最大参加人数（null = 無制限）
   requiredHours: number;         // 必要時間数
   creatorId: string;
   createdAt: string;

@@ -38,19 +38,41 @@ export async function POST(request: NextRequest) {
     
     // バリデーション
     if (!eventRequest.name || !eventRequest.description || 
-        !eventRequest.requiredParticipants || !eventRequest.requiredHours || !eventRequest.deadline) {
+        eventRequest.minParticipants === undefined || eventRequest.minParticipants === null ||
+        !eventRequest.requiredHours || !eventRequest.deadline) {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'All required fields must be provided' },
         { status: 400 }
       );
     }
 
-    if (eventRequest.requiredParticipants < 1 || eventRequest.requiredHours < 1) {
+    // 参加人数のバリデーション
+    if (eventRequest.minParticipants < 1 || eventRequest.requiredHours < 1) {
       return NextResponse.json(
-        { error: 'Required participants and hours must be greater than 0' },
+        { error: 'Minimum participants and required hours must be greater than 0' },
         { status: 400 }
       );
     }
+
+    // 最大参加人数のバリデーション
+    if (eventRequest.maxParticipants !== null && eventRequest.maxParticipants !== undefined) {
+      if (eventRequest.maxParticipants < eventRequest.minParticipants) {
+        return NextResponse.json(
+          { error: 'Maximum participants must be greater than or equal to minimum participants' },
+          { status: 400 }
+        );
+      }
+      if (eventRequest.maxParticipants < 1) {
+        return NextResponse.json(
+          { error: 'Maximum participants must be greater than 0' },
+          { status: 400 }
+        );
+      }
+    }
+
+
+    // 下位互換性のため requiredParticipants を minParticipants と同期
+    eventRequest.requiredParticipants = eventRequest.minParticipants;
 
     // 期間のバリデーション
     if (!eventRequest.periodStart || !eventRequest.periodEnd) {

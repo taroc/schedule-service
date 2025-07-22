@@ -6,11 +6,14 @@ interface BasicSettingsSectionProps {
     name: string;
     description: string;
     requiredParticipants: number;
+    minParticipants: number;
+    maxParticipants: number | null;
     requiredHours: number;
   };
   deadlineDate: string;
   periodStartDate: string;
   periodEndDate: string;
+  validationErrors: { [key: string]: string };
   onFieldChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onDeadlineDateChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPeriodStartDateChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -22,6 +25,7 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
   deadlineDate,
   periodStartDate,
   periodEndDate,
+  validationErrors,
   onFieldChange,
   onDeadlineDateChange,
   onPeriodStartDateChange,
@@ -49,19 +53,24 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
         </div>
 
         <div>
-          <label htmlFor="requiredParticipants" className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
-            必要人数 *
+          <label htmlFor="minParticipants" className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
+            最小参加人数 *
           </label>
           <input
-            id="requiredParticipants"
+            id="minParticipants"
             type="number"
-            name="requiredParticipants"
-            value={formData.requiredParticipants}
+            name="minParticipants"
+            value={formData.minParticipants}
             onChange={onFieldChange}
             min="1"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 ${
+              validationErrors.minParticipants ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
+            }`}
             required
           />
+          {validationErrors.minParticipants && (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.minParticipants}</p>
+          )}
         </div>
       </div>
 
@@ -79,6 +88,33 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
           required
           placeholder="イベントの詳細を記載してください"
         />
+      </div>
+
+      {/* 最大参加者設定 */}
+      <div className="mt-4">
+        <div>
+          <label htmlFor="maxParticipants" className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
+            最大参加人数（任意）
+          </label>
+          <input
+            id="maxParticipants"
+            type="number"
+            name="maxParticipants"
+            value={formData.maxParticipants || ''}
+            onChange={onFieldChange}
+            min="1"
+            placeholder="無制限の場合は空欄"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 ${
+              validationErrors.maxParticipants ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
+            }`}
+          />
+          {validationErrors.maxParticipants && (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.maxParticipants}</p>
+          )}
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            空欄の場合は無制限になります。参加人数が多い方が優先してマッチングされます。
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">

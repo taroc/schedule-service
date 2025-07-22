@@ -81,7 +81,8 @@ class MatchingEngine {
       const bestMatch = this.findOptimalParticipantCombination(
         availableSlotCombinations,
         event.requiredHours,
-        event.requiredParticipants,
+        event.minParticipants,
+        event.maxParticipants,
         event.participants
       );
 
@@ -128,7 +129,7 @@ class MatchingEngine {
         schedules
       );
       
-      if (eveningParticipants.length >= event.requiredParticipants) {
+      if (eveningParticipants.length >= event.minParticipants) {
         availableSlots.push({
           slot: {
             date: new Date(currentDate),
@@ -146,7 +147,7 @@ class MatchingEngine {
         schedules
       );
       
-      if (fulldayParticipants.length >= event.requiredParticipants) {
+      if (fulldayParticipants.length >= event.minParticipants) {
         availableSlots.push({
           slot: {
             date: new Date(currentDate),
@@ -167,8 +168,8 @@ class MatchingEngine {
    * 参加者検証
    */
   async validateParticipants(event: Event): Promise<boolean> {
-    // 必要参加者数は1人以上である必要がある
-    if (event.requiredParticipants < 1) {
+    // 最小参加者数は1人以上である必要がある
+    if (event.minParticipants < 1) {
       return false;
     }
     
@@ -177,7 +178,18 @@ class MatchingEngine {
       return false;
     }
     
-    return event.participants.length >= event.requiredParticipants;
+    // 最小参加者数を満たしているかチェック
+    if (event.participants.length < event.minParticipants) {
+      return false;
+    }
+    
+    // 最大参加者数制限がある場合はチェック（通常はマッチング時に制限内で選択）
+    if (event.maxParticipants !== null && event.participants.length > event.maxParticipants) {
+      // この場合は警告のみ - 実際のマッチングでは適切に選択される
+      console.warn(`Event ${event.id} has more participants than maxParticipants. Will select optimal subset.`);
+    }
+    
+    return true;
   }
 
   /**
@@ -211,21 +223,26 @@ class MatchingEngine {
   /**
    * 最適な参加者組み合わせを選択
    * 1. 必要時間数を満たせる組み合わせ
-   * 2. 必要人数ちょうどを選択
+   * 2. 参加人数が多い方を優先（最大人数制限内で）
    * 3. 複数候補がある場合は先着順（参加登録順）
    */
   private findOptimalParticipantCombination(
     availableSlotCombinations: SlotCombination[],
     requiredHours: number,
-    requiredParticipants: number,
+    minParticipants: number,
+    maxParticipants: number | null,
     eventParticipants: string[] // 参加登録順の配列
   ): { timeSlots: TimeSlot[]; participants: string[] } | null {
-    // 必要人数を満たせる組み合わせを優先、時間数が多い順、日付が早い順でソート
+    // 最小人数を満たせる組み合わせを優先、時間数が多い順、日付が早い順でソート
     const validCombinations = availableSlotCombinations.filter(
-      combination => combination.availableParticipants.length >= requiredParticipants
+      combination => combination.availableParticipants.length >= minParticipants
     );
     
     const sortedCombinations = [...validCombinations].sort((a, b) => {
+      // 参加者数で比較（多い順）- より多くの参加者を優先
+      const participantsDiff = b.availableParticipants.length - a.availableParticipants.length;
+      if (participantsDiff !== 0) return participantsDiff;
+      
       // 時間数で比較（多い順）- より長い時間スロットを優先
       const hoursA = getTimeSlotHours(a.slot.timeSlot);
       const hoursB = getTimeSlotHours(b.slot.timeSlot);
@@ -241,12 +258,19 @@ class MatchingEngine {
       const slotHours = getTimeSlotHours(combination.slot.timeSlot);
       
       // 単一の時間スロットで必要時間数を満たす場合
-      if (slotHours >= requiredHours && combination.availableParticipants.length >= requiredParticipants) {
-        // 先着順（参加登録順）で必要人数ちょうど選択
+      if (slotHours >= requiredHours && combination.availableParticipants.length >= minParticipants) {
+        // 参加人数の決定：最大人数制限内で最多を選択
+        const targetParticipants = this.determineMaximumParticipantCount(
+          combination.availableParticipants.length,
+          minParticipants,
+          maxParticipants
+        );
+        
+        // 先着順（参加登録順）で目標人数を選択
         const selectedParticipants = this.selectParticipantsInRegistrationOrder(
           combination.availableParticipants,
           eventParticipants,
-          requiredParticipants
+          targetParticipants
         );
         
         return {
@@ -260,11 +284,29 @@ class MatchingEngine {
     const multiDayMatch = this.findMultiDayConsecutiveMatch(
       sortedCombinations,
       requiredHours,
-      requiredParticipants,
+      minParticipants,
+      maxParticipants,
       eventParticipants
     );
     
     return multiDayMatch;
+  }
+
+  /**
+   * 利用可能な参加者数から最大参加人数を決定
+   * 参加人数が多い方を優先（最大人数制限内で）
+   */
+  private determineMaximumParticipantCount(
+    availableCount: number,
+    minParticipants: number,
+    maxParticipants: number | null
+  ): number {
+    // 最大参加者数制限を適用（無制限の場合は利用可能数そのまま）
+    const effectiveMax = maxParticipants !== null ? maxParticipants : availableCount;
+    const maxAllowed = Math.min(availableCount, effectiveMax);
+    
+    // 最大人数内で最多を選択（最小人数以上）
+    return Math.max(minParticipants, maxAllowed);
   }
 
   /**
@@ -293,7 +335,8 @@ class MatchingEngine {
   private findMultiDayConsecutiveMatch(
     sortedCombinations: SlotCombination[],
     requiredHours: number,
-    requiredParticipants: number,
+    minParticipants: number,
+    maxParticipants: number | null,
     eventParticipants: string[]
   ): { timeSlots: TimeSlot[]; participants: string[] } | null {
     // 日付ごとにグループ化
@@ -317,7 +360,8 @@ class MatchingEngine {
       availableDates,
       slotsByDate,
       requiredHours,
-      requiredParticipants,
+      minParticipants,
+      maxParticipants,
       eventParticipants
     );
   }
@@ -329,7 +373,8 @@ class MatchingEngine {
     availableDates: Date[],
     slotsByDate: Map<string, SlotCombination[]>,
     requiredHours: number,
-    requiredParticipants: number,
+    minParticipants: number,
+    maxParticipants: number | null,
     eventParticipants: string[]
   ): { timeSlots: TimeSlot[]; participants: string[] } | null {
     // 連続する日程を優先して探索
@@ -372,8 +417,8 @@ class MatchingEngine {
           commonParticipants = new Set([...commonParticipants].filter(x => dayParticipants.has(x)));
         }
 
-        // 必要人数を満たせない場合はスキップ
-        if (commonParticipants.size < requiredParticipants) {
+        // 最小人数を満たせない場合はスキップ
+        if (commonParticipants.size < minParticipants) {
           break;
         }
 
@@ -383,10 +428,17 @@ class MatchingEngine {
 
         // 必要時間数を満たした場合
         if (currentHours >= requiredHours) {
+          // 参加人数の決定：最大人数制限内で最多を選択
+          const targetParticipants = this.determineMaximumParticipantCount(
+            commonParticipants.size,
+            minParticipants,
+            maxParticipants
+          );
+          
           const selectedParticipants = this.selectParticipantsInRegistrationOrder(
             Array.from(commonParticipants),
             eventParticipants,
-            requiredParticipants
+            targetParticipants
           );
 
           return {

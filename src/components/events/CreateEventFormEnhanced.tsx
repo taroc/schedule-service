@@ -25,6 +25,7 @@ export default function CreateEventFormEnhanced({
     deadlineDate,
     periodStartDate,
     periodEndDate,
+    validationErrors,
     isFormValid,
     handleFieldChange,
     handleDeadlineDateChange,
@@ -57,11 +58,14 @@ export default function CreateEventFormEnhanced({
             name: formData.name,
             description: formData.description,
             requiredParticipants: formData.requiredParticipants,
+            minParticipants: formData.minParticipants,
+            maxParticipants: formData.maxParticipants,
             requiredHours: formData.requiredHours,
           }}
           deadlineDate={deadlineDate}
           periodStartDate={periodStartDate}
           periodEndDate={periodEndDate}
+          validationErrors={validationErrors}
           onFieldChange={handleFieldChange}
           onDeadlineDateChange={handleDeadlineDateChange}
           onPeriodStartDateChange={handlePeriodStartDateChange}

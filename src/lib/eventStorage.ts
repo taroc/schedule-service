@@ -19,7 +19,9 @@ class EventStorageDB {
         id: eventId,
         name: request.name,
         description: request.description,
-        requiredParticipants: request.requiredParticipants,
+        requiredParticipants: request.requiredParticipants, // 下位互換性のため
+        minParticipants: request.minParticipants,
+        maxParticipants: request.maxParticipants,
         requiredTimeSlots: request.requiredHours, // Temporary backwards compatibility
         requiredHours: request.requiredHours,
         creatorId,
@@ -36,14 +38,13 @@ class EventStorageDB {
         timeSlotRestriction: 'both',
         minimumConsecutive: 1,
         participantSelectionStrategy: 'first_come',
-        minParticipants: request.requiredParticipants,
         allowPartialMatching: false,
         suggestMultipleOptions: false,
         requireAllParticipants: false,
         requireCreatorConfirmation: false,
         confirmationTimeout: 60,
         requireParticipantConfirmation: false,
-        minimumConfirmations: request.requiredParticipants,
+        minimumConfirmations: request.minParticipants, // minParticipantsを使用
         confirmationMode: 'creator_only',
         gracePeriod: 30,
         discordNotificationSettings: JSON.stringify({
@@ -833,7 +834,6 @@ class EventStorageDB {
       participantSelectionStrategy?: string;
       minParticipants?: number;
       maxParticipants?: number | null;
-      optimalParticipants?: number | null;
       selectionDeadline?: Date | null;
       lotterySeed?: number | null;
       allowPartialMatching?: boolean;
@@ -861,7 +861,9 @@ class EventStorageDB {
       id: prismaEvent.id,
       name: prismaEvent.name,
       description: prismaEvent.description,
-      requiredParticipants: prismaEvent.requiredParticipants,
+      requiredParticipants: prismaEvent.requiredParticipants, // 下位互換性のため
+      minParticipants: prismaEvent.minParticipants || prismaEvent.requiredParticipants,
+      maxParticipants: prismaEvent.maxParticipants || null,
       requiredHours: prismaEvent.requiredHours || 1,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,
@@ -890,6 +892,8 @@ class EventStorageDB {
       name: string;
       description: string;
       requiredParticipants: number;
+      minParticipants?: number;
+      maxParticipants?: number | null;
       requiredHours?: number | null;
       creatorId: string;
       status: string;
@@ -908,7 +912,9 @@ class EventStorageDB {
       id: prismaEvent.id,
       name: prismaEvent.name,
       description: prismaEvent.description,
-      requiredParticipants: prismaEvent.requiredParticipants,
+      requiredParticipants: prismaEvent.requiredParticipants, // 下位互換性のため
+      minParticipants: prismaEvent.minParticipants || prismaEvent.requiredParticipants,
+      maxParticipants: prismaEvent.maxParticipants || null,
       requiredHours: prismaEvent.requiredHours || 1,
       creatorId: prismaEvent.creatorId,
       status: prismaEvent.status as EventStatus,

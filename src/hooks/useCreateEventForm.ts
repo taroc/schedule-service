@@ -29,7 +29,9 @@ const createInitialFormData = (): CreateEventRequest => {
   return {
     name: '',
     description: '',
-    requiredParticipants: 1,
+    requiredParticipants: 1, // 下位互換性のために残す（minParticipantsと同期）
+    minParticipants: 1,
+    maxParticipants: null, // null = 無制限
     requiredHours: 1,
     deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     periodStart: tomorrow,
@@ -81,27 +83,62 @@ export const useCreateEventForm = (): UseCreateEventFormReturn => {
     }
   }, [periodEndDate]);
 
-  // 必要人数変更時の関連フィールド更新
+  // 最小参加人数変更時の関連フィールド更新（下位互換性のため）
   useEffect(() => {
-    // 削除されたフィールドへの依存は削除
-  }, [formData.requiredParticipants]);
+    // minParticipantsが変更されたらrequiredParticipantsも同期
+    setFormData(prev => ({
+      ...prev,
+      requiredParticipants: prev.minParticipants
+    }));
+  }, [formData.minParticipants]);
 
   // バリデーション
   useEffect(() => {
     const errors: ValidationErrors = {};
     
+    // 最小参加人数のバリデーション
+    if (formData.minParticipants < 1) {
+      errors.minParticipants = '最小参加人数は1人以上である必要があります';
+    }
+    
+    // 最大参加人数のバリデーション
+    if (formData.maxParticipants !== null) {
+      if (formData.maxParticipants < formData.minParticipants) {
+        errors.maxParticipants = '最大参加人数は最小参加人数以上である必要があります';
+      }
+      if (formData.maxParticipants < 1) {
+        errors.maxParticipants = '最大参加人数は1人以上である必要があります';
+      }
+    }
+    
+    
+    // 必要時間数のバリデーション
+    if (formData.requiredHours < 1) {
+      errors.requiredHours = '必要時間数は1時間以上である必要があります';
+    }
+    
     setValidationErrors(errors);
   }, [
-    formData.requiredParticipants,
+    formData.minParticipants,
+    formData.maxParticipants,
     formData.requiredHours
   ]);
 
   const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    let processedValue: string | number | boolean = value;
+    let processedValue: string | number | boolean | null = value;
     
     if (type === 'number') {
-      processedValue = parseInt(value) || 0;
+      // 空文字列または0の場合、nullable フィールドはnullに、そうでなければ数値に
+      if (value === '' || value === '0') {
+        if (name === 'maxParticipants') {
+          processedValue = null;
+        } else {
+          processedValue = 0;
+        }
+      } else {
+        processedValue = parseInt(value) || 0;
+      }
     } else if (type === 'checkbox') {
       processedValue = (e.target as HTMLInputElement).checked;
     }
