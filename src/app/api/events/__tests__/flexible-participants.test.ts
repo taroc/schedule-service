@@ -1,5 +1,5 @@
 // 🔴 Red Phase: Flexible Participant System Tests
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { POST } from '../route';
 import { eventStorage } from '@/lib/eventStorage';
 import { userStorage } from '@/lib/userStorage';

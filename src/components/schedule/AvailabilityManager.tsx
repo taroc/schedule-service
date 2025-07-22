@@ -261,41 +261,6 @@ export default function AvailabilityManager() {
     }
   };
 
-  const handleDeleteAllSchedules = async () => {
-    if (!token) {
-      return;
-    }
-
-    if (!confirm('全ての予定を未登録に戻しますか？この操作は取り消せません。')) {
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      const response = await fetch('/api/schedules/availability', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ dates: [] }) // 空配列で全削除
-      });
-
-      if (response.ok) {
-        // 削除成功時の処理
-        setSelectedSchedulesToDelete([]);
-        setIndividualSelectedDates([]);
-        setWeekdaySelectedDates([]);
-
-        // スケジュールのみ再取得
-        await fetchSchedules();
-      }
-    } catch {
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   if (authLoading || loading) {
     return (
