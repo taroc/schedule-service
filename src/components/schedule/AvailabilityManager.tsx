@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserSchedule, MatchedEvent } from '@/types/schedule';
 import MultiSelectCalendar from './MultiSelectCalendar';
 import WeekdaySelector from './WeekdaySelector';
-import QuickSelectButtons from './QuickSelectButtons';
 import { getDatesByWeekdays } from '@/lib/weekdayUtils';
 
 export default function AvailabilityManager() {
@@ -17,7 +16,6 @@ export default function AvailabilityManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSchedulesToDelete, setSelectedSchedulesToDelete] = useState<Date[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [operationMode, setOperationMode] = useState<'add' | 'delete'>('add');
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [individualSelectedDates, setIndividualSelectedDates] = useState<Date[]>([]); // 個別選択の日付
   const [weekdaySelectedDates, setWeekdaySelectedDates] = useState<Date[]>([]); // 曜日選択の日付
@@ -147,14 +145,6 @@ export default function AvailabilityManager() {
     setSelectedTimeSlots(value);
   };
 
-  const handleModeChange = (mode: 'add' | 'delete') => {
-    setOperationMode(mode);
-    // モード切り替え時に選択をクリア
-    setIndividualSelectedDates([]);
-    setWeekdaySelectedDates([]);
-    setSelectedSchedulesToDelete([]);
-    setSelectedWeekdays([]);
-  };
 
   const handleWeekdaysChange = React.useCallback((weekdays: number[]) => {
     setSelectedWeekdays(weekdays);
@@ -185,18 +175,6 @@ export default function AvailabilityManager() {
     }
   }, [selectedWeekdays, calendarStartDate, calendarEndDate]);
 
-  // クイック選択ハンドラー
-  const handleQuickSelect = React.useCallback((quickSelectedDates: Date[]) => {
-    // カレンダー範囲内の日付のみをフィルタ
-    const filteredDates = quickSelectedDates.filter(date => 
-      date >= calendarStartDate && date <= calendarEndDate
-    );
-    
-    // 個別選択に設定（曜日選択はクリア）
-    setIndividualSelectedDates(filteredDates);
-    setSelectedWeekdays([]);
-    setWeekdaySelectedDates([]);
-  }, [calendarStartDate, calendarEndDate]);
 
   const handleSubmitAvailability = async () => {
     if (!token || selectedDates.length === 0) {
@@ -338,188 +316,123 @@ export default function AvailabilityManager() {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          予定管理
-        </h2>
-        <div className="text-sm text-gray-600 dark:text-gray-300">
-          {operationMode === 'add' 
-            ? '曜日と日付を個別に選択して一括登録'
-            : '削除したい日を選択'
-          }
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* 選択系UI */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-2">
+          📅 日程選択
+        </h3>
 
-      {/* モード切り替え */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">操作モード</h3>
-        <div className="flex gap-4">
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="operationMode"
-              value="add"
-              checked={operationMode === 'add'}
-              onChange={(e) => handleModeChange(e.target.value as 'add' | 'delete')}
-              className="mr-2 text-blue-500"
-            />
-            <span className="text-gray-900 dark:text-gray-100">予定を追加・更新</span>
-          </label>
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="operationMode"
-              value="delete"
-              checked={operationMode === 'delete'}
-              onChange={(e) => handleModeChange(e.target.value as 'add' | 'delete')}
-              className="mr-2 text-red-500"
-            />
-            <span className="text-gray-900 dark:text-gray-100">予定を削除</span>
-          </label>
-        </div>
-
-      </div>
-
-      {/* 時間帯選択（追加モード時のみ表示） */}
-      {operationMode === 'add' && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">時間帯を選択</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <label className="flex items-center p-3 border dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <input
-                type="radio"
-                name="timeSlot"
-                value="evening"
-                checked={selectedTimeSlots === 'evening'}
-                onChange={(e) => handleTimeSlotChange(e.target.value as 'evening' | 'fullday')}
-                className="mr-3 text-purple-500"
-              />
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-purple-100 border-2 border-purple-400 rounded mr-2"></div>
-                <span className="text-gray-900 dark:text-gray-100">夜のみ（3時間）</span>
-              </div>
-            </label>
-
-            <label className="flex items-center p-3 border dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <input
-                type="radio"
-                name="timeSlot"
-                value="fullday"
-                checked={selectedTimeSlots === 'fullday'}
-                onChange={(e) => handleTimeSlotChange(e.target.value as 'evening' | 'fullday')}
-                className="mr-3 text-blue-500"
-              />
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
-                <span className="text-gray-900 dark:text-gray-100">終日（10時間）</span>
-              </div>
-            </label>
-          </div>
-        </div>
-      )}
-
-      {/* 曜日選択（追加モード時のみ表示） */}
-      {operationMode === 'add' && (
+        {/* 曜日選択 */}
         <WeekdaySelector
           selectedWeekdays={selectedWeekdays}
           onWeekdaysChange={handleWeekdaysChange}
         />
-      )}
 
-      {/* クイック選択ボタン（追加モード時のみ表示） */}
-      {operationMode === 'add' && (
-        <QuickSelectButtons
-          onQuickSelect={handleQuickSelect}
-          startDate={calendarStartDate}
-          endDate={calendarEndDate}
-          disabled={isSubmitting}
-        />
-      )}
-
-      {/* カレンダー（削除モードまたは追加モード時に表示） */}
-      {(operationMode === 'delete' || operationMode === 'add') && (
+        {/* カレンダー */}
         <MultiSelectCalendar
           schedules={schedules}
           selectedDates={selectedDates}
-          onDateSelectionChange={operationMode === 'add' ? handleIndividualDateSelection : () => {}}
+          onDateSelectionChange={handleIndividualDateSelection}
           selectedSchedulesToDelete={selectedSchedulesToDelete}
           onScheduleDeleteSelectionChange={setSelectedSchedulesToDelete}
-          operationMode={operationMode}
+          operationMode="add"
           matchedEvents={matchedEvents}
           readOnly={false}
           onCalendarRangeChange={handleCalendarRangeChange}
         />
-      )}
+      </div>
 
-      {/* 統合登録ボタン */}
-      {operationMode === 'add' && selectedDates.length > 0 && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
+      {/* 時間帯選択 */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h4 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">時間帯を選択</h4>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex items-center p-3 border dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <input
+              type="radio"
+              name="timeSlot"
+              value="evening"
+              checked={selectedTimeSlots === 'evening'}
+              onChange={(e) => handleTimeSlotChange(e.target.value as 'evening' | 'fullday')}
+              className="mr-3 text-purple-500"
+            />
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-purple-100 border-2 border-purple-400 rounded mr-2"></div>
+              <span className="text-gray-900 dark:text-gray-100">夜のみ（3時間）</span>
+            </div>
+          </label>
+
+          <label className="flex items-center p-3 border dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <input
+              type="radio"
+              name="timeSlot"
+              value="fullday"
+              checked={selectedTimeSlots === 'fullday'}
+              onChange={(e) => handleTimeSlotChange(e.target.value as 'evening' | 'fullday')}
+              className="mr-3 text-blue-500"
+            />
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
+              <span className="text-gray-900 dark:text-gray-100">終日（10時間）</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* 操作ボタン（常に一番下に表示） */}
+      <div className="space-y-3">
+        {/* 登録・更新ボタン */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              <h4 className="text-md font-medium text-gray-900 dark:text-gray-100">
                 空き時間を登録・更新
-              </h3>
+              </h4>
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                選択した{selectedDates.length}日に空き時間を設定します（既存の予定は上書きされます）
+                {selectedDates.length > 0 
+                  ? `選択した${selectedDates.length}日に空き時間を設定します（既存の予定は上書きされます）`
+                  : '日付を選択してください'
+                }
               </p>
             </div>
             <button
               onClick={handleSubmitAvailability}
               disabled={isSubmitting || selectedDates.length === 0}
-              className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
+              className="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? '登録中...' : '空き時間登録'}
             </button>
           </div>
         </div>
-      )}
 
-      {/* 削除ボタン */}
-      {operationMode === 'delete' && selectedSchedulesToDelete.length > 0 && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
+        {/* 選択日削除ボタン */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                予定を未登録に戻す
-              </h3>
+              <h4 className="text-md font-medium text-gray-900 dark:text-gray-100">
+                選択した日の予定を削除
+              </h4>
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                選択した{selectedSchedulesToDelete.length}日の予定を削除します
+                {selectedDates.length > 0 
+                  ? `選択した${selectedDates.length}日の予定を削除します`
+                  : '日付を選択してください'
+                }
               </p>
             </div>
             <button
-              onClick={handleDeleteSchedules}
-              disabled={isDeleting || selectedSchedulesToDelete.length === 0}
-              className="bg-red-500 text-white px-6 py-3 rounded-md hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
+              onClick={() => {
+                setSelectedSchedulesToDelete([...selectedDates]);
+                handleDeleteSchedules();
+              }}
+              disabled={isDeleting || selectedDates.length === 0}
+              className="bg-red-500 text-white px-6 py-3 rounded-md hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {isDeleting ? '削除中...' : '予定を削除'}
+              {isDeleting ? '削除中...' : '選択日を削除'}
             </button>
           </div>
         </div>
-      )}
 
-      {/* 全削除ボタン */}
-      {operationMode === 'delete' && schedules.length > 0 && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded shadow p-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                全ての予定をリセット
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                登録済みの全ての予定を未登録状態に戻します
-              </p>
-            </div>
-            <button
-              onClick={handleDeleteAllSchedules}
-              disabled={isDeleting}
-              className="bg-red-600 text-white px-6 py-3 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
-            >
-              {isDeleting ? '削除中...' : '全ての予定を削除'}
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
